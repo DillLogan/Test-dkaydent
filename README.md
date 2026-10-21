@@ -17,6 +17,7 @@ Purchasing, inventory and sales tracking for a wholesale flower and hard goods o
 | **CSV** | Export products, vendors, customers, lots, movements, POs, sales orders, invoices, returns, and report data. Import products (with pack units), vendors and customers from CSV with a row-by-row preview and errors before anything is saved; downloadable templates. |
 | **Barcodes** | Code 128 labels for lots (lot code, product, qty, received, expiry) and product SKUs — from a lot, a PO's receipts, or any filtered lot list; print on plain paper or 3-across sheets. **Scan** page works with USB/Bluetooth scanners and the phone or tablet camera, and opens the matching lot, product, PO, order, invoice or return. |
 | **Reports** | Net revenue, FIFO COGS, gross margin, shrink — by product and customer for any date range, with returns shown. Sell-through and shrink rate per product. Inventory aging buckets (flowers vs hard goods). |
+| **Settings** | Appearance: Light, Dark or System (follows the device and switches with it). Saved per browser and applied before the page draws. Invoices and labels always print light. |
 | **Dashboard** | Inventory value, lots expiring within 3 days, items at reorder point, open POs, orders to fulfill, open and overdue invoices, 30-day revenue and margin. |
 
 ### Roles
@@ -93,6 +94,7 @@ middleware.ts            session refresh + login redirect
 
 ## Notes
 
+- Motion (button lift, row highlight, page entrance, theme cross-fade) turns off automatically for anyone with "reduce motion" enabled on their device.
 - Camera scanning needs HTTPS (any deployed site is) and works in current Safari, Chrome and Edge on phones and tablets.
 - Voiding an invoice doesn't move stock; record a return for goods that come back.
 - Report date ranges use calendar days in UTC for the database filter.

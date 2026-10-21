@@ -26,6 +26,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
     ],
   },
   { title: "Insights", links: [{ href: "/reports", label: "Reports" }] },
+  { title: "Account", links: [{ href: "/settings", label: "Settings" }] },
 ];
 
 export function Nav({ profile }: { profile: Profile }) {
@@ -58,7 +59,7 @@ export function Nav({ profile }: { profile: Profile }) {
               <Link
                 key={l.href}
                 href={l.href}
-                className="block shrink-0 rounded-md px-2 py-1.5 text-sm whitespace-nowrap text-stone-700 hover:bg-stone-100 hover:text-stone-900"
+                className="nav-link block shrink-0 rounded-md px-2 py-1.5 text-sm whitespace-nowrap text-stone-700 hover:bg-stone-100 hover:text-stone-900"
               >
                 {l.label}
               </Link>
