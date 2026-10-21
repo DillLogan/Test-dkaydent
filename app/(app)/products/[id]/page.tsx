@@ -54,7 +54,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
           </>
         }
         back={{ href: "/products", label: "Products" }}
-      />
+      >
+        <Link href={`/labels?products=${id}`} className="btn">
+          Print SKU label
+        </Link>
+      </PageHeader>
       <ErrorBanner error={error} />
       <Notice message={message} />
 

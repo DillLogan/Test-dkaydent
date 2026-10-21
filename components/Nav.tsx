@@ -11,6 +11,8 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/inventory", label: "Inventory" },
       { href: "/sales", label: "Sales orders" },
       { href: "/invoices", label: "Invoices" },
+      { href: "/returns", label: "Returns & credits" },
+      { href: "/scan", label: "Scan" },
     ],
   },
   {
@@ -20,6 +22,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/vendors", label: "Vendors" },
       { href: "/customers", label: "Customers" },
       { href: "/inventory/locations", label: "Locations" },
+      { href: "/import", label: "Import data" },
     ],
   },
   { title: "Insights", links: [{ href: "/reports", label: "Reports" }] },

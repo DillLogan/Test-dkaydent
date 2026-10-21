@@ -58,6 +58,8 @@ const STATUS_STYLES: Record<string, string> = {
   paid: "bg-brand-50 text-brand-700",
   void: "bg-stone-100 text-stone-500",
   cancelled: "bg-stone-100 text-stone-500",
+  applied: "bg-brand-50 text-brand-700",
+  refunded: "bg-blue-50 text-blue-700",
   inactive: "bg-stone-100 text-stone-500",
 };
 

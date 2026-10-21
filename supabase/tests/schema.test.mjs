@@ -20,7 +20,9 @@ await db.exec(`
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 `);
-await db.exec(fs.readFileSync(`${root}/migrations/20261021000000_init.sql`, "utf8"));
+for (const f of fs.readdirSync(`${root}/migrations`).filter((f) => f.endsWith(".sql")).sort()) {
+  await db.exec(fs.readFileSync(`${root}/migrations/${f}`, "utf8"));
+}
 await db.exec(fs.readFileSync(`${root}/seed.sql`, "utf8"));
 ok(true, "migration + seed applied");
 
@@ -125,6 +127,54 @@ ok(i.invoice_number === "INV-1001" && Number(i.total) === 214 && Number(i.tax) =
 ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "invoiced", "SO invoiced");
 await expectErr(`select create_invoice($1, 0)`, [so.id], "Only fulfilled", "no double invoice");
 
+// ---------- Returns & credits ----------
+// so: 10 bunch (250 stems) @ $20/bunch, all from $0.50 lots, invoiced at 7%
+const soLine = (await one(`select id from sales_order_lines where so_id=$1`, [so.id])).id;
+const lotQtyBefore = Number((await one(`select sum(qty_on_hand_base) q from lots where product_id=$1`, [rose])).q);
+const ret = (await one(`select create_return($1, $2::jsonb, 'Wrong color') id`, [so.id, JSON.stringify([{ so_line_id: soLine, qty: 2, restock: true }])])).id;
+const r1 = await one(`select return_number, subtotal, tax, total, credit_status from returns where id=$1`, [ret]);
+ok(r1.return_number === "RMA-1001" && Number(r1.subtotal) === 40 && Number(r1.tax) === 2.8 && Number(r1.total) === 42.8 && r1.credit_status === "open", "return credit uses sale price + invoice tax");
+const lotQtyAfter = Number((await one(`select sum(qty_on_hand_base) q from lots where product_id=$1`, [rose])).q);
+ok(lotQtyAfter - lotQtyBefore === 50, "restocked 2 bunches = 50 stems back on hand");
+const rl1 = await one(`select cost_total from return_lines where return_id=$1`, [ret]);
+ok(Math.abs(Number(rl1.cost_total) - 25) < 1e-9, "returned cost = 50 × $0.50");
+const backToSoldLots = await one(`select count(*)::int n from return_allocations ra join sales_allocations sa on sa.id = ra.sales_allocation_id where sa.so_line_id=$1`, [soLine]);
+ok(backToSoldLots.n >= 1, "restock went back to the exact lots the sale used");
+
+const shrinkBefore = Number((await one(`select coalesce(sum(value),0) v from v_shrink`)).v);
+await q(`select create_return($1, $2::jsonb, 'Crushed in transit')`, [so.id, JSON.stringify([{ so_line_id: soLine, qty: 1, restock: false }])]);
+const shrinkAfter = Number((await one(`select coalesce(sum(value),0) v from v_shrink`)).v);
+ok(Math.abs(shrinkAfter - shrinkBefore - 12.5) < 1e-9, "non-restock return is written off as shrink ($12.50)");
+ok(Number((await one(`select sum(qty_on_hand_base) q from lots where product_id=$1`, [rose])).q) === lotQtyAfter, "written-off return doesn't add stock");
+await expectErr(`select create_return($1, $2::jsonb)`, [so.id, JSON.stringify([{ so_line_id: soLine, qty: 8, restock: true }])], "more", "can't return more than sold");
+const rv = await one(`select sum(credit) c, sum(cost) k from v_return_lines where so_id=$1`, [so.id]);
+ok(Number(rv.c) === 60 && Math.abs(Number(rv.k) - 37.5) < 1e-9, "return view totals");
+await expectErr(`update returns set total = 0 where id=$1`, [ret], "credit status", "return amounts are locked");
+await q(`update returns set credit_status='applied' where id=$1`, [ret]);
+ok(true, "credit can be marked applied");
+
+// ---------- Invoice void & re-invoice ----------
+await expectErr(`update invoices set status='void' where id=$1`, [inv], "Use Void invoice", "can't void by direct update");
+await q(`select void_invoice($1)`, [inv]);
+ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "fulfilled", "void sends order back to fulfilled");
+const inv2 = (await one(`select create_invoice($1, 0) id`, [so.id])).id;
+ok((await one(`select invoice_number from invoices where id=$1`, [inv2])).invoice_number === "INV-1002", "order can be re-invoiced after void");
+await expectErr(`update invoices set status='open' where id=$1`, [inv], "cannot be reopened", "void invoice stays void");
+await q(`update invoices set status='paid', paid_at=current_date where id=$1`, [inv2]);
+await expectErr(`select void_invoice($1)`, [inv2], "Only open", "paid invoice can't be voided");
+
+// ---------- Hand-picked lots ----------
+const lot60 = (await one(`select id from lots where product_id=$1 and unit_cost_base > 0.55 and qty_on_hand_base > 0`, [rose])).id;
+const soP = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [cust])).id;
+const pl = (await one(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,2,20) returning id`, [soP, rose, bunch.id])).id;
+await q(`update sales_orders set status='confirmed' where id=$1`, [soP]);
+await expectErr(`select fulfill_sales_order($1, $2::jsonb)`, [soP, JSON.stringify([{ so_line_id: pl, lot_id: lot60, qty_base: 30 }])], "needs 50", "picks must total the line");
+const ofOther = (await one(`select l.id from lots l join products p on p.id=l.product_id where p.sku='HG-VASE-CYL8' limit 1`))?.id;
+if (ofOther) await expectErr(`select fulfill_sales_order($1, $2::jsonb)`, [soP, JSON.stringify([{ so_line_id: pl, lot_id: ofOther, qty_base: 50 }])], "not", "can't pick another product's lot");
+await q(`select fulfill_sales_order($1, $2::jsonb)`, [soP, JSON.stringify([{ so_line_id: pl, lot_id: lot60, qty_base: 50 }])]);
+const pc = await one(`select cost_total from sales_order_lines where id=$1`, [pl]);
+ok(Math.abs(Number(pc.cost_total) - 30) < 1e-9, "hand-picked newer $0.60 lot instead of FIFO ($30 cost)");
+
 // role checks (functions)
 await as(sales);
 await expectErr(`select fulfill_sales_order($1)`, [so2], "Not authorized", "inactive user blocked from RPC");
@@ -147,6 +197,7 @@ await expectErr(`insert into lots (product_id, location_id, qty_received_base, q
 const so3 = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [cust])).id;
 await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so3, rose, bunch.id]);
 ok(true, "sales can create draft SO + lines");
+await expectErr(`insert into returns (so_id, customer_id) values ($1,$2)`, [so.id, cust], "row-level security", "returns only via create_return");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");
 await db.exec(`reset role`);
 await as(admin);

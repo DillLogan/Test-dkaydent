@@ -56,6 +56,18 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
   return (
     <>
       <PageHeader title="Inventory" subtitle="What's on hand, where it is, and how old it is">
+        <a
+          href={`/export/lots?${new URLSearchParams(Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && ["q", "location", "kind", "product"].includes(k))) as Record<string, string>)}`}
+          className="btn"
+        >
+          Export CSV
+        </a>
+        <Link
+          href={`/labels?${new URLSearchParams(Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && ["q", "location", "kind", "product"].includes(k))) as Record<string, string>)}`}
+          className="btn"
+        >
+          Print labels
+        </Link>
         <Link href="/inventory/movements" className="btn">
           Movement log
         </Link>

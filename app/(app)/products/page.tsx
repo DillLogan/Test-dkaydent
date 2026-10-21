@@ -21,6 +21,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
   return (
     <>
       <PageHeader title="Products" subtitle="Flowers, greens and hard goods with their units and stock">
+        <a href="/export/products" className="btn">
+          Export CSV
+        </a>
+        {can(profile, "buyer") && (
+          <Link href="/import?entity=products" className="btn">
+            Import
+          </Link>
+        )}
         {can(profile, "buyer") && (
           <Link href="/products/new" className="btn btn-primary">
             New product

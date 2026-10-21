@@ -3,8 +3,20 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { loadCatalog, toPicker } from "@/lib/catalog";
-import { date, money, pct, qty, sum } from "@/lib/format";
-import { addSOLine, deleteSO, fulfillSO, invoiceSO, removeSOLine, setSOStatus, updateSO } from "../actions";
+import { date, dateTime, money, pct, qty, sum } from "@/lib/format";
+import {
+  addSOLine,
+  createReturn,
+  deleteSO,
+  fulfillSO,
+  fulfillSOPicked,
+  invoiceSO,
+  removeSOLine,
+  setCreditStatus,
+  setSOStatus,
+  updateSO,
+} from "../actions";
+import { PickForm, type PickLine } from "@/components/PickForm";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
@@ -23,9 +35,14 @@ export default async function SOPage({ params, searchParams }: Props) {
       .select("*, products(sku, name, base_unit), product_units(name, factor)")
       .eq("so_id", id)
       .order("created_at"),
-    supabase.from("invoices").select("id, invoice_number").eq("so_id", id).maybeSingle(),
+    supabase.from("invoices").select("id, invoice_number").eq("so_id", id).neq("status", "void").maybeSingle(),
   ]);
   if (!so) notFound();
+  const { data: returns } = await supabase
+    .from("returns")
+    .select("*, return_lines(so_line_id, qty, qty_base, restock, credit, product_id)")
+    .eq("so_id", id)
+    .order("created_at");
 
   const canSell = can(profile, "sales");
   const canFulfill = can(profile, "sales", "warehouse");
@@ -51,6 +68,40 @@ export default async function SOPage({ params, searchParams }: Props) {
   const subtotal = sum(rows, (r) => r.revenue);
   const costTotal = sum(rows, (r) => r.cost);
   const anyShort = rows.some((r) => r.short);
+
+  // Returnable quantity per line, in the line's unit
+  const returnedBase = new Map<string, number>();
+  for (const r of returns ?? []) for (const rl of r.return_lines ?? []) returnedBase.set(rl.so_line_id, (returnedBase.get(rl.so_line_id) ?? 0) + Number(rl.qty_base));
+  const canReturn = (so.status === "fulfilled" || so.status === "invoiced") && canFulfill;
+
+  // Hand-pick: available lots per line, oldest first
+  let pickLines: PickLine[] = [];
+  if (so.status === "confirmed" && canFulfill && rows.length) {
+    const productIds = [...new Set(rows.map((r) => r.product_id))];
+    const { data: avail } = await supabase
+      .from("v_lot_aging")
+      .select("lot_id, lot_code, product_id, location_name, received_at, expires_at, days_to_expiry, qty_on_hand_base")
+      .in("product_id", productIds)
+      .order("received_at");
+    pickLines = rows.map((r) => ({
+      id: r.id,
+      product: r.products.name,
+      sku: r.products.sku,
+      base_unit: r.products.base_unit,
+      need: Number(r.qty) * Number(r.product_units.factor),
+      lots: (avail ?? [])
+        .filter((a) => a.product_id === r.product_id)
+        .map((a) => ({
+          lot_id: a.lot_id,
+          lot_code: a.lot_code,
+          location: a.location_name,
+          received: date(a.received_at),
+          expires: date(a.expires_at),
+          days_to_expiry: a.days_to_expiry,
+          available: Number(a.qty_on_hand_base),
+        })),
+    }));
+  }
 
   let picker: ReturnType<typeof toPicker> = [];
   if (isDraft && canSell) {
@@ -118,7 +169,7 @@ export default async function SOPage({ params, searchParams }: Props) {
             {canFulfill && (
               <form action={fulfillSO.bind(null, id)}>
                 <SubmitButton pendingText="Pulling stock…" confirm="Pull stock for this order now? Oldest lots are used first.">
-                  Fulfill (pull stock)
+                  Fulfill oldest-first
                 </SubmitButton>
               </form>
             )}
@@ -237,6 +288,140 @@ export default async function SOPage({ params, searchParams }: Props) {
             </p>
             <SubmitButton>Add line</SubmitButton>
           </form>
+        </Section>
+      )}
+
+      {pickLines.length > 0 && (
+        <Section title="Or choose lots">
+          <details className="group">
+            <summary className="btn mb-3 cursor-pointer list-none">Hand-pick lots / scan to pick</summary>
+            <PickForm lines={pickLines} action={fulfillSOPicked.bind(null, id)} />
+          </details>
+        </Section>
+      )}
+
+      {(canReturn || (returns ?? []).length > 0) && (
+        <Section title="Returns & credits">
+          {(returns ?? []).length > 0 && (
+            <div className="table-wrap mb-4">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Return</th>
+                    <th>When</th>
+                    <th>Items</th>
+                    <th>Reason</th>
+                    <th className="num">Credit</th>
+                    <th>Credit status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(returns ?? []).map((r: any) => (
+                    <tr key={r.id}>
+                      <td className="font-medium whitespace-nowrap">{r.return_number}</td>
+                      <td className="whitespace-nowrap">{dateTime(r.created_at)}</td>
+                      <td>
+                        {r.return_lines.map((rl: any) => {
+                          const line = rows.find((x) => x.id === rl.so_line_id);
+                          return (
+                            <div key={rl.so_line_id} className="text-sm">
+                              {qty(rl.qty)} {line?.product_units.name} {line?.products.name}{" "}
+                              <span className={rl.restock ? "text-brand-700" : "text-red-700"}>
+                                ({rl.restock ? "restocked" : "written off"})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </td>
+                      <td>{r.reason ?? "—"}</td>
+                      <td className="num">{money(r.total)}</td>
+                      <td>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusBadge status={r.credit_status} />
+                          {canSell && r.credit_status === "open" && (
+                            <>
+                              <form action={setCreditStatus.bind(null, r.id, "applied", `/sales/${id}`)}>
+                                <SubmitButton className="btn btn-sm" pendingText="…">
+                                  Applied
+                                </SubmitButton>
+                              </form>
+                              <form action={setCreditStatus.bind(null, r.id, "refunded", `/sales/${id}`)}>
+                                <SubmitButton className="btn btn-sm" pendingText="…">
+                                  Refunded
+                                </SubmitButton>
+                              </form>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {canReturn && (
+            <details>
+              <summary className="btn mb-3 cursor-pointer list-none">Record a return</summary>
+              <form action={createReturn.bind(null, id, rows.map((r) => r.id))} className="card space-y-4">
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th className="num">Sold</th>
+                        <th className="num">Returnable</th>
+                        <th>Return qty</th>
+                        <th>Resellable?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => {
+                        const factor = Number(r.product_units.factor);
+                        const left = Number(r.qty) - (returnedBase.get(r.id) ?? 0) / factor;
+                        return (
+                          <tr key={r.id}>
+                            <td>{r.products.name}</td>
+                            <td className="num">
+                              {qty(r.qty)} {r.product_units.name}
+                            </td>
+                            <td className="num">
+                              {qty(left)} {r.product_units.name}
+                            </td>
+                            <td>
+                              <input
+                                name={`rqty_${r.id}`}
+                                type="number"
+                                min="0"
+                                max={left}
+                                step="any"
+                                className="input w-24"
+                                disabled={left <= 0}
+                              />
+                            </td>
+                            <td>
+                              <label className="flex items-center gap-2 text-sm">
+                                <input type="checkbox" name={`restock_${r.id}`} defaultChecked disabled={left <= 0} />
+                                Restock
+                              </label>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Field label="Reason">
+                  <input name="reason" className="input" placeholder="Wrong color, damaged in transit, over-shipped…" />
+                </Field>
+                <p className="text-xs text-stone-500">
+                  Restocked items go back into the exact lots they shipped from. Unchecked items are returned and written off as shrink.
+                  The customer gets a credit at the sale price{invoice ? " plus the invoice's tax rate" : ""}.
+                </p>
+                <SubmitButton pendingText="Recording…">Record return</SubmitButton>
+              </form>
+            </details>
+          )}
         </Section>
       )}
 

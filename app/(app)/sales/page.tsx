@@ -36,7 +36,11 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
 
   return (
     <>
-      <PageHeader title="Sales orders" subtitle="Draft → confirmed → fulfilled (stock pulled) → invoiced" />
+      <PageHeader title="Sales orders" subtitle="Draft → confirmed → fulfilled (stock pulled) → invoiced">
+        <a href="/export/sales-orders" className="btn">
+          Export CSV
+        </a>
+      </PageHeader>
       <ErrorBanner error={error} />
 
       {can(profile, "sales") && (

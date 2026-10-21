@@ -35,7 +35,11 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
 
   return (
     <>
-      <PageHeader title="Purchasing" subtitle="Purchase orders from growers and suppliers, and receiving" />
+      <PageHeader title="Purchasing" subtitle="Purchase orders from growers and suppliers, and receiving">
+        <a href="/export/purchase-orders" className="btn">
+          Export CSV
+        </a>
+      </PageHeader>
       <ErrorBanner error={error} />
 
       {can(profile, "buyer") && (

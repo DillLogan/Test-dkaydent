@@ -295,7 +295,14 @@ export default async function POPage({ params, searchParams }: Props) {
       )}
 
       {(receipts ?? []).length > 0 && (
-        <Section title="Received lots">
+        <Section
+          title="Received lots"
+          actions={
+            <Link href={`/labels?po=${id}`} className="btn">
+              Print labels
+            </Link>
+          }
+        >
           <div className="table-wrap">
             <table className="table">
               <thead>

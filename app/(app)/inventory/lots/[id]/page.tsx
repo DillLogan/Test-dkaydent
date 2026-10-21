@@ -18,6 +18,7 @@ const KIND_LABEL: Record<string, string> = {
   sale: "Sold",
   shrink: "Shrink",
   adjust: "Count adjustment",
+  return: "Customer return",
 };
 
 export default async function LotPage({ params, searchParams }: Props) {
@@ -81,7 +82,11 @@ export default async function LotPage({ params, searchParams }: Props) {
           </>
         }
         back={{ href: "/inventory?view=lots", label: "Inventory" }}
-      />
+      >
+        <Link href={`/labels?lot=${id}`} className="btn">
+          Print label
+        </Link>
+      </PageHeader>
       <ErrorBanner error={error} />
       <Notice message={message} />
 
