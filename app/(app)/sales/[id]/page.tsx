@@ -21,12 +21,13 @@ import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { ItemCell } from "@/components/ItemThumb";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
+import { PaymentsPanel } from "@/components/PaymentsPanel";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
 export default async function SOPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { error, message } = await searchParams;
+  const { error, message, charge } = await searchParams;
   const { supabase, profile } = await getSession();
 
   const [{ data: so }, { data: lines }, { data: invoice }] = await Promise.all([
@@ -36,7 +37,7 @@ export default async function SOPage({ params, searchParams }: Props) {
       .select("*, products(sku, name, base_unit, image_path, category), product_units(name, factor)")
       .eq("so_id", id)
       .order("created_at"),
-    supabase.from("invoices").select("id, invoice_number").eq("so_id", id).neq("status", "void").maybeSingle(),
+    supabase.from("invoices").select("id, invoice_number, total").eq("so_id", id).neq("status", "void").maybeSingle(),
   ]);
   if (!so) notFound();
   const { data: returns } = await supabase
@@ -435,6 +436,34 @@ export default async function SOPage({ params, searchParams }: Props) {
             <SubmitButton pendingText="Creating…">Create invoice</SubmitButton>
           </form>
         </Section>
+      )}
+
+      {invoice ? (
+        <PaymentsPanel
+          supabase={supabase}
+          soId={id}
+          total={Number(invoice.total)}
+          purpose="invoice"
+          back={`/invoices/${invoice.id}`}
+          canSell={false}
+          open={false}
+          title="Payments (take more on the invoice)"
+        />
+      ) : (
+        ["draft", "confirmed", "fulfilled"].includes(so.status) &&
+        rows.length > 0 && (
+          <PaymentsPanel
+            supabase={supabase}
+            soId={id}
+            total={Math.round(subtotal * 100) / 100}
+            purpose="deposit"
+            back={`/sales/${id}`}
+            canSell={canSell}
+            open
+            chargeId={charge}
+            title="Deposit (optional)"
+          />
+        )
       )}
 
       <Section title="Details">
