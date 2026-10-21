@@ -283,6 +283,72 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   ok((await one(`select generate_standing_orders($1) n`, [m])).n === 3, "monthly with end date: 3 occurrences");
 }
 
+// ---------- Payments, counter sales, Valor terminals ----------
+{
+  const term = (await one(`insert into payment_terminals (name, model, epi, serial_no) values ('Counter VP800', 'VP800', '2501357713', 'SN800') returning id`)).id;
+  await expectErr(`insert into payment_terminals (name, model, epi) values ('X', 'Z9', 'E1')`, [], "check", "unknown terminal model rejected");
+  const money2 = (x) => Math.round(Number(x) * 100) / 100;
+  // deposit -> invoice -> partial payments
+  const so = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [cust])).id;
+  await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,10,20)`, [so, rose, bunch.id]);
+  await q(`update sales_orders set status='confirmed' where id=$1`, [so]);
+  const dep = (await one(`select record_payment($1,'cash',50) id`, [so])).id;
+  ok((await one(`select kind from payments where id=$1`, [dep])).kind === "deposit", "payment before invoicing is a deposit");
+  await expectErr(`select record_payment($1,'cash',151)`, [so], "more than the $150.00 still due", "can't take more than is due");
+  await q(`select fulfill_sales_order($1)`, [so]);
+  const inv = (await one(`select create_invoice($1, 7) id`, [so])).id;
+  const b1 = await one(`select total, paid, balance from v_invoice_balance where invoice_id=$1`, [inv]);
+  ok(money2(b1.total) === 214 && money2(b1.paid) === 50 && money2(b1.balance) === 164, "deposit counts toward the invoice (214 - 50 = 164)");
+  ok((await one(`select invoice_id from payments where id=$1`, [dep])).invoice_id === inv, "deposit linked to the invoice");
+  await q(`select record_payment($1,'check',100,'Check 2231')`, [so]);
+  ok((await one(`select status from invoices where id=$1`, [inv])).status === "open", "partial payment leaves invoice open");
+  const last = (await one(`select record_payment($1,'card',64,'A1B2C3',0,'{"card_brand":"Visa","card_last4":"4242"}') id`, [so])).id;
+  ok((await one(`select status, paid_at is not null p from invoices where id=$1`, [inv])).status === "paid", "fully paid invoice marked paid");
+  await expectErr(`select record_payment($1,'cash',1)`, [so], "already paid", "no payments on a paid invoice");
+  await expectErr(`select void_invoice($1)`, [inv], "Only open", "paid invoice can't be voided");
+  await q(`select void_payment($1)`, [last]);
+  ok((await one(`select status from invoices where id=$1`, [inv])).status === "open", "voiding a payment reopens the invoice");
+  await expectErr(`select void_invoice($1)`, [inv], "Void the payments first", "invoice with payments can't be voided");
+
+  // counter sale, cash
+  const onHand = async () => Number((await one(`select coalesce(sum(qty_on_hand_base),0) s from lots where product_id=$1`, [rose])).s);
+  await expectErr(`select create_counter_sale(null, $1::jsonb)`, [JSON.stringify([{ product_id: rose, unit_id: bunch.id, qty: 100000, unit_price: 20 }])], "Not enough Rose Freedom", "counter sale checks stock");
+  const before = await onHand();
+  const cs = (await one(`select create_counter_sale(null, $1::jsonb) id`, [JSON.stringify([{ product_id: rose, unit_id: bunch.id, qty: 2, unit_price: 18 }])])).id;
+  const csRow = await one(`select status, channel, c.name from sales_orders s join customers c on c.id=s.customer_id where s.id=$1`, [cs]);
+  ok(csRow.status === "confirmed" && csRow.channel === "counter" && csRow.name === "Walk-in", "counter sale: confirmed, walk-in customer");
+  const csInv = (await one(`select complete_counter_sale($1, 0, '{"method":"cash"}') id`, [cs])).id;
+  const ci = await one(`select status, total, due_at = issued_at due_today from invoices where id=$1`, [csInv]);
+  ok(ci.status === "paid" && money2(ci.total) === 36 && ci.due_today, "cash counter sale: invoiced, due today, paid");
+  const after = await onHand(); ok(Math.abs(before - after - 2 * Number(bunch.factor)) < 1e-6, `counter sale pulled 2 bunches FIFO (${before} -> ${after})`);
+
+  // counter sale on the terminal (simulator), 7% tax
+  const ts = (await one(`select create_counter_sale(null, $1::jsonb) id`, [JSON.stringify([{ product_id: rose, unit_id: bunch.id, qty: 1, unit_price: 25 }])])).id;
+  await expectErr(`select create_terminal_request($1,'counter',$2,27,'simulator',false,7)`, [term, ts], "more than the $26.75", "terminal amount capped at total with tax");
+  const tr = (await one(`select create_terminal_request($1,'counter',$2,26.75,'simulator',true,7) id`, [term, ts])).id;
+  ok(/^[0-9A-F]{20}$/.test((await one(`select req_txn_id from terminal_requests where id=$1`, [tr])).req_txn_id), "REQ_TXN_ID generated");
+  await expectErr(`select create_terminal_request($1,'counter',$2,1,'simulator')`, [term, ts], "busy", "one pending payment per terminal");
+  const fin = (await one(`select finalize_terminal_request($1, '{"status":"approved","card_brand":"Mastercard","card_last4":"5454","auth_code":"OK1234","txn_id":"SIM-1","tip":"3"}') r`, [tr])).r;
+  ok(fin.status === "approved" && fin.payment_id, "approved terminal request records a payment");
+  const tp = await one(`select method, amount, tip, card_last4, terminal_id from payments where id=$1`, [fin.payment_id]);
+  ok(tp.method === "card" && money2(tp.amount) === 26.75 && money2(tp.tip) === 3 && tp.card_last4 === "5454" && tp.terminal_id === term, "card payment details + tip kept separately");
+  ok((await one(`select s.status, i.status ist from sales_orders s join invoices i on i.so_id=s.id where s.id=$1`, [ts])).ist === "paid", "terminal counter sale finished: invoiced and paid");
+  ok((await one(`select finalize_terminal_request($1, '{"status":"declined"}') r`, [tr])).r.already === true, "finalize is idempotent");
+  // declined on an invoice
+  const tr2 = (await one(`select create_terminal_request($1,'invoice',$2,64,'simulator') id`, [term, so])).id;
+  await q(`select finalize_terminal_request($1, '{"status":"declined","message":"Card declined"}')`, [tr2]);
+  ok((await one(`select status, payment_id from terminal_requests where id=$1`, [tr2])).payment_id === null, "declined request records nothing");
+  // sync from the terminal: payment against an invoice by number, duplicates skipped, itemized sale
+  const invNo = (await one(`select invoice_number from invoices where id=$1`, [inv])).invoice_number;
+  ok((await one(`select import_terminal_txn($1::jsonb) r`, [JSON.stringify({ txn_id: "VAL-9001", amount: 64, invoice_ref: invNo.toLowerCase(), card_last4: "1111", terminal_epi: "2501357713" })])).r.result === "payment", "synced txn matched to invoice by number");
+  ok((await one(`select status from invoices where id=$1`, [inv])).status === "paid", "synced payment settles the invoice");
+  ok((await one(`select import_terminal_txn($1::jsonb) r`, [JSON.stringify({ txn_id: "VAL-9001", amount: 64 })])).r.result === "duplicate", "same txn id is skipped");
+  const sale = (await one(`select import_terminal_txn($1::jsonb) r`, [JSON.stringify({ txn_id: "VAL-9002", amount: 40, lines: [{ product_id: rose, unit_id: bunch.id, qty: 2, unit_price: 20 }] })])).r;
+  const sr = await one(`select s.channel, i.status from sales_orders s join invoices i on i.so_id=s.id where s.id=$1`, [sale.so_id]);
+  ok(sale.result === "sale" && sr.channel === "terminal" && sr.status === "paid", "itemized terminal sale becomes a paid sale with stock pulled");
+  await expectErr(`select import_terminal_txn($1::jsonb)`, [JSON.stringify({ txn_id: "VAL-9003", amount: 5 })], "no matching invoice", "unmatched, unitemized txn rejected");
+}
+
 // ---------- Floor plan, home areas, photos ----------
 const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
 await q(`select set_home_location($1, $2)`, [tulip.id, c1]);
@@ -320,6 +386,8 @@ await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: 
 await expectErr(`select set_home_location($1, null)`, [rose], "Not authorized", "sales can't set home areas");
 await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-level security", "sales can't plan shipments");
 await expectErr(`select generate_standing_orders()`, [], "Not authorized", "sales can't run standing orders");
+await expectErr(`insert into payments (customer_id, kind, method, amount) values ($1,'payment','cash',1)`, [cust], "row-level security", "payments only through record_payment");
+await expectErr(`insert into payment_terminals (name, model, epi) values ('T','VL100','X1')`, [], "row-level security", "only admins add terminals");
 ok((await db.query(`update shop_layout set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
 ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");

@@ -6,13 +6,14 @@ import { date, money, qty, today } from "@/lib/format";
 import { setInvoiceStatus, voidInvoice } from "../../sales/actions";
 import { PrintButton } from "@/components/PrintButton";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ErrorBanner, PageHeader, Section, StatusBadge } from "@/components/ui";
+import { ErrorBanner, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
+import { PaymentsPanel } from "@/components/PaymentsPanel";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
 export default async function InvoicePage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, message, charge } = await searchParams;
   const { supabase, profile } = await getSession();
 
   const { data: inv } = await supabase
@@ -32,6 +33,8 @@ export default async function InvoicePage({ params, searchParams }: Props) {
     .select("id, return_number, created_at, total, credit_status")
     .eq("so_id", inv.so_id)
     .order("created_at");
+  const { data: paidRows } = await supabase.from("payments").select("amount").eq("so_id", inv.so_id).eq("status", "completed");
+  const paid = (paidRows ?? []).reduce((t, p) => t + Number(p.amount), 0);
   const canEdit = can(profile, "sales");
   const overdue = inv.status === "open" && inv.due_at < today();
   const c = inv.customers;
@@ -51,12 +54,14 @@ export default async function InvoicePage({ params, searchParams }: Props) {
                 Void
               </SubmitButton>
             </form>
-            <form action={setInvoiceStatus.bind(null, id, "paid")}>
-              <SubmitButton pendingText="…">Mark paid</SubmitButton>
-            </form>
+            {paid === 0 && (
+              <form action={setInvoiceStatus.bind(null, id, "paid")}>
+                <SubmitButton pendingText="…">Mark paid</SubmitButton>
+              </form>
+            )}
           </>
         )}
-        {canEdit && inv.status === "paid" && (
+        {canEdit && inv.status === "paid" && paid === 0 && (
           <form action={setInvoiceStatus.bind(null, id, "open")}>
             <SubmitButton className="btn" pendingText="…">
               Mark unpaid
@@ -65,6 +70,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
         )}
       </PageHeader>
       <ErrorBanner error={error} />
+      <Notice message={message} />
 
       <article className="card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none">
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
@@ -148,13 +154,40 @@ export default async function InvoicePage({ params, searchParams }: Props) {
             <span className="tabular-nums">{money(inv.tax)}</span>
           </div>
           <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold">
-            <span>Total due</span>
+            <span>{paid > 0 ? "Total" : "Total due"}</span>
             <span className="tabular-nums">{money(inv.total)}</span>
           </div>
+          {paid > 0 && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Paid</span>
+                <span className="tabular-nums">−{money(paid)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>Balance due</span>
+                <span className="tabular-nums">{money(Math.max(0, Number(inv.total) - paid))}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
       </article>
+
+      {inv.status !== "void" && (
+        <div className="mx-auto mt-8 max-w-3xl print:hidden">
+          <PaymentsPanel
+            supabase={supabase}
+            soId={inv.so_id}
+            total={Number(inv.total)}
+            purpose="invoice"
+            back={`/invoices/${id}`}
+            canSell={canEdit}
+            open={inv.status === "open"}
+            chargeId={charge}
+          />
+        </div>
+      )}
 
       {(credits ?? []).length > 0 && (
         <Section title="Credits on this order" className="mx-auto mt-8 max-w-3xl print:hidden">
