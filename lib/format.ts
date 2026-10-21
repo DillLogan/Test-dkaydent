@@ -58,3 +58,10 @@ export function inUnits(qtyBase: number, units: { name: string; factor: number }
   const rest = qtyBase - whole * Number(big.factor);
   return rest > 0 ? `${whole} ${big.name} + ${qty(rest)} ${baseUnit}` : `${whole} ${big.name}`;
 }
+
+/** The same date one year later (Feb 29 -> Feb 28). The furthest out a shipment can be planned. */
+export function oneYearFrom(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const last = new Date(Date.UTC(y + 1, m, 0)).getUTCDate();
+  return `${y + 1}-${String(m).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}

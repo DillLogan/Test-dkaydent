@@ -5,6 +5,7 @@ import { can } from "@/lib/roles";
 import { loadCatalog, toPicker } from "@/lib/catalog";
 import { addDays, date, dateTime, money, pct, qty, sum, today, unitMoney } from "@/lib/format";
 import { addPOLine, closePO, deletePO, receivePO, removePOLine, setPOStatus, updatePO } from "../actions";
+import { skipOccurrence } from "../../receiving/actions";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
@@ -17,7 +18,11 @@ export default async function POPage({ params, searchParams }: Props) {
   const { supabase, profile } = await getSession();
 
   const [{ data: po }, { data: lines }, { data: locations }] = await Promise.all([
-    supabase.from("purchase_orders").select("*, vendors(id, name)").eq("id", id).maybeSingle(),
+    supabase
+      .from("purchase_orders")
+      .select("*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name)")
+      .eq("id", id)
+      .maybeSingle(),
     supabase
       .from("purchase_order_lines")
       .select("*, products(sku, name, base_unit, shelf_life_days), product_units(name, factor)")
@@ -89,17 +94,43 @@ export default async function POPage({ params, searchParams }: Props) {
             </Link>
             {po.order_date && ` · ordered ${date(po.order_date)}`}
             {po.expected_date && ` · expected ${date(po.expected_date)}`}
+            {po.shipments && (
+              <>
+                {" · on "}
+                <Link href={`/receiving/${po.shipments.id}`} className="link">
+                  {po.shipments.shipment_number}
+                </Link>
+                {po.shipments.carrier && ` (${po.shipments.carrier})`}
+              </>
+            )}
+            {po.standing_orders && (
+              <>
+                {" · ↻ "}
+                <Link href={`/receiving/standing/${po.standing_orders.id}`} className="link">
+                  {po.standing_orders.name}
+                </Link>
+                {po.customized && " (edited)"}
+              </>
+            )}
           </>
         }
         back={{ href: "/purchasing", label: "Purchasing" }}
       >
         {canBuy && isDraft && (
           <>
-            <form action={deletePO.bind(null, id)}>
-              <SubmitButton className="btn btn-danger" confirm="Delete this draft PO?" pendingText="Deleting…">
-                Delete draft
-              </SubmitButton>
-            </form>
+            {po.standing_order_id ? (
+              <form action={skipOccurrence.bind(null, id, `/purchasing/${id}`)}>
+                <SubmitButton className="btn btn-danger" confirm="Skip this planned delivery?" pendingText="Skipping…">
+                  Skip delivery
+                </SubmitButton>
+              </form>
+            ) : (
+              <form action={deletePO.bind(null, id)}>
+                <SubmitButton className="btn btn-danger" confirm="Delete this draft PO?" pendingText="Deleting…">
+                  Delete draft
+                </SubmitButton>
+              </form>
+            )}
             <form action={setPOStatus.bind(null, id, "ordered")}>
               <SubmitButton pendingText="Updating…">Mark as ordered</SubmitButton>
             </form>

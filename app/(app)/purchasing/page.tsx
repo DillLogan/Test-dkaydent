@@ -13,6 +13,7 @@ const FILTERS: Record<string, string[] | null> = {
   draft: ["draft"],
   ordered: ["ordered", "partially_received"],
   received: ["received"],
+  planned: ["draft"],
   cancelled: ["cancelled"],
   all: null,
 };
@@ -24,10 +25,13 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
   let query = supabase
     .from("purchase_orders")
     .select("id, po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name), purchase_order_lines(qty, unit_cost)")
-    .order("created_at", { ascending: false })
+    .order(status === "planned" ? "expected_date" : "created_at", { ascending: status === "planned" })
     .limit(200);
   const statuses = FILTERS[status] ?? null;
   if (statuses) query = query.in("status", statuses);
+  // Standing-order deliveries that haven't been placed yet live under "Planned", not in the open/draft lists.
+  if (status === "planned") query = query.not("standing_order_id", "is", null);
+  else if (status === "open" || status === "draft") query = query.or("standing_order_id.is.null,status.neq.draft");
   const [{ data: pos }, { data: vendors }] = await Promise.all([
     query,
     supabase.from("vendors").select("id, name").eq("active", true).order("name"),
@@ -78,7 +82,7 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
         items={Object.keys(FILTERS).map((k) => ({
           key: k,
           href: `/purchasing?status=${k}`,
-          label: k[0].toUpperCase() + k.slice(1),
+          label: k === "planned" ? "Planned (standing)" : k[0].toUpperCase() + k.slice(1),
         }))}
       />
 

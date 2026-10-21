@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addDays, money, pct, qty, sum, today } from "@/lib/format";
-import { Empty, ErrorBanner, ExpiryText, PageHeader, Section, Stat } from "@/components/ui";
+import { addDays, date, money, pct, qty, sum, today } from "@/lib/format";
+import { Empty, ErrorBanner, ExpiryText, PageHeader, Section, Stat, StatusBadge } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -11,14 +11,22 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const { supabase, profile } = await getSession();
   const since = addDays(today(), -30);
 
-  const [lots, stock, openPOs, toFulfill, openInv, sales] = await Promise.all([
+  const [lots, stock, openPOs, toFulfill, openInv, sales, inbound] = await Promise.all([
     supabase.from("v_lot_aging").select("lot_id, lot_code, product_name, location_name, qty_on_hand_base, base_unit, value, days_to_expiry"),
     supabase.from("v_product_stock").select("product_id, sku, name, base_unit, qty_on_hand_base, reorder_point_base").eq("active", true),
     supabase.from("purchase_orders").select("id", { count: "exact", head: true }).in("status", ["ordered", "partially_received"]),
     supabase.from("sales_orders").select("id", { count: "exact", head: true }).eq("status", "confirmed"),
     supabase.from("invoices").select("total, due_at").eq("status", "open"),
     supabase.from("v_sales_lines").select("revenue, margin").gte("fulfilled_at", since),
+    supabase
+      .from("v_shipments")
+      .select("id, shipment_number, eta, status, carrier, vendors, value, is_late")
+      .in("status", ["planned", "in_transit", "arrived"])
+      .lte("eta", addDays(today(), 7))
+      .order("eta"),
   ]);
+  const inboundRows = inbound.data ?? [];
+  const lateShipments = inboundRows.filter((s) => s.is_late);
 
   const lotRows = lots.data ?? [];
   const stockValue = sum(lotRows, (l) => l.value);
@@ -49,7 +57,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       </PageHeader>
       <ErrorBanner error={error} />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Stat label="Inventory value" value={money(stockValue)} hint={`${lotRows.length} lots on hand`} href="/inventory" />
         <Stat
           label="Expiring ≤ 3 days"
@@ -59,6 +67,13 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           tone={expiring.length ? "warn" : undefined}
         />
         <Stat label="Open purchase orders" value={openPOs.count ?? 0} hint="awaiting receipt" href="/purchasing?status=open" />
+        <Stat
+          label="Shipments this week"
+          value={inboundRows.length - lateShipments.length}
+          hint={lateShipments.length ? `${lateShipments.length} late` : "due in the next 7 days"}
+          href={lateShipments.length ? "/receiving?view=list&status=late" : "/receiving"}
+          tone={lateShipments.length ? "bad" : undefined}
+        />
         <Stat label="Orders to fulfill" value={toFulfill.count ?? 0} hint="confirmed, not pulled" href="/sales?status=confirmed" />
         <Stat label="Revenue, 30 days" value={money(revenue)} hint={`Gross margin ${pct(revenue ? margin / revenue : null)}`} href="/reports" />
         <Stat label="Gross profit, 30 days" value={money(margin)} href="/reports" />
@@ -71,6 +86,45 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           tone={overdue.length ? "bad" : undefined}
         />
       </div>
+
+      {inboundRows.length > 0 && (
+        <Section title="Incoming shipments" actions={<Link href="/receiving" className="btn">Receiving</Link>}>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Shipment</th>
+                  <th>ETA</th>
+                  <th>Vendors</th>
+                  <th className="num">Value</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inboundRows.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <Link href={`/receiving/${s.id}`} className="link">
+                        {s.shipment_number}
+                      </Link>
+                      {s.carrier && <div className="text-xs text-stone-500">{s.carrier}</div>}
+                    </td>
+                    <td className={s.is_late ? "font-medium text-red-700" : ""}>
+                      {date(s.eta)}
+                      {s.is_late && " · late"}
+                    </td>
+                    <td>{s.vendors || "—"}</td>
+                    <td className="num">{money(s.value)}</td>
+                    <td>
+                      <StatusBadge status={s.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Expiring soon">
