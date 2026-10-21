@@ -6,6 +6,11 @@ import { date, dateTime, inUnits, money, qty, today, unitMoney } from "@/lib/for
 import { countLot, shrinkLot, transferLot } from "../../actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, ExpiryText, Notice, PageHeader, Section } from "@/components/ui";
+import { PhotoUpload } from "@/components/PhotoUpload";
+import { MiniMap } from "@/components/MiniMap";
+import { imageUrl } from "@/lib/images";
+import { loadPlan } from "@/lib/plan";
+import { removeLotPhoto, uploadLotPhoto } from "../../../photos/actions";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -29,7 +34,7 @@ export default async function LotPage({ params, searchParams }: Props) {
   const [{ data: lot }, { data: movements }, { data: locations }] = await Promise.all([
     supabase
       .from("lots")
-      .select("*, products(id, sku, name, base_unit, kind), locations(id, name), purchase_order_lines(po_id, purchase_orders(po_number))")
+      .select("*, products(id, sku, name, base_unit, kind, image_path, home_location_id), locations(id, name), purchase_order_lines(po_id, purchase_orders(po_number))")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("stock_movements").select("*, locations(name), profiles(full_name)").eq("lot_id", id).order("created_at"),
@@ -49,6 +54,12 @@ export default async function LotPage({ params, searchParams }: Props) {
     ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000)
     : null;
   const po = lot.purchase_order_lines?.purchase_orders;
+  const plan = await loadPlan(supabase);
+  const home = lot.products.home_location_id as string | null;
+  const lotMarks: Record<string, "home" | "here" | "both"> = { [lot.location_id]: home === lot.location_id ? "both" : "here" };
+  if (home && home !== lot.location_id) lotMarks[home] = "home";
+  const homeName = plan.locations.find((l) => l.id === home)?.name;
+  const canPhoto = can(profile, "buyer", "warehouse");
 
   const UnitSelect = () => (
     <select name="unit_id" className="input w-auto" defaultValue={units?.[0]?.id}>
@@ -114,6 +125,42 @@ export default async function LotPage({ params, searchParams }: Props) {
             <ExpiryText days={daysToExpiry} />
           </div>
         </div>
+      </div>
+
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
+        <Section title="Delivery photo">
+          <PhotoUpload
+            current={imageUrl(lot.image_path)}
+            alt={`Lot ${lot.lot_code}`}
+            label="photo"
+            canEdit={canPhoto}
+            upload={uploadLotPhoto.bind(null, id)}
+            remove={removeLotPhoto.bind(null, id)}
+          />
+          {!lot.image_path && lot.products.image_path && (
+            <p className="mt-2 text-xs text-stone-500">Lists show the item&apos;s main photo until a delivery photo is added.</p>
+          )}
+        </Section>
+        <Section title="Location in shop">
+          <MiniMap
+            aspect={plan.aspect}
+            background={plan.background}
+            areas={plan.areas}
+            marks={lotMarks}
+            caption={
+              <>
+                This lot is in <b>{lot.locations.name}</b>.{" "}
+                {homeName && home !== lot.location_id ? (
+                  <span className="font-medium text-amber-700">Its home area is {homeName} (pulsing).</span>
+                ) : homeName ? (
+                  "That's its home area."
+                ) : (
+                  "The item has no home area yet."
+                )}
+              </>
+            }
+          />
+        </Section>
       </div>
 
       {canWork && (

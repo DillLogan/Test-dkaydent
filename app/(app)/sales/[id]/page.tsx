@@ -18,6 +18,7 @@ import {
 } from "../actions";
 import { PickForm, type PickLine } from "@/components/PickForm";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
+import { ItemCell } from "@/components/ItemThumb";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
@@ -32,7 +33,7 @@ export default async function SOPage({ params, searchParams }: Props) {
     supabase.from("sales_orders").select("*, customers(id, name, price_tier_id, price_tiers(name, markup_pct))").eq("id", id).maybeSingle(),
     supabase
       .from("sales_order_lines")
-      .select("*, products(sku, name, base_unit), product_units(name, factor)")
+      .select("*, products(sku, name, base_unit, image_path, category), product_units(name, factor)")
       .eq("so_id", id)
       .order("created_at"),
     supabase.from("invoices").select("id, invoice_number").eq("so_id", id).neq("status", "void").maybeSingle(),
@@ -216,8 +217,7 @@ export default async function SOPage({ params, searchParams }: Props) {
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td>
-                      {r.products.name}
-                      <div className="font-mono text-xs text-stone-500">{r.products.sku}</div>
+                      <ItemCell path={r.products.image_path} name={r.products.name} sku={r.products.sku} category={r.products.category} />
                     </td>
                     <td className="num">
                       {qty(r.qty)} {r.product_units.name}

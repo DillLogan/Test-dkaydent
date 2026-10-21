@@ -7,6 +7,12 @@ import { addUnit, deleteTierPrice, deleteUnit, setTierPrice, updateProduct } fro
 import { ProductFields } from "@/components/ProductFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
+import { PhotoUpload } from "@/components/PhotoUpload";
+import { MiniMap, type MapMark } from "@/components/MiniMap";
+import { imageUrl } from "@/lib/images";
+import { loadPlan } from "@/lib/plan";
+import { removeProductPhoto, uploadProductPhoto } from "../../photos/actions";
+import { setHomeArea } from "../../floor-plan/actions";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -42,6 +48,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
     byLocation.set(l.location_id, cur);
   }
   const onHand = sum(lots, (l) => l.qty_on_hand_base);
+  const plan = await loadPlan(supabase);
+  const marks: Record<string, MapMark> = {};
+  for (const locId of byLocation.keys()) marks[locId] = "here";
+  if (product.home_location_id) marks[product.home_location_id] = marks[product.home_location_id] ? "both" : "home";
+  const homeName = plan.locations.find((l) => l.id === product.home_location_id)?.name;
+  const misplaced = [...byLocation.keys()].filter((id) => product.home_location_id && id !== product.home_location_id);
+  const canPlace = can(profile, "buyer", "warehouse");
 
   return (
     <>
@@ -86,6 +99,57 @@ export default async function ProductPage({ params, searchParams }: Props) {
           <div className="text-xl font-semibold">{qty(product.reorder_point_base)}</div>
           <div className="text-xs text-stone-500">{product.base_unit}</div>
         </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Photo">
+          <PhotoUpload
+            current={imageUrl(product.image_path)}
+            alt={product.name}
+            canEdit={canPlace}
+            upload={uploadProductPhoto.bind(null, id)}
+            remove={removeProductPhoto.bind(null, id)}
+          />
+        </Section>
+        <Section title="Location in shop">
+          <MiniMap
+            aspect={plan.aspect}
+            background={plan.background}
+            areas={plan.areas}
+            marks={marks}
+            caption={
+              <>
+                {homeName ? (
+                  <>
+                    Belongs in <b>{homeName}</b> (pulsing).{" "}
+                  </>
+                ) : (
+                  "No home area set. "
+                )}
+                {byLocation.size > 0 && <>Stock is in {[...byLocation.values()].map((l) => l.name).join(", ")}. </>}
+                {misplaced.length > 0 && <span className="font-medium text-amber-700">Some stock is outside its home area.</span>}
+              </>
+            }
+          />
+          {canPlace && (
+            <form action={setHomeArea.bind(null, id)} className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="min-w-48 flex-1">
+                <span className="label">Home area</span>
+                <select name="location_id" defaultValue={product.home_location_id ?? ""} className="input">
+                  <option value="">Not set</option>
+                  {plan.locations
+                    .filter((l) => l.active)
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <SubmitButton className="btn">Save home area</SubmitButton>
+            </form>
+          )}
+        </Section>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

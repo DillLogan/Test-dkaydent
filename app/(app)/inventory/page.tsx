@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { searchTerm } from "@/lib/forms";
 import { date, money, qty, sum, unitMoney } from "@/lib/format";
 import { Empty, ErrorBanner, ExpiryText, PageHeader, Stat, Tabs } from "@/components/ui";
+import { ItemCell } from "@/components/ItemThumb";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -36,6 +37,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
       sku: l.sku,
       name: l.product_name,
       base_unit: l.base_unit,
+      image: l.product_image,
+      category: l.category,
       qty: 0,
       value: 0,
       lots: 0,
@@ -146,10 +149,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
               {products.map((p) => (
                 <tr key={p.product_id}>
                   <td>
-                    <Link href={`/products/${p.product_id}`} className="link">
-                      {p.name}
-                    </Link>
-                    <div className="font-mono text-xs text-stone-500">{p.sku}</div>
+                    <ItemCell path={p.image} name={p.name} sku={p.sku} category={p.category}>
+                      <Link href={`/products/${p.product_id}`} className="link">
+                        {p.name}
+                      </Link>
+                    </ItemCell>
                   </td>
                   <td className="num">
                     {qty(p.qty)} {p.base_unit}
@@ -193,7 +197,9 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
                       {l.lot_code}
                     </Link>
                   </td>
-                  <td>{l.product_name}</td>
+                  <td>
+                    <ItemCell path={l.lot_image || l.product_image} name={l.product_name} category={l.category} />
+                  </td>
                   <td>{l.location_name}</td>
                   <td>{date(l.received_at)}</td>
                   <td className="num">{l.age_days}d</td>

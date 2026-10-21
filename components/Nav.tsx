@@ -9,6 +9,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/purchasing", label: "Purchasing" },
       { href: "/inventory", label: "Inventory" },
+      { href: "/floor-plan", label: "Location in shop" },
       { href: "/sales", label: "Sales orders" },
       { href: "/invoices", label: "Invoices" },
       { href: "/returns", label: "Returns & credits" },

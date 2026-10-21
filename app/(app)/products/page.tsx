@@ -4,6 +4,7 @@ import { can } from "@/lib/roles";
 import { searchTerm } from "@/lib/forms";
 import { money, qty, unitMoney } from "@/lib/format";
 import { Empty, ErrorBanner, PageHeader, StatusBadge } from "@/components/ui";
+import { ItemThumb } from "@/components/ItemThumb";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -21,6 +22,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
   return (
     <>
       <PageHeader title="Products" subtitle="Flowers, greens and hard goods with their units and stock">
+        <Link href="/products/categories" className="btn">
+          Category rules
+        </Link>
         <a href="/export/products" className="btn">
           Export CSV
         </a>
@@ -72,11 +76,16 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
                   <tr key={p.product_id}>
                     <td className="font-mono text-xs whitespace-nowrap">{p.sku}</td>
                     <td>
-                      <Link href={`/products/${p.product_id}`} className="link">
-                        {p.name}
-                      </Link>{" "}
-                      {!p.active && <StatusBadge status="inactive" />}
-                      <div className="text-xs text-stone-500">{p.kind === "flower" ? "Flower" : "Hard good"}</div>
+                      <div className="flex items-start gap-2.5">
+                        <ItemThumb path={p.image_path} name={p.name} category={p.category} size={36} />
+                        <div>
+                          <Link href={`/products/${p.product_id}`} className="link">
+                            {p.name}
+                          </Link>{" "}
+                          {!p.active && <StatusBadge status="inactive" />}
+                          <div className="text-xs text-stone-500">{p.kind === "flower" ? "Flower" : "Hard good"}</div>
+                        </div>
+                      </div>
                     </td>
                     <td>{p.category ?? "—"}</td>
                     <td className={`num ${low ? "font-medium text-amber-700" : ""}`}>

@@ -193,3 +193,19 @@ html.theme-anim *::after {
     transform: none;
   }
 }
+
+/* ---------- Floor plan ---------- */
+.plan-grid {
+  background-color: var(--color-stone-100);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-stone-400) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-stone-400) 22%, transparent) 1px, transparent 1px);
+  background-size: 5% 8%;
+}
+@keyframes plan-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-brand-600) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-brand-600) 0%, transparent); }
+}
+.plan-pulse {
+  animation: plan-pulse 1.6s ease-in-out infinite;
+}
