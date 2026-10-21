@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { ThemePicker } from "@/components/ThemePicker";
+import { PrintSettingsForm } from "@/components/PrintSettingsForm";
 import { PageHeader, Section } from "@/components/ui";
 
 export default async function SettingsPage() {
@@ -13,6 +14,13 @@ export default async function SettingsPage() {
           device; invoices and labels always print in light.
         </p>
         <ThemePicker />
+      </Section>
+      <Section title="Printing">
+        <p className="mb-3 text-sm text-stone-500">
+          How labels print from this computer. Use Label printer for a thermal or roll label printer, and Regular printer for an office or home
+          printer on plain paper. Saved on this computer only, so each workstation can use its own printer.
+        </p>
+        <PrintSettingsForm />
       </Section>
     </>
   );
