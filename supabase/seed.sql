@@ -42,3 +42,20 @@ insert into customers (name, contact_name, price_tier_id, payment_terms_days)
 select 'Bloom & Vine Florist', 'Front desk', id, 30 from price_tiers where name = 'Retail Florist'
 union all
 select 'Evergreen Events', 'Planning team', id, 15 from price_tiers where name = 'Event Designer';
+
+-- Shop floor plan: display areas plus where each location sits (percent of plan)
+insert into locations (name, kind, temp_c) values ('Front Display Cooler', 'cooler', 3), ('Greens Rack', 'shelf', null);
+update locations set map_x = 4,  map_y = 6,  map_w = 30, map_h = 34, map_color = '#2e5234' where name = 'Cooler 1';
+update locations set map_x = 38, map_y = 6,  map_w = 26, map_h = 34, map_color = '#3d6b8f' where name = 'Cooler 2';
+update locations set map_x = 70, map_y = 6,  map_w = 26, map_h = 22, map_color = '#8a6d3b' where name = 'Receiving Dock';
+update locations set map_x = 4,  map_y = 60, map_w = 22, map_h = 34, map_color = '#7a5c99' where name = 'Hard Goods Shelf A';
+update locations set map_x = 28, map_y = 60, map_w = 22, map_h = 34, map_color = '#9a4d6b' where name = 'Hard Goods Shelf B';
+update locations set map_x = 56, map_y = 52, map_w = 40, map_h = 18, map_color = '#b0543a' where name = 'Front Display Cooler';
+update locations set map_x = 56, map_y = 76, map_w = 40, map_h = 18, map_color = '#5f7f3a' where name = 'Greens Rack';
+
+update products p set home_location_id = l.id from locations l
+ where (p.category = 'Roses' and l.name = 'Cooler 1')
+    or (p.category = 'Hydrangea' and l.name = 'Cooler 2')
+    or (p.category = 'Greens' and l.name = 'Greens Rack')
+    or (p.sku = 'HG-VASE-CYL8' and l.name = 'Hard Goods Shelf A')
+    or (p.sku in ('HG-FOAM-BRICK', 'HG-RIB-SAT15') and l.name = 'Hard Goods Shelf B');

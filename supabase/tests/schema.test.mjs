@@ -175,6 +175,49 @@ await q(`select fulfill_sales_order($1, $2::jsonb)`, [soP, JSON.stringify([{ so_
 const pc = await one(`select cost_total from sales_order_lines where id=$1`, [pl]);
 ok(Math.abs(Number(pc.cost_total) - 30) < 1e-9, "hand-picked newer $0.60 lot instead of FIFO ($30 cost)");
 
+// ---------- Category rules ----------
+const cat = async (n) => (await one(`select * from categorize($1)`, [n])) || {};
+ok((await cat("Rose Freedom 60cm")).category === "Roses", "categorize: rose → Roses");
+ok((await cat("Spray Rose Majolika")).category === "Spray Roses", "categorize: longest keyword wins (spray rose)");
+ok((await cat("Rose Sleeve 20in")).category === "Packaging", "categorize: sleeve beats rose");
+ok((await cat("Glass Cylinder 12in")).kind === "hard_good", "categorize: sets hard good");
+ok((await cat("Oriental Lilies Mixed")).category === "Lilies", "categorize: plural form");
+ok(!(await cat("Mystery Stem")).category, "categorize: no match → none");
+ok(!(await cat("Primrose Yellow")).category, "categorize: matches word starts only (primrose ≠ rose)");
+
+// ---------- CSV stock batch ----------
+const lotsBefore = Number((await one(`select count(*) n from lots`)).n);
+const batch = [
+  { sku: "ro-fre-60", unit: "box", qty: 2, unit_cost: 110, location: "cooler 1" },
+  { sku: "TU-PNK-40", name: "Tulip Pink 40cm", units: [{ name: "bunch", factor: 10 }], unit: "bunch", qty: 12, unit_cost: 6.5, location: "Cooler 2", shelf_life_days: 7 },
+  { sku: "HG-CUBE-4", name: "Glass Cube 4in", units: [{ name: "case", factor: 24 }], unit: "case", qty: 3, unit_cost: 30, location: "Hard Goods Shelf A" },
+];
+const res = (await one(`select import_stock_batch($1::jsonb, 'TEST-BATCH') r`, [JSON.stringify(batch)])).r;
+ok(res.items_created === 2 && res.lots_created === 3 && res.reference === "TEST-BATCH", "batch: 2 new items, 3 lots");
+const tulip = await one(`select * from products where sku='TU-PNK-40'`);
+ok(tulip.category === "Tulips" && tulip.kind === "flower" && tulip.base_unit === "stem", "batch: new item auto-categorized (Tulips, stem)");
+const cube = await one(`select * from products where sku='HG-CUBE-4'`);
+ok(cube.category === "Vases" && cube.kind === "hard_good" && cube.base_unit === "each", "batch: hard good gets each + Vases");
+const tl = await one(`select qty_on_hand_base, unit_cost_base, expires_at - current_date d from lots where product_id=$1`, [tulip.id]);
+ok(Number(tl.qty_on_hand_base) === 120 && Math.abs(Number(tl.unit_cost_base) - 0.65) < 1e-9 && tl.d === 7, "batch: 12 bunch = 120 stems @ $0.65, expiry from shelf life");
+ok(Number((await one(`select count(*) n from stock_movements where reference='TEST-BATCH' and kind='receive'`)).n) === 3, "batch: receive movements under batch reference");
+const lotsMid = Number((await one(`select count(*) n from lots`)).n);
+await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }, { sku: "NEW-X", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Row 3", "batch: new item without name names the row");
+ok(Number((await one(`select count(*) n from lots`)).n) === lotsMid, "batch: failed batch adds nothing (all-or-nothing)");
+await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", unit: "pallet", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "pallet", "batch: unknown unit rejected");
+await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Attic" }])], "Attic", "batch: unknown location rejected");
+ok(lotsMid - lotsBefore === 3, "batch: lot count");
+
+// ---------- Floor plan, home areas, photos ----------
+const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
+await q(`select set_home_location($1, $2)`, [tulip.id, c1]);
+ok((await one(`select home_location_id h from products where id=$1`, [tulip.id])).h === c1, "home area set");
+await q(`select set_product_image($1, 'products/x.webp')`, [tulip.id]);
+await q(`select set_lot_image($1, 'lots/y.webp')`, [lotA.id]);
+ok((await one(`select image_path from lots where id=$1`, [lotA.id])).image_path === "lots/y.webp", "photo paths saved");
+await expectErr(`update locations set map_x = 140 where id=$1`, [c1], "check", "map coordinates must be within the plan");
+ok(Number((await one(`select aspect from shop_layout`)).aspect) === 1.6, "shop layout row exists");
+
 // role checks (functions)
 await as(sales);
 await expectErr(`select fulfill_sales_order($1)`, [so2], "Not authorized", "inactive user blocked from RPC");
@@ -191,13 +234,17 @@ await db.exec(`grant usage on schema public to authenticated;
   grant usage on all sequences in schema public to authenticated;`);
 await as(sales);
 await db.exec(`set role authenticated`);
-ok((await q(`select id from products`)).length === 7, "sales can read products");
+ok((await q(`select id from products`)).length === 9, "sales can read products");
 await expectErr(`insert into vendors (name) values ('X')`, [], "row-level security", "sales cannot create vendors");
 await expectErr(`insert into lots (product_id, location_id, qty_received_base, qty_on_hand_base, unit_cost_base) values ($1,$2,1,1,1)`, [rose, cooler1], "row-level security", "nobody writes lots directly");
 const so3 = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [cust])).id;
 await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so3, rose, bunch.id]);
 ok(true, "sales can create draft SO + lines");
 await expectErr(`insert into returns (so_id, customer_id) values ($1,$2)`, [so.id, cust], "row-level security", "returns only via create_return");
+await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Not authorized", "sales can't import stock");
+await expectErr(`select set_home_location($1, null)`, [rose], "Not authorized", "sales can't set home areas");
+ok((await db.query(`update shop_layout set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
+ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");
 await db.exec(`reset role`);
 await as(admin);

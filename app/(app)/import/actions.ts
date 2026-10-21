@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { dbMessage, fail } from "@/lib/forms";
 import { IMPORT_ROLE, validate, type Entity } from "@/lib/importSpec";
+import { validateStockRows } from "@/lib/stockBatch";
+import { categorize, type CategoryRule } from "@/lib/categorize";
+import { can } from "@/lib/roles";
 
 async function loadKeys(supabase: any, entity: Entity) {
   if (entity === "products") {
@@ -38,6 +41,9 @@ export async function importRows(entity: Entity, fd: FormData) {
   let updated = 0;
 
   if (entity === "products") {
+    // Blank categories are filled from the keyword rules
+    const { data: rules } = await supabase.from("category_rules").select("keyword, category, kind, priority");
+    for (const r of results) if (!r.record.category) r.record.category = categorize(r.record.name ?? "", (rules ?? []) as CategoryRule[])?.category ?? null;
     const creates = results.filter((r) => r.action === "create").map((r) => r.record);
     const updates = results.filter((r) => r.action === "update").map((r) => r.record);
 
@@ -92,4 +98,49 @@ export async function importRows(entity: Entity, fd: FormData) {
 
   revalidatePath(`/${entity}`);
   redirect(`${path}&message=${encodeURIComponent(`Imported ${created} new and updated ${updated} ${entity}.`)}`);
+}
+
+/** CSV stock batch: validate again on the server, then receive everything in one transaction. */
+export async function importStockBatch(fd: FormData) {
+  const { supabase, profile } = await requireRole("buyer", "warehouse");
+  const path = "/import?entity=stock";
+  let raw: Record<string, string>[] = [];
+  try {
+    raw = JSON.parse(String(fd.get("rows") ?? "[]"));
+  } catch {
+    raw = [];
+  }
+  if (!Array.isArray(raw) || raw.length === 0) fail(path, "The file had no rows.");
+
+  const [{ data: products }, { data: units }, { data: locations }, { data: rules }] = await Promise.all([
+    supabase.from("products").select("id, sku, name, base_unit, category"),
+    supabase.from("product_units").select("product_id, name"),
+    supabase.from("locations").select("name").eq("active", true),
+    supabase.from("category_rules").select("keyword, category, kind, priority"),
+  ]);
+  const unitsBy = new Map<string, string[]>();
+  for (const u of units ?? []) unitsBy.set(u.product_id, [...(unitsBy.get(u.product_id) ?? []), u.name]);
+  const results = validateStockRows(raw, {
+    items: (products ?? []).map((p) => ({ sku: p.sku, name: p.name, baseUnit: p.base_unit, category: p.category, units: unitsBy.get(p.id) ?? [p.base_unit] })),
+    locations: (locations ?? []).map((l) => l.name),
+    rules: (rules ?? []) as CategoryRule[],
+    defaultLocation: String(fd.get("default_location") ?? ""),
+    canCreate: can(profile, "buyer"),
+  });
+  const bad = results.filter((r) => r.errors.length);
+  if (bad.length) fail(path, `${bad.length} rows have errors (first: row ${bad[0].row}: ${bad[0].errors[0]}). Nothing was received.`);
+
+  const { data, error } = await supabase.rpc("import_stock_batch", {
+    p_rows: results.map((r) => r.payload),
+    p_reference: String(fd.get("reference") ?? "").trim() || null,
+  });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath("/inventory");
+  revalidatePath("/products");
+  const r = data as { reference: string; items_created: number; lots_created: number; value: number };
+  redirect(
+    `${path}&message=${encodeURIComponent(
+      `Received ${r.lots_created} lots ($${Number(r.value).toFixed(2)} at cost) under ${r.reference}${r.items_created ? `, and created ${r.items_created} new items` : ""}.`,
+    )}`,
+  );
 }

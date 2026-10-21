@@ -291,6 +291,14 @@ const SPECS: Record<string, Spec> = {
       { sku: "HG-CUBE-4", name: "Glass Cube 4in", kind: "hard_good", category: "Vases", base_unit: "each", units: "case=24", reorder_point_base: 48, active: true },
     ],
   }),
+  "template-stock": async () => ({
+    columns: ["sku", "name", "qty", "unit", "unit_cost", "location", "category", "kind", "base_unit", "units", "shelf_life_days", "expires_at", "lot_code"].map((key) => ({ key })),
+    rows: [
+      { sku: "RO-FRE-60", qty: 4, unit: "box", unit_cost: 104.5, location: "Cooler 1", lot_code: "ANDES-7781" },
+      { sku: "PE-SAR-BN", name: "Peony Sarah Bernhardt", qty: 6, unit: "bunch", unit_cost: 18, location: "Cooler 2", units: "bunch=10; box=50", shelf_life_days: 6 },
+      { sku: "HG-CUBE-4", name: "Glass Cube 4in", qty: 2, unit: "case", unit_cost: 30, location: "Hard Goods Shelf A", units: "case=24" },
+    ],
+  }),
   "template-vendors": async () => ({
     columns: VENDOR_COLS,
     rows: [{ name: "Example Farms", kind: "grower", contact_name: "Ana", email: "orders@example.com", country: "Colombia", payment_terms: "Net 15", active: true }],
