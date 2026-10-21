@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { date, money, qty, today } from "@/lib/format";
-import { setInvoiceStatus } from "../../sales/actions";
+import { setInvoiceStatus, voidInvoice } from "../../sales/actions";
 import { PrintButton } from "@/components/PrintButton";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ErrorBanner, PageHeader, StatusBadge } from "@/components/ui";
+import { ErrorBanner, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -27,6 +27,11 @@ export default async function InvoicePage({ params, searchParams }: Props) {
     .eq("so_id", inv.so_id)
     .order("created_at");
 
+  const { data: credits } = await supabase
+    .from("returns")
+    .select("id, return_number, created_at, total, credit_status")
+    .eq("so_id", inv.so_id)
+    .order("created_at");
   const canEdit = can(profile, "sales");
   const overdue = inv.status === "open" && inv.due_at < today();
   const c = inv.customers;
@@ -37,8 +42,12 @@ export default async function InvoicePage({ params, searchParams }: Props) {
         <PrintButton />
         {canEdit && inv.status === "open" && (
           <>
-            <form action={setInvoiceStatus.bind(null, id, "void")}>
-              <SubmitButton className="btn btn-danger" confirm="Void this invoice?" pendingText="…">
+            <form action={voidInvoice.bind(null, id, inv.so_id)}>
+              <SubmitButton
+                className="btn btn-danger"
+                confirm="Void this invoice? The order goes back to fulfilled so you can correct it and invoice again."
+                pendingText="…"
+              >
                 Void
               </SubmitButton>
             </form>
@@ -146,6 +155,39 @@ export default async function InvoicePage({ params, searchParams }: Props) {
 
         {inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
       </article>
+
+      {(credits ?? []).length > 0 && (
+        <Section title="Credits on this order" className="mx-auto mt-8 max-w-3xl print:hidden">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Return</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th className="num">Credit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(credits ?? []).map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <Link href={`/sales/${inv.so_id}`} className="link whitespace-nowrap">
+                        {c.return_number}
+                      </Link>
+                    </td>
+                    <td>{date(c.created_at)}</td>
+                    <td>
+                      <StatusBadge status={c.credit_status} />
+                    </td>
+                    <td className="num">{money(c.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
     </>
   );
 }

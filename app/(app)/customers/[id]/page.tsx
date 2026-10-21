@@ -27,6 +27,7 @@ export default async function CustomerPage({ params, searchParams }: Props) {
     supabase.from("invoices").select("*").eq("customer_id", id).order("issued_at", { ascending: false }).limit(50),
     supabase.from("v_sales_lines").select("revenue, margin").eq("customer_id", id),
   ]);
+  const { data: credits } = await supabase.from("returns").select("total, credit_status").eq("customer_id", id);
   if (!customer) notFound();
   const canEdit = can(profile, "sales");
 
@@ -49,7 +50,7 @@ export default async function CustomerPage({ params, searchParams }: Props) {
       <ErrorBanner error={error} />
       <Notice message={message} />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Lifetime revenue" value={money(revenue)} />
         <Stat label="Gross margin" value={pct(revenue ? sum(lines, (l) => l.margin) / revenue : null)} />
         <Stat label="Open balance" value={money(sum(open, (i) => i.total))} hint={`${open.length} open invoices`} />
@@ -57,6 +58,12 @@ export default async function CustomerPage({ params, searchParams }: Props) {
           label="Overdue"
           value={money(sum(open.filter((i) => i.due_at < today()), (i) => i.total))}
           tone={open.some((i) => i.due_at < today()) ? "bad" : undefined}
+        />
+        <Stat
+          label="Open credits"
+          value={money(sum((credits ?? []).filter((c) => c.credit_status === "open"), (c) => c.total))}
+          hint={`${(credits ?? []).length} returns total`}
+          href="/returns?status=open"
         />
       </div>
 

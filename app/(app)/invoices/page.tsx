@@ -25,7 +25,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: SP 
       <PageHeader
         title="Invoices"
         subtitle={`${invoices?.length ?? 0} shown · ${money(sum(invoices, (i) => i.total))}`}
-      />
+      >
+        <a href="/export/invoices" className="btn">
+          Export CSV
+        </a>
+      </PageHeader>
       <Tabs
         current={status}
         items={["open", "overdue", "paid", "void", "all"].map((k) => ({

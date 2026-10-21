@@ -12,6 +12,7 @@ const KINDS: Record<string, string> = {
   sale: "Sold",
   shrink: "Shrink",
   adjust: "Count adjustment",
+  return: "Customer return",
 };
 
 export default async function MovementsPage({ searchParams }: { searchParams: SP }) {
@@ -27,7 +28,11 @@ export default async function MovementsPage({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <PageHeader title="Movement log" subtitle="Every change to stock, newest first" back={{ href: "/inventory", label: "Inventory" }} />
+      <PageHeader title="Movement log" subtitle="Every change to stock, newest first" back={{ href: "/inventory", label: "Inventory" }}>
+        <a href={`/export/movements${kind ? `?kind=${kind}` : ""}`} className="btn">
+          Export CSV
+        </a>
+      </PageHeader>
       <form className="mb-4 flex gap-2">
         <select name="kind" defaultValue={kind ?? ""} className="input w-auto">
           <option value="">All movements</option>

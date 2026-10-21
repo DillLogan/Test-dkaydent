@@ -5,7 +5,7 @@ import { Empty, PageHeader, Section, Stat } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
 
-type Agg = { key: string; label: string; sub?: string; qty: number; revenue: number; cost: number; unit?: string };
+type Agg = { key: string; label: string; sub?: string; qty: number; revenue: number; cost: number; returns: number; returnedCost: number; unit?: string };
 
 function group<T>(rows: T[], key: (r: T) => string, init: (r: T) => Agg, add: (a: Agg, r: T) => void) {
   const m = new Map<string, Agg>();
@@ -33,45 +33,52 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
   const toExclusive = addDays(to, 1);
   const { supabase } = await getSession();
 
-  const [{ data: sales }, { data: moves }, { data: shrink }, { data: lots }] = await Promise.all([
+  const [{ data: sales }, { data: moves }, { data: shrink }, { data: lots }, { data: rets }] = await Promise.all([
     supabase.from("v_sales_lines").select("*").gte("fulfilled_at", from).lt("fulfilled_at", toExclusive).limit(10000),
     supabase
       .from("stock_movements")
       .select("product_id, kind, qty_base, products(sku, name, base_unit)")
-      .in("kind", ["receive", "sale", "shrink"])
+      .in("kind", ["receive", "sale", "shrink", "return"])
       .gte("created_at", from)
       .lt("created_at", toExclusive)
       .limit(20000),
     supabase.from("v_shrink").select("*").gte("created_at", from).lt("created_at", toExclusive).limit(10000),
     supabase.from("v_lot_aging").select("kind, age_days, value"),
+    supabase.from("v_return_lines").select("*").gte("created_at", from).lt("created_at", toExclusive).limit(10000),
   ]);
 
-  const revenue = sum(sales, (s) => s.revenue);
-  const cogs = sum(sales, (s) => s.cost);
+  const grossRevenue = sum(sales, (s) => s.revenue);
+  const credits = sum(rets, (r) => r.credit);
+  const revenue = grossRevenue - credits;
+  const cogs = sum(sales, (s) => s.cost) - sum(rets, (r) => r.cost);
   const shrinkValue = sum(shrink, (s) => s.value);
   const invValue = sum(lots, (l) => l.value);
 
   const byProduct = group(
     sales ?? [],
     (s) => s.product_id,
-    (s) => ({ key: s.product_id, label: s.product_name, sub: s.sku, unit: s.base_unit, qty: 0, revenue: 0, cost: 0 }),
+    (s) => ({ key: s.product_id, label: s.product_name, sub: s.sku, unit: s.base_unit, qty: 0, revenue: 0, cost: 0, returns: 0, returnedCost: 0 }),
     (a, s) => {
       a.qty += Number(s.qty_base);
       a.revenue += Number(s.revenue);
       a.cost += Number(s.cost);
     },
-  ).sort((a, b) => b.revenue - a.revenue);
+  );
+  mergeReturns(byProduct, rets ?? [], (r) => r.product_id, (r) => ({ key: r.product_id, label: r.product_name, sub: r.sku, unit: r.base_unit }), true);
+  byProduct.sort((a, b) => b.revenue - a.revenue);
 
   const byCustomer = group(
     sales ?? [],
     (s) => s.customer_id,
-    (s) => ({ key: s.customer_id, label: s.customer_name, qty: 0, revenue: 0, cost: 0 }),
+    (s) => ({ key: s.customer_id, label: s.customer_name, qty: 0, revenue: 0, cost: 0, returns: 0, returnedCost: 0 }),
     (a, s) => {
       a.qty += 1;
       a.revenue += Number(s.revenue);
       a.cost += Number(s.cost);
     },
-  ).sort((a, b) => b.revenue - a.revenue);
+  );
+  mergeReturns(byCustomer, rets ?? [], (r) => r.customer_id, (r) => ({ key: r.customer_id, label: r.customer_name }), false);
+  byCustomer.sort((a, b) => b.revenue - a.revenue);
 
   // Sell-through: sold ÷ received in the period, per product
   const flow = new Map<string, { name: string; sku: string; unit: string; received: number; sold: number; shrunk: number }>();
@@ -80,6 +87,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
     const q = Math.abs(Number(m.qty_base));
     if (m.kind === "receive") f.received += q;
     if (m.kind === "sale") f.sold += q;
+    if (m.kind === "return") f.sold -= q;
     if (m.kind === "shrink") f.shrunk += q;
     flow.set(m.product_id, f);
   }
@@ -104,7 +112,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
 
   return (
     <>
-      <PageHeader title="Reports" subtitle={`${date(from)} – ${date(to)}`} />
+      <PageHeader title="Reports" subtitle={`${date(from)} – ${date(to)}`}>
+        <a href={`/export/sales-lines?from=${from}&to=${to}`} className="btn">
+          Export sales
+        </a>
+        <a href={`/export/returns`} className="btn">
+          Export returns
+        </a>
+        <a href={`/export/shrink?from=${from}&to=${to}`} className="btn">
+          Export shrink
+        </a>
+      </PageHeader>
 
       <form className="mb-6 flex flex-wrap items-end gap-2 print:hidden">
         <label>
@@ -125,7 +143,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
       </form>
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Revenue" value={money(revenue)} hint="fulfilled in period" />
+        <Stat label="Net revenue" value={money(revenue)} hint={credits ? `${money(grossRevenue)} sold − ${money(credits)} returns` : "fulfilled in period"} />
         <Stat label="COGS (FIFO)" value={money(cogs)} />
         <Stat label="Gross margin" value={money(revenue - cogs)} hint={pct(revenue ? (revenue - cogs) / revenue : null)} />
         <Stat label="Shrink" value={money(shrinkValue)} hint={pct(cogs + shrinkValue ? shrinkValue / (cogs + shrinkValue) : null) + " of goods out"} tone={shrinkValue ? "warn" : undefined} />
@@ -257,8 +275,9 @@ function MarginTable({ rows, qtyLabel, linkBase }: { rows: Agg[]; qtyLabel: stri
           <tr>
             <th>Name</th>
             <th className="num">{qtyLabel}</th>
-            <th className="num">Revenue</th>
-            <th className="num">Cost</th>
+            <th className="num">Sales</th>
+            <th className="num">Returns</th>
+            <th className="num">Net cost</th>
             <th className="num">Margin</th>
             <th className="num">Margin %</th>
           </tr>
@@ -276,10 +295,11 @@ function MarginTable({ rows, qtyLabel, linkBase }: { rows: Agg[]; qtyLabel: stri
                 {qty(r.qty)} {r.unit ?? ""}
               </td>
               <td className="num">{money(r.revenue)}</td>
-              <td className="num">{money(r.cost)}</td>
-              <td className="num">{money(r.revenue - r.cost)}</td>
-              <td className={`num ${r.revenue && (r.revenue - r.cost) / r.revenue < 0.15 ? "font-medium text-amber-700" : ""}`}>
-                {pct(r.revenue ? (r.revenue - r.cost) / r.revenue : null)}
+              <td className={`num ${r.returns ? "text-red-700" : "text-stone-400"}`}>{r.returns ? `−${money(r.returns)}` : "—"}</td>
+              <td className="num">{money(r.cost - r.returnedCost)}</td>
+              <td className="num">{money(net(r))}</td>
+              <td className={`num ${r.revenue - r.returns && net(r) / (r.revenue - r.returns) < 0.15 ? "font-medium text-amber-700" : ""}`}>
+                {pct(r.revenue - r.returns ? net(r) / (r.revenue - r.returns) : null)}
               </td>
             </tr>
           ))}
@@ -287,4 +307,28 @@ function MarginTable({ rows, qtyLabel, linkBase }: { rows: Agg[]; qtyLabel: stri
       </table>
     </div>
   );
+}
+
+const net = (r: Agg) => r.revenue - r.returns - (r.cost - r.returnedCost);
+
+/** Subtract returns from sales aggregates (adding rows for items only returned in this period). */
+function mergeReturns(
+  rows: Agg[],
+  rets: any[],
+  key: (r: any) => string,
+  init: (r: any) => Pick<Agg, "key" | "label" | "sub" | "unit">,
+  countQty: boolean,
+) {
+  const byKey = new Map(rows.map((r) => [r.key, r]));
+  for (const r of rets) {
+    let a = byKey.get(key(r));
+    if (!a) {
+      a = { ...init(r), qty: 0, revenue: 0, cost: 0, returns: 0, returnedCost: 0 };
+      rows.push(a);
+      byKey.set(a.key, a);
+    }
+    a.returns += Number(r.credit);
+    a.returnedCost += Number(r.cost);
+    if (countQty) a.qty -= Number(r.qty_base);
+  }
 }

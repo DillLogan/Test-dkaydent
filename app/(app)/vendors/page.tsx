@@ -19,7 +19,16 @@ export default async function VendorsPage({ searchParams }: { searchParams: SP }
 
   return (
     <>
-      <PageHeader title="Vendors" subtitle="Growers, distributors and hard goods suppliers" />
+      <PageHeader title="Vendors" subtitle="Growers, distributors and hard goods suppliers">
+        <a href="/export/vendors" className="btn">
+          Export CSV
+        </a>
+        {can(profile, "buyer") && (
+          <Link href="/import?entity=vendors" className="btn">
+            Import
+          </Link>
+        )}
+      </PageHeader>
       <ErrorBanner error={error} />
 
       <form className="mb-4 flex gap-2">

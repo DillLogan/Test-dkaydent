@@ -26,6 +26,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: SP
         <Link href="/customers/tiers" className="btn">
           Price tiers
         </Link>
+        <a href="/export/customers" className="btn">
+          Export CSV
+        </a>
+        {can(profile, "sales") && (
+          <Link href="/import?entity=customers" className="btn">
+            Import
+          </Link>
+        )}
       </PageHeader>
       <ErrorBanner error={error} />
 

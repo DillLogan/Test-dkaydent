@@ -102,7 +102,7 @@ export async function invoiceSO(id: string, fd: FormData) {
   redirect(`/invoices/${data}`);
 }
 
-export async function setInvoiceStatus(id: string, status: "paid" | "void" | "open") {
+export async function setInvoiceStatus(id: string, status: "paid" | "open") {
   const { supabase } = await requireRole("sales");
   const path = `/invoices/${id}`;
   const { error } = await supabase
@@ -113,4 +113,56 @@ export async function setInvoiceStatus(id: string, status: "paid" | "void" | "op
   revalidatePath(path);
   revalidatePath("/invoices");
   redirect(path);
+}
+
+export async function voidInvoice(id: string, soId: string) {
+  const { supabase } = await requireRole("sales");
+  const { error } = await supabase.rpc("void_invoice", { p_invoice_id: id });
+  if (error) fail(`/invoices/${id}`, dbMessage(error));
+  revalidatePath("/invoices");
+  redirect(`/sales/${soId}?message=${encodeURIComponent("Invoice voided. Correct the order if needed, then invoice again.")}`);
+}
+
+/** Fulfill using hand-picked lots. `picks` is JSON from the pick form. */
+export async function fulfillSOPicked(id: string, fd: FormData) {
+  const { supabase } = await requireRole("sales", "warehouse");
+  const path = `/sales/${id}`;
+  let picks: { so_line_id: string; lot_id: string; qty_base: number }[] = [];
+  try {
+    picks = JSON.parse(String(fd.get("picks") ?? "[]"));
+  } catch {
+    picks = [];
+  }
+  picks = picks.filter((p) => p && p.lot_id && Number(p.qty_base) > 0);
+  if (picks.length === 0) fail(path, "Enter quantities to pick, or use Fulfill oldest-first.");
+  const { error } = await supabase.rpc("fulfill_sales_order", { p_so_id: id, p_picks: picks });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  revalidatePath("/inventory");
+  redirect(`${path}?message=${encodeURIComponent("Stock pulled from the lots you picked. Ready to invoice.")}`);
+}
+
+export async function createReturn(id: string, lineIds: string[], fd: FormData) {
+  const { supabase } = await requireRole("sales", "warehouse");
+  const path = `/sales/${id}`;
+  const lines = lineIds
+    .map((lineId) => ({ so_line_id: lineId, qty: num(fd, `rqty_${lineId}`) ?? 0, restock: fd.get(`restock_${lineId}`) === "on" }))
+    .filter((l) => l.qty > 0);
+  if (lines.length === 0) fail(path, "Enter a quantity to return on at least one line.");
+  const { data, error } = await supabase.rpc("create_return", { p_so_id: id, p_lines: lines, p_reason: str(fd, "reason") });
+  if (error) fail(path, dbMessage(error));
+  const { data: r } = await supabase.from("returns").select("return_number, total").eq("id", data).single();
+  revalidatePath(path);
+  revalidatePath("/inventory");
+  revalidatePath("/returns");
+  redirect(`${path}?message=${encodeURIComponent(`${r?.return_number ?? "Return"} recorded. Customer credit $${Number(r?.total ?? 0).toFixed(2)}.`)}`);
+}
+
+export async function setCreditStatus(returnId: string, status: "open" | "applied" | "refunded", back: string) {
+  const { supabase } = await requireRole("sales");
+  const { error } = await supabase.from("returns").update({ credit_status: status }).eq("id", returnId);
+  if (error) fail(back, dbMessage(error));
+  revalidatePath(back);
+  revalidatePath("/returns");
+  redirect(back);
 }
