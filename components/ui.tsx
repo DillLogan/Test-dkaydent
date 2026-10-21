@@ -61,6 +61,9 @@ const STATUS_STYLES: Record<string, string> = {
   applied: "bg-brand-50 text-brand-700",
   refunded: "bg-blue-50 text-blue-700",
   inactive: "bg-stone-100 text-stone-500",
+  planned: "bg-stone-100 text-stone-700",
+  in_transit: "bg-blue-50 text-blue-700",
+  arrived: "bg-amber-50 text-amber-800",
 };
 
 export function StatusBadge({ status }: { status: string }) {

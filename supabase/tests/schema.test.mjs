@@ -208,6 +208,81 @@ await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: 
 await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Attic" }])], "Attic", "batch: unknown location rejected");
 ok(lotsMid - lotsBefore === 3, "batch: lot count");
 
+// ---------- Receiving: shipments + standing orders ----------
+{
+  const plus = async (n) => (await one(`select (current_date + $1::int)::text d`, [n])).d;
+  await expectErr(`insert into shipments (eta) values (current_date + 400)`, [], "one year out", "ETA limited to one year out");
+  const shp = await one(`insert into shipments (eta, carrier, tracking) values (current_date + 300, 'LATAM Cargo', '045-1234 5678') returning id, shipment_number`);
+  ok(/^SHP-10\d\d$/.test(shp.shipment_number), "shipment numbering");
+  // two POs on one shipment: one draft, one ordered
+  const pA = (await one(`insert into purchase_orders (vendor_id, freight_cost) values ($1, 20) returning id`, [vendor])).id;
+  const pB = (await one(`insert into purchase_orders (vendor_id) values ($1) returning id`, [vendor])).id;
+  const la = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,1,100) returning id`, [pA, rose, box.id])).id;
+  const lb = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,4,10) returning id`, [pB, rose, bunch.id])).id;
+  await q(`update purchase_orders set status='ordered' where id=$1`, [pB]);
+  await q(`select set_po_shipment($1,$2)`, [pA, shp.id]);
+  await q(`select set_po_shipment($1,$2)`, [pB, shp.id]);
+  ok((await one(`select expected_date::text d from purchase_orders where id=$1`, [pA])).d === await plus(300), "PO expected date follows shipment ETA");
+  await q(`update shipments set eta = current_date + 2 where id=$1`, [shp.id]);
+  ok((await one(`select expected_date::text d from purchase_orders where id=$1`, [pB])).d === await plus(2), "ETA change moves its POs");
+  const vs = await one(`select po_count, value, is_late from v_shipments where id=$1`, [shp.id]);
+  ok(Number(vs.po_count) === 2 && Number(vs.value) === 160 && vs.is_late === false, "shipment rollup: 2 POs, $160");
+  await expectErr(`update shipments set status='received' where id=$1`, [shp.id], "directly", "cannot mark shipment received directly");
+  await q(`update shipments set status='in_transit' where id=$1`, [shp.id]);
+  await expectErr(`select receive_shipment($1, $2::jsonb)`, [shp.id, JSON.stringify([{ line_id: l2, qty: 1, location_id: cooler1 }])], "isn't on this shipment", "lines from other POs rejected");
+  const res = await one(`select receive_shipment($1, $2::jsonb) r`, [shp.id, JSON.stringify([
+    { line_id: la, qty: 1, location_id: cooler1 }, { line_id: lb, qty: 3, location_id: cooler2, lot_code: "AWB-LOT" }])]);
+  ok(res.r.pos === 2 && res.r.lots === 2, "receive_shipment: 2 POs, 2 lots");
+  const sts = await q(`select status from purchase_orders where id in ($1,$2) order by po_number`, [pA, pB]);
+  ok(sts.map((s) => s.status).join(",") === "received,partially_received", "draft PO auto-ordered and received; short line stays partial");
+  const lotLanded = await one(`select unit_cost_base from lots where po_line_id=$1`, [la]);
+  ok(Math.abs(Number(lotLanded.unit_cost_base) - 0.48) < 1e-9, "landed cost via receive_po (100/250 * 1.2 = 0.48)");
+  ok((await one(`select status, received_at is not null r from shipments where id=$1`, [shp.id])).status === "received", "shipment received");
+  await expectErr(`update shipments set carrier='x' where id=$1`, [shp.id], "cannot be changed", "received shipment is locked");
+  await expectErr(`select set_po_shipment($1,$2)`, [pA, shp.id], "can't be moved", "received PO can't move");
+  const s2 = (await one(`insert into shipments (eta) values (current_date + 5) returning id`)).id;
+  await q(`select set_po_shipment($1,$2)`, [pB, s2]);
+  ok(true, "partially received PO can move to the next shipment");
+  const late = (await one(`insert into shipments (eta) values (current_date - 2) returning id`)).id;
+  ok((await one(`select is_late from v_shipments where id=$1`, [late])).is_late === true, "late flag");
+
+  // standing order: weekly, 12 months
+  const so = (await one(`insert into standing_orders (name, vendor_id, cadence, start_date, lead_days, carrier, freight_cost)
+                         values ('Weekly roses', $1, 'weekly', current_date + 3, 5, 'KLM Cargo', 15) returning id`, [vendor])).id;
+  ok((await one(`select generate_standing_orders($1) n`, [so])).n === 0, "no lines -> nothing generated");
+  await q(`insert into standing_order_lines (standing_order_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,2,95)`, [so, rose, box.id]);
+  const n = (await one(`select generate_standing_orders($1) n`, [so])).n;
+  ok(n === 52 || n === 53, `weekly order generated ${n} planned POs over 12 months`);
+  ok((await one(`select generate_standing_orders($1) n`, [so])).n === 0, "generation is idempotent");
+  const gen = await q(`select po.id, po.status, po.order_date::text od, po.expected_date::text ed, s.eta::text eta, s.carrier,
+                        (select count(*) from purchase_order_lines where po_id = po.id)::int lines
+                         from purchase_orders po join shipments s on s.id = po.shipment_id
+                        where po.standing_order_id=$1 order by po.occurrence_date`, [so]);
+  ok(gen[0].status === "draft" && gen[0].eta === await plus(3) && gen[0].carrier === "KLM Cargo" && gen[0].lines === 1, "occurrence = draft PO + planned shipment + lines");
+  ok(gen[0].od === await plus(0) && gen[1].od === await plus(5), "order date = arrival - lead days (not in the past)");
+  ok(gen.every((g) => g.eta <= gen[gen.length - 1].eta) && gen[gen.length - 1].eta <= await plus(365), "nothing past 12 months");
+  // edit one, skip one
+  await q(`update purchase_order_lines set qty = 3 where po_id=$1`, [gen[1].id]);
+  ok((await one(`select customized from purchase_orders where id=$1`, [gen[1].id])).customized === true, "editing a planned PO marks it customized");
+  await q(`select skip_planned_po($1)`, [gen[2].id]);
+  ok((await one(`select status from purchase_orders where id=$1`, [gen[2].id])).status === "cancelled", "skip cancels the occurrence");
+  ok((await one(`select status from shipments where eta::text=$1 and notes like 'Standing order:%'`, [gen[2].eta])).status === "cancelled", "skipped occurrence's empty shipment cancelled");
+  ok((await one(`select generate_standing_orders($1) n`, [so])).n === 0, "skipped occurrence not recreated");
+  await expectErr(`delete from purchase_orders where id=$1`, [gen[3].id], "Skip it instead", "generated POs can't be deleted");
+  // pause: only untouched future drafts go
+  const removed = (await one(`select set_standing_order_state($1,'pause') n`, [so])).n;
+  const left = await q(`select id, status from purchase_orders where standing_order_id=$1 order by occurrence_date`, [so]);
+  ok(removed === n - 2 && left.length === 2, `pause removed ${removed} untouched occurrences, kept edited + skipped`);
+  ok((await one(`select count(*)::int c from shipments where notes = 'Standing order: Weekly roses' and status='planned'`)).c === 1, "their empty shipments removed");
+  ok((await one(`select set_standing_order_state($1,'resume') n`, [so])).n === removed, "resume regenerates them");
+  await q(`select set_standing_order_state($1,'end')`, [so]);
+  ok((await one(`select active, end_date::text e from standing_orders where id=$1`, [so])).e === await plus(3), "end sets end date");
+  // monthly cadence
+  const m = (await one(`insert into standing_orders (name, vendor_id, cadence, start_date, end_date) values ('Monthly HG', $1, 'monthly', current_date + 10, current_date + 95) returning id`, [vendor])).id;
+  await q(`insert into standing_order_lines (standing_order_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,1,50)`, [m, rose, box.id]);
+  ok((await one(`select generate_standing_orders($1) n`, [m])).n === 3, "monthly with end date: 3 occurrences");
+}
+
 // ---------- Floor plan, home areas, photos ----------
 const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
 await q(`select set_home_location($1, $2)`, [tulip.id, c1]);
@@ -243,6 +318,8 @@ ok(true, "sales can create draft SO + lines");
 await expectErr(`insert into returns (so_id, customer_id) values ($1,$2)`, [so.id, cust], "row-level security", "returns only via create_return");
 await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Not authorized", "sales can't import stock");
 await expectErr(`select set_home_location($1, null)`, [rose], "Not authorized", "sales can't set home areas");
+await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-level security", "sales can't plan shipments");
+await expectErr(`select generate_standing_orders()`, [], "Not authorized", "sales can't run standing orders");
 ok((await db.query(`update shop_layout set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
 ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");
