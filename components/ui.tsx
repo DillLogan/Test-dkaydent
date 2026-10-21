@@ -119,7 +119,7 @@ export function Stat({
     </>
   );
   return href ? (
-    <Link href={href} className="card block hover:border-brand-500">
+    <Link href={href} className="lift card block hover:border-brand-500">
       {body}
     </Link>
   ) : (

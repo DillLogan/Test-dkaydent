@@ -136,14 +136,14 @@ export default async function LabelsPage({ searchParams }: { searchParams: SP })
           {all.map((l) => (
             <div
               key={l.key}
-              className="flex break-inside-avoid flex-col rounded-md border border-stone-300 bg-white p-3 print:rounded-none print:border-stone-400 print:p-2"
+              className="lift flex break-inside-avoid flex-col rounded-md border border-[#d6d3d1] bg-[#ffffff] p-3 text-[#1c1917] print:rounded-none print:border-[#a8a29e] print:p-2"
             >
               <div className="truncate text-sm leading-tight font-semibold">{l.title}</div>
-              <div className="mb-1 font-mono text-[11px] text-stone-500">{l.sku}</div>
+              <div className="mb-1 font-mono text-[11px] text-[#78716c]">{l.sku}</div>
               <Barcode value={l.code} className="h-12 w-full" />
               <div className="mt-1 text-center font-mono text-sm font-semibold tracking-wider">{l.code}</div>
               {l.lines.map((line, i) => (
-                <div key={i} className="truncate text-[11px] text-stone-600">
+                <div key={i} className="truncate text-[11px] text-[#57534e]">
                   {line}
                 </div>
               ))}
