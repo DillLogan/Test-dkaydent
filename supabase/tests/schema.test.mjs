@@ -423,6 +423,61 @@ await as(sales);
 await expectErr(`select receive_po($1, '[]')`, [po2], "Not authorized", "sales cannot receive");
 await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not authorized", "sales cannot transfer");
 
+// ---------- Web store connection ----------
+{
+  await as(admin);
+  const lot = (name) => one(`select coalesce(sum(qty_on_hand_base),0)::numeric q from lots l join products p on p.id=l.product_id where p.sku=$1`, [name]);
+  const freedom = Number((await lot("RO-FRE-60")).q);
+  // service key (website webhook / scheduled job), no signed-in user
+  await as("");
+  await expectErr(`select web_store_apply_inventory('[]'::jsonb)`, [], "Not authorized", "web sync needs the service key or a warehouse user");
+  await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', false)`);
+  const inv = (await one(`select web_store_apply_inventory($1::jsonb, 'webhook') r`, [JSON.stringify([
+    { sku: "ro-fre-60", qty: freedom + 50 }, { sku: "WEB-ROSE-BUNCH", qty: 3 }, { sku: "EU-SDL", qty: 0 }, { sku: "", qty: 4 }])])).r;
+  ok(inv.updated >= 1 && inv.unmatched.includes("WEB-ROSE-BUNCH"), `inventory synced: ${JSON.stringify(inv)}`);
+  ok(Number((await lot("RO-FRE-60")).q) === freedom + 50, "website count raises on-hand");
+  ok(Number((await lot("EU-SDL")).q) === 0, "website zero empties the item");
+  const mv = await one(`select count(*) c from stock_movements where reason='Web sync'`);
+  ok(Number(mv.c) >= 1, "changes recorded as Web sync adjustments");
+  ok((await one(`select seen_in from web_unmatched_skus where external_sku='WEB-ROSE-BUNCH'`)).seen_in === "inventory", "unmatched website SKU listed");
+  await expectErr(`select web_store_apply_inventory('[{"sku":"RO-FRE-60","qty":"lots"}]'::jsonb)`, [], "not a number", "bad quantity rejected");
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  // link the website SKU to bunches of Freedom (as a buyer/admin)
+  await as(admin);
+  const bunchU = (await one(`select u.id from product_units u join products p on p.id=u.product_id where p.sku='RO-FRE-60' and u.name='bunch'`)).id;
+  const freedomId = (await one(`select id from products where sku='RO-FRE-60'`)).id;
+  await q(`select web_link_sku('WEB-ROSE-BUNCH', $1, $2)`, [freedomId, bunchU]);
+  ok(Number((await one(`select count(*) c from web_unmatched_skus`)).c) === 0, "linking clears it from unmatched");
+  // web order: created confirmed; second time is a no-op
+  const order = { external_id: "5001", number: "#5001", email: "orders@bloomvine.example", name: "Ana", ordered_at: "2026-10-22T09:00:00Z", ship_date: "2026-10-23",
+    lines: [{ sku: "WEB-ROSE-BUNCH", qty: 2, price: 21 }, { sku: "HY-WHT", qty: 10 }] };
+  const r1 = (await one(`select web_store_upsert_order($1::jsonb) r`, [JSON.stringify(order)])).r;
+  ok(r1.result === "created", "web order becomes a sales order");
+  const wso = await one(`select status, source, customer_id, notes from sales_orders where id=$1`, [r1.so_id]);
+  ok(wso.status === "confirmed" && wso.source === "web" && /Web order #5001/.test(wso.notes), "confirmed, marked as a web order");
+  ok((await one(`select name from customers where id=$1`, [wso.customer_id])).name === "Web orders", "no matching email → Web orders customer");
+  const lines = await q(`select qty, unit_price, (select name from product_units where id=unit_id) u from sales_order_lines where so_id=$1 order by unit_price desc`, [r1.so_id]);
+  ok(lines.length === 2 && lines[0].u === "bunch" && Number(lines[0].unit_price) === 21, "linked SKU uses its unit and the website price");
+  const fallback = (await one(`select customer_unit_price($1, (select u.id from product_units u join products p on p.id=u.product_id where p.sku='HY-WHT' and u.factor=1)) p`, [wso.customer_id])).p;
+  ok(Number(lines[1].unit_price) === Number(fallback), "missing price falls back to the customer's price");
+  const r2 = (await one(`select web_store_upsert_order($1::jsonb) r`, [JSON.stringify(order)])).r;
+  ok(r2.result === "exists" && r2.so_id === r1.so_id, "same web order isn't imported twice");
+  // stock promised to the open web order isn't counted twice by the next count
+  const before = Number((await lot("RO-FRE-60")).q);
+  await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', false)`);
+  await q(`select web_store_apply_inventory($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: before - 50 }])]);
+  ok(Number((await lot("RO-FRE-60")).q) === before - 50 + 50, "open web orders are added back on top of the website count");
+  // unmatched SKU → order waits as a draft
+  const r3 = (await one(`select web_store_upsert_order($1::jsonb) r`, [JSON.stringify({ external_id: "5002", lines: [{ sku: "MYSTERY", qty: 1 }, { sku: "HY-WHT", qty: 5 }] })])).r;
+  ok(r3.result === "needs_review" && (await one(`select status from sales_orders where id=$1`, [r3.so_id])).status === "draft", "unmatched SKU leaves the web order as a draft to review");
+  // cancelled on the website
+  const r4 = (await one(`select web_store_upsert_order($1::jsonb) r`, [JSON.stringify({ ...order, cancelled: true })])).r;
+  ok(r4.result === "cancelled" && (await one(`select status from sales_orders where id=$1`, [r1.so_id])).status === "cancelled", "website cancellation cancels the order");
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await as(admin);
+  ok(Number((await one(`select count(*) c from web_sync_runs`)).c) >= 2, "sync history kept");
+}
+
 // RLS checks as the authenticated role
 await as(admin);
 await db.exec(`grant usage on schema public to authenticated;
@@ -447,6 +502,9 @@ await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-le
 await expectErr(`select generate_standing_orders()`, [], "Not authorized", "sales can't run standing orders");
 await expectErr(`insert into payments (customer_id, kind, method, amount) values ($1,'payment','cash',1)`, [cust], "row-level security", "payments only through record_payment");
 await expectErr(`insert into payment_terminals (name, model, epi) values ('T','VL100','X1')`, [], "row-level security", "only admins add terminals");
+ok((await q(`select api_key from web_store_settings`)).length === 0, "web store settings (API key, secret) hidden from sales");
+await expectErr(`select web_store_apply_inventory('[]'::jsonb)`, [], "Not authorized", "sales can't push web inventory");
+await expectErr(`select web_store_config()`, [], "Not authorized", "sales can't read the web store secrets");
 ok((await db.query(`update shop_layouts set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
 ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");

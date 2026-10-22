@@ -22,7 +22,8 @@ Purchasing, inventory and sales tracking for a wholesale flower and hard goods o
 | **CSV** | Import **stock on hand** as a batch (each row a lot; new SKUs created and **auto-sorted into categories** by editable keyword rules). Export products, vendors, customers, lots, movements, POs, sales orders, invoices, returns, and report data. Import products (with pack units), vendors and customers from CSV with a row-by-row preview and errors before anything is saved; downloadable templates. |
 | **Barcodes & label printing** | Code 128 labels for any product (single, or tick several on the Products list) and for lots — from a lot, a PO's receipts, or any filtered lot list. Prints through the computer's print dialog, so any connected printer works. **Label printer** mode prints one label per page at the exact label size (2.25×1.25, 2×1, 3×2, 4×2, 4×6 in, DYMO 30252 or custom); **Regular printer** mode lays labels out on letter or A4 paper with cut lines. Defaults are set per computer in **Settings → Printing** and can be changed for any single print. **Scan** page works with USB/Bluetooth scanners and the phone or tablet camera, and opens the matching lot, product, PO, order, invoice or return. |
 | **Reports** | Net revenue, FIFO COGS, gross margin, shrink — by product and customer for any date range, with returns shown. Sell-through and shrink rate per product. Inventory aging buckets (flowers vs hard goods). |
-| **Settings** | Appearance: Light, Dark or System (follows the device and switches with it). Saved per browser and applied before the page draws. Invoices and labels always print light. |
+| **Settings** | Appearance: four palettes (**Fern** white and green by default, **Peony & eucalyptus**, **Ranunculus & linen**, **Hydrangea & stone**), each in Light, Dark or System. Saved per browser; invoices, labels and pull tickets always print in black and white. Products and lots show as photo cards or a table (remembered per browser). |
+| **Web store** | Connects the shop's separate ordering website (Admin → Web store). Its stock counts are the source of truth: each count sets on-hand here for matched SKUs, plus whatever open web orders still need (so nothing is counted twice), recorded as **Web sync** adjustments. Web orders become **confirmed sales orders** once each (matched to a customer by email, else a Web orders customer); an order with an unknown SKU waits as a draft. Data arrives by **signed webhook** as it happens, by **Sync now**, and by a daily scheduled pull. A field-name table maps the website's own JSON, a sample preview checks it, and unknown website SKUs are linked to an item and unit. |
 | **Dashboard** | Inventory value, lots expiring within 3 days, items at reorder point, open POs, orders to fulfill, open and overdue invoices, 30-day revenue and margin. |
 
 ### Roles
@@ -68,12 +69,19 @@ Until Valor gives you developer access, terminal charges run on a **built-in sim
 4. Check every line marked `UNCONFIRMED` in `lib/valor/connect.ts` against Valor's docs (credential headers, status/cancel calls, response field names). The documented fields (TRAN_MODE/TRAN_CODE, amount in cents, INVOICENUMBER, REQ_TXN_ID, STAN) are already used.
 5. Optional: point Valor's transaction notifications at `/api/valor/webhook` with `VALOR_WEBHOOK_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` set (format also unconfirmed).
 
+### 5. Web store connection (optional)
+1. Set `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project settings → API) and a random `CRON_SECRET` in Vercel.
+2. In the app: **Admin → Web store**. Turn it on, enter the website's inventory and orders addresses (JSON over https) and API key (sent as `Authorization: Bearer …`), make a webhook secret, and fill in the field names to match the website's JSON. Paste a sample under **Try a sample** to check.
+3. On the website, send webhooks to `/api/web-store/webhook?type=inventory` and `/api/web-store/webhook?type=order`, signed with header `X-Signature: sha256=<hex HMAC-SHA256 of the raw body using the secret>`.
+4. The orders address is called with `?since=<ISO time>` (parameter name configurable) so only recent orders come back; repeats are ignored.
+5. `vercel.json` runs the pull once a day (`/api/web-store/sync`), which is what Vercel's Hobby plan allows. On Pro you can change the schedule to every 15 minutes (`*/15 * * * *`), or have any scheduler call that address with `Authorization: Bearer $CRON_SECRET`.
+
 ## Tests
 
 ```bash
 npm run test:db
 ```
-Runs the migrations and seed in an embedded Postgres and checks 180 behaviors: unit conversion, landed cost, partial receiving, status locks, lot splitting, shrink, FIFO and hand-picked costing, all-or-nothing fulfillment, invoicing, voids and re-invoicing, returns to the original lots, credits, role checks and RLS, category rules, stock batches, layouts, entries/exits, home areas per shop, shipments and standing orders, payments, deposits, counter and terminal sales.
+Runs the migrations and seed in an embedded Postgres and checks 202 behaviors: unit conversion, landed cost, partial receiving, status locks, lot splitting, shrink, FIFO and hand-picked costing, all-or-nothing fulfillment, invoicing, voids and re-invoicing, returns to the original lots, credits, role checks and RLS, category rules, stock batches, layouts, entries/exits, home areas per shop, shipments and standing orders, payments, deposits, counter and terminal sales, MUST CHECK, and the web store connection (stock counts, open web orders added back, order import once, unmatched SKUs, cancellations, permissions).
 
 ## How the numbers work
 

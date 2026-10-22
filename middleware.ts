@@ -25,8 +25,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // The Valor webhook authenticates with its own shared secret.
-  const isPublic = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname === "/api/valor/webhook";
+  // The Valor and web store endpoints authenticate with their own shared secrets.
+  const isPublic =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname === "/api/valor/webhook" ||
+    request.nextUrl.pathname.startsWith("/api/web-store/"); // signed webhook and the scheduled sync check their own secrets
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
