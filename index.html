@@ -8,7 +8,7 @@
 <title>DKaydent Wholesale Demo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Gloock&family=Nunito+Sans:wght@400;500;600;700&family=Instrument+Serif&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: app shell like the real product — sidebar of operations on the left, working surface on the right; collapses to a top bar on phones.
    Palette: cool stone neutrals with a slight leaf bias, cooler-green brand, peony as the "demo" marker. */
@@ -410,6 +410,107 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
 .mc-sig { margin-top: 2px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
 .mc-tag { display: inline-block; border: 1px solid #dc2626; color: #dc2626; border-radius: 4px; padding: 0 4px; font-size: 10px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
 .pt-head dl { margin-left: auto; }
+
+
+/* ---------- Palettes (Settings → Appearance), same as the full app ----------
+   data-pal picks the palette; light/dark follows the existing theme rules. */
+:root[data-pal="fern"] { --font: 'Figtree', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --display: 'Newsreader', Georgia, serif; --dw: 500; }
+:root[data-pal="fern"], :root[data-pal="fern"][data-app-theme="light"] { --bg: #f6f8f5; --surface: #ffffff; --surface-2: #edf1ec; --line: #dfe6de; --line-soft: #edf1ec; --fg: #18211a; --muted: #6b786c; --faint: #96a396; --brand: #255e38; --brand-hover: #2f7345; --brand-soft: #eef6ef; --brand-ink: #1b4729; --shadow: 0 1px 2px color-mix(in srgb, #18211a 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #18211a 28%, transparent); color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root[data-pal="fern"]:not([data-theme="light"]):not([data-app-theme="light"]) { --bg: #101612; --surface: #18201b; --surface-2: #1f2822; --line: #2c372f; --line-soft: #1f2822; --fg: #eaf0eb; --muted: #9daaa0; --faint: #66746a; --brand: #7dc191; --brand-hover: #8fcb9f; --brand-soft: #1a2c20; --brand-ink: #b4dfbf; --shadow: 0 1px 2px color-mix(in srgb, #eaf0eb 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #eaf0eb 60%, transparent); color-scheme: dark; } }
+:root[data-pal="fern"][data-theme="dark"]:not([data-app-theme="light"]), :root[data-pal="fern"][data-app-theme="dark"] { --bg: #101612; --surface: #18201b; --surface-2: #1f2822; --line: #2c372f; --line-soft: #1f2822; --fg: #eaf0eb; --muted: #9daaa0; --faint: #66746a; --brand: #7dc191; --brand-hover: #8fcb9f; --brand-soft: #1a2c20; --brand-ink: #b4dfbf; --shadow: 0 1px 2px color-mix(in srgb, #eaf0eb 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #eaf0eb 60%, transparent); color-scheme: dark; }
+:root[data-pal="peony"] { --font: 'Figtree', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --display: 'Newsreader', Georgia, serif; --dw: 500; }
+:root[data-pal="peony"], :root[data-pal="peony"][data-app-theme="light"] { --bg: #eef2ec; --surface: #fbfcfa; --surface-2: #e4ebe2; --line: #d3ddd2; --line-soft: #e4ebe2; --fg: #1f3a2b; --muted: #66786a; --faint: #8fa08f; --brand: #9e3b5e; --brand-hover: #b84d72; --brand-soft: #fbeff3; --brand-ink: #7c2c49; --shadow: 0 1px 2px color-mix(in srgb, #1f3a2b 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #1f3a2b 28%, transparent); color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root[data-pal="peony"]:not([data-theme="light"]):not([data-app-theme="light"]) { --bg: #121915; --surface: #1a221d; --surface-2: #212b25; --line: #2f3b33; --line-soft: #212b25; --fg: #ecf1ed; --muted: #a2b2a6; --faint: #6c7d71; --brand: #e88fb0; --brand-hover: #f0a3bf; --brand-soft: #3a1e2a; --brand-ink: #f6c2d5; --shadow: 0 1px 2px color-mix(in srgb, #ecf1ed 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #ecf1ed 60%, transparent); color-scheme: dark; } }
+:root[data-pal="peony"][data-theme="dark"]:not([data-app-theme="light"]), :root[data-pal="peony"][data-app-theme="dark"] { --bg: #121915; --surface: #1a221d; --surface-2: #212b25; --line: #2f3b33; --line-soft: #212b25; --fg: #ecf1ed; --muted: #a2b2a6; --faint: #6c7d71; --brand: #e88fb0; --brand-hover: #f0a3bf; --brand-soft: #3a1e2a; --brand-ink: #f6c2d5; --shadow: 0 1px 2px color-mix(in srgb, #ecf1ed 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #ecf1ed 60%, transparent); color-scheme: dark; }
+:root[data-pal="ranunculus"] { --font: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --display: 'Gloock', Georgia, serif; --dw: 400; }
+:root[data-pal="ranunculus"], :root[data-pal="ranunculus"][data-app-theme="light"] { --bg: #f3efe8; --surface: #fffdf9; --surface-2: #ece6dc; --line: #e2d9cc; --line-soft: #ece6dc; --fg: #2b1e26; --muted: #7a6b66; --faint: #a3968a; --brand: #8a6214; --brand-hover: #a87a1c; --brand-soft: #fbf4e2; --brand-ink: #6b4b10; --shadow: 0 1px 2px color-mix(in srgb, #2b1e26 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #2b1e26 28%, transparent); color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root[data-pal="ranunculus"]:not([data-theme="light"]):not([data-app-theme="light"]) { --bg: #181216; --surface: #231b20; --surface-2: #2a2026; --line: #3a2e35; --line-soft: #2a2026; --fg: #f3ede8; --muted: #b0a2a6; --faint: #7b6b72; --brand: #e8bc5c; --brand-hover: #f0cb78; --brand-soft: #33270f; --brand-ink: #f5d995; --shadow: 0 1px 2px color-mix(in srgb, #f3ede8 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #f3ede8 60%, transparent); color-scheme: dark; } }
+:root[data-pal="ranunculus"][data-theme="dark"]:not([data-app-theme="light"]), :root[data-pal="ranunculus"][data-app-theme="dark"] { --bg: #181216; --surface: #231b20; --surface-2: #2a2026; --line: #3a2e35; --line-soft: #2a2026; --fg: #f3ede8; --muted: #b0a2a6; --faint: #7b6b72; --brand: #e8bc5c; --brand-hover: #f0cb78; --brand-soft: #33270f; --brand-ink: #f5d995; --shadow: 0 1px 2px color-mix(in srgb, #f3ede8 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #f3ede8 60%, transparent); color-scheme: dark; }
+:root[data-pal="hydrangea"] { --font: 'Outfit', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --display: 'Instrument Serif', Georgia, serif; --dw: 400; }
+:root[data-pal="hydrangea"], :root[data-pal="hydrangea"][data-app-theme="light"] { --bg: #edf0f4; --surface: #fafbfd; --surface-2: #e4e8ee; --line: #d6dce5; --line-soft: #e4e8ee; --fg: #1e2a3b; --muted: #67718a; --faint: #8e98a8; --brand: #4950a3; --brand-hover: #5a62bb; --brand-soft: #eff0fb; --brand-ink: #383e82; --shadow: 0 1px 2px color-mix(in srgb, #1e2a3b 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #1e2a3b 28%, transparent); color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root[data-pal="hydrangea"]:not([data-theme="light"]):not([data-app-theme="light"]) { --bg: #111623; --surface: #1a2030; --surface-2: #1f2636; --line: #2d3548; --line-soft: #1f2636; --fg: #eceff5; --muted: #a1aabd; --faint: #6a7489; --brand: #9ea5ea; --brand-hover: #b0b6f0; --brand-soft: #22264a; --brand-ink: #c8cdf6; --shadow: 0 1px 2px color-mix(in srgb, #eceff5 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #eceff5 60%, transparent); color-scheme: dark; } }
+:root[data-pal="hydrangea"][data-theme="dark"]:not([data-app-theme="light"]), :root[data-pal="hydrangea"][data-app-theme="dark"] { --bg: #111623; --surface: #1a2030; --surface-2: #1f2636; --line: #2d3548; --line-soft: #1f2636; --fg: #eceff5; --muted: #a1aabd; --faint: #6a7489; --brand: #9ea5ea; --brand-hover: #b0b6f0; --brand-soft: #22264a; --brand-ink: #c8cdf6; --shadow: 0 1px 2px color-mix(in srgb, #eceff5 5%, transparent), 0 10px 30px -18px color-mix(in srgb, #eceff5 60%, transparent); color-scheme: dark; }
+
+/* ---------- Florist look: softer type, shapes and motion (same as the full app) ---------- */
+:root { --ease: cubic-bezier(0.22, 1, 0.36, 1); --r: 16px; }
+body { font: 14.5px/1.55 var(--font); }
+h1, h2, .brand b, .stat .v, .disp { font-family: var(--display); font-weight: var(--dw); letter-spacing: -0.01em; }
+h1 { font-size: 32px; line-height: 1.15; }
+h2 { font-size: 20px; }
+.sub { font-size: 15px; }
+::selection { background: color-mix(in srgb, var(--brand) 25%, transparent); }
+:focus-visible { outline: 2px solid var(--brand-hover); outline-offset: 2px; }
+
+/* labels and headers in sentence case */
+label.f > span, .lbl { font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+th { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; background: transparent; padding: 11px 16px; }
+td { padding: 11px 16px; vertical-align: middle; }
+.stat .k { font-size: 13.5px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.stat .v { font-size: 30px; line-height: 1.2; }
+.side h6 { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; margin: 16px 12px 4px; }
+.brand small { font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.brand b { font-size: 22px; }
+.badge::first-letter { text-transform: uppercase; } .badge { text-transform: none; padding: 1px 10px; font-weight: 500; }
+
+/* shapes */
+.card, .stat, .tw, .empty, .modal, .theme-opt, .plan { border-radius: var(--r); }
+.card, .stat, .tw, .theme-opt { border-color: color-mix(in srgb, var(--line) 85%, transparent); box-shadow: var(--shadow); }
+.card { padding: 20px; }
+.banner { border-radius: 14px; padding: 12px 16px; animation: settle-in 420ms var(--ease) both; }
+.empty { padding: 36px 20px; font-size: 15px; background: color-mix(in srgb, var(--surface) 60%, transparent); }
+input, select, textarea { border-radius: 12px; padding: 8px 12px; border-color: var(--line); transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand-hover); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-hover) 18%, transparent); }
+.btn { border-radius: 999px; padding: 8px 16px; transition: background-color 200ms var(--ease), border-color 200ms var(--ease), color 200ms var(--ease), box-shadow 200ms var(--ease), transform 160ms var(--ease); box-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 6%, transparent); }
+.btn:not(:disabled):hover { transform: none; box-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 6%, transparent); border-color: color-mix(in srgb, var(--line) 60%, var(--muted)); }
+.btn:not(:disabled):active { transform: scale(.97); }
+.btn-p { border-color: transparent; box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--brand) 70%, transparent); }
+.btn-s { padding: 4px 12px; }
+.side button { border-radius: 999px; padding: 7px 12px; color: color-mix(in srgb, var(--fg) 80%, var(--muted)); }
+.side button:hover { transform: none; }
+.side button[aria-current="page"] { font-weight: 500; }
+.tabs { border-bottom: 0; gap: 6px; padding-bottom: 4px; }
+.tabs button { border: 0; border-radius: 999px; margin: 0; padding: 6px 16px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--brand); color: var(--surface); box-shadow: none; font-weight: 500; }
+.toast { border-radius: 999px; padding: 10px 20px; animation: toast-in 380ms var(--ease) both; }
+.thumb { border-radius: 10px; }
+.code { font-family: inherit; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+/* one calm page entrance, and settle-in for messages */
+@keyframes settle-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.wrap { animation-duration: 420ms !important; animation-timing-function: var(--ease) !important; }
+
+/* photo cards (products, lots) */
+.vt { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.vt button { border: 0; background: none; border-radius: 999px; padding: 4px 12px; color: var(--muted); cursor: pointer; font: inherit; }
+.vt button[aria-pressed="true"] { background: var(--brand); color: var(--surface); }
+.pcards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+.pcard { position: relative; background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 85%, transparent); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); transition: transform 260ms var(--ease), box-shadow 260ms var(--ease); }
+.pcard:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -16px color-mix(in srgb, var(--fg) 35%, transparent); }
+.pcard > button { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+.pcard .ph { display: grid; place-items: center; aspect-ratio: 4 / 3; width: 100%; object-fit: cover; font: 400 36px/1 var(--display); background: linear-gradient(160deg, hsl(var(--h, 140) 50% 91%), hsl(var(--h, 140) 40% 81%)); color: hsl(var(--h, 140) 40% 30%); }
+:root[data-theme="dark"]:not([data-app-theme="light"]) .pcard .ph:not(img), :root[data-app-theme="dark"] .pcard .ph:not(img) { background: linear-gradient(160deg, hsl(var(--h, 140) 24% 24%), hsl(var(--h, 140) 20% 17%)); color: hsl(var(--h, 140) 45% 82%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-app-theme="light"]) .pcard .ph:not(img) { background: linear-gradient(160deg, hsl(var(--h, 140) 24% 24%), hsl(var(--h, 140) 20% 17%)); color: hsl(var(--h, 140) 45% 82%); } }
+.pcard .bd { padding: 12px 14px 14px; display: grid; gap: 3px; }
+.pcard .nm { font-weight: 500; line-height: 1.3; }
+.pcard:hover .nm { color: var(--brand); }
+.pcard .meta { font-size: 12px; color: var(--muted); }
+.pcard .row2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-top: 4px; }
+.pcard .pill { position: absolute; right: 10px; top: calc(100% * 0); }
+.pcard .loc { position: absolute; right: 10px; bottom: auto; margin-top: -34px; background: color-mix(in srgb, var(--surface) 92%, transparent); border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 500; }
+.pcard .pick { position: absolute; z-index: 2; left: 10px; top: 10px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; background: color-mix(in srgb, var(--surface) 92%, transparent); }
+.pcard .pick input { width: auto; margin: 0; }
+
+/* palette picker */
+.pal-opts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.pal-mini { display: flex; height: 76px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.pal-mini > div { flex: 1; display: flex; gap: 6px; padding: 8px; }
+.pal-mini .s { width: 24%; border-radius: 6px; } .pal-mini .m { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.pal-mini .t { height: 7px; width: 65%; border-radius: 999px; } .pal-mini .c { flex: 1; border-radius: 6px; } .pal-mini .b { height: 9px; width: 35%; border-radius: 999px; }
+
+@media (prefers-reduced-motion: reduce) { .banner, .toast, .pcard { animation: none !important; transition: none !important; } .pcard:hover { transform: none; } }
+.head > .actions, .head > .mc-col { margin-left: auto; justify-content: flex-end; }
+.mc-col > .actions { justify-content: flex-end; }
 
 </style>
 
@@ -2348,15 +2449,23 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
 
   // ---------- appearance (per viewer) ----------
   // Light / Dark set data-app-theme, which overrides the viewer's theme; System clears it.
+  const PALETTES = [
+    ["fern", "Fern", "White and green", ["#f6f8f5", "#ffffff", "#18211a", "#255e38"], ["#101612", "#7dc191"]],
+    ["peony", "Peony & eucalyptus", "Misty green with peony pink", ["#eef2ec", "#fbfcfa", "#1f3a2b", "#9e3b5e"], ["#121915", "#e88fb0"]],
+    ["ranunculus", "Ranunculus & linen", "Warm linen with buttercup gold", ["#f3efe8", "#fffdf9", "#2b1e26", "#8a6214"], ["#181216", "#e8bc5c"]],
+    ["hydrangea", "Hydrangea & stone", "Cool stone with periwinkle", ["#edf0f4", "#fafbfd", "#1e2a3b", "#4950a3"], ["#111623", "#9ea5ea"]],
+  ];
   function applyTheme(choice, animate) {
     const root = document.documentElement;
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (animate && !reduce) root.classList.add("theme-anim");
     if (choice === "light" || choice === "dark") root.setAttribute("data-app-theme", choice);
     else root.removeAttribute("data-app-theme");
-    if (animate) setTimeout(() => root.classList.remove("theme-anim"), 350);
+    root.setAttribute("data-pal", PALETTES.some((p) => p[0] === ui.palette) ? ui.palette : "fern");
+    if (animate) setTimeout(() => root.classList.remove("theme-anim"), 450);
   }
   ui.theme = store.get("dk-theme", "system");
+  ui.palette = store.get("dk-palette", "fern");
   applyTheme(ui.theme, false);
 
   // ---------- format ----------
@@ -2549,7 +2658,7 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
       mode === "empty" ? `<span class="chip chip-local">No data yet</span>` : `<span class="chip chip-local">Connecting…</span>`;
     app.innerHTML = `
       <header class="topbar">
-        <button type="button" class="brand" data-go="dashboard"><small>DKaydent</small><b>Wholesale</b></button>
+        <button type="button" class="brand" data-go="dashboard"><b>DKaydent</b><small>Wholesale flowers &amp; goods</small></button>
         <span class="chip chip-demo">Demo · sample data</span>
         ${status}
         <label class="role" for="role">Viewing as
@@ -2686,8 +2795,16 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
         <label class="check"><input type="checkbox" name="inactive" ${ui.q.inactive ? "checked" : ""}> Include inactive</label>
         <button class="btn">Filter</button>
       </form>
-      ${list.length ? `<div class="row"><button type="button" class="btn" data-act="printSelected">Print labels for selected</button><span class="small">Tick any products, then print. Uses your print settings.</span></div>` : ""}
-      ${list.length ? table(["", "SKU", "Name", "Category", ">On hand", ">Avg landed cost", ">Value"], list.map((p) => {
+      ${list.length ? `<div class="row"><button type="button" class="btn" data-act="printSelected">Print labels for selected</button><span class="small">Tick any products, then print. Uses your print settings.</span><span style="margin-left:auto">${viewToggle("products")}</span></div>` : ""}
+      ${list.length && listView("products") === "cards" ? `<ul class="pcards" data-testid="product-cards">${list.map((p) => {
+        const s = st[p.id];
+        const low = p.reorder > 0 && (s?.qty || 0) <= p.reorder;
+        return `<li class="pcard"><label class="pick"><input type="checkbox" data-pl="${p.id}" aria-label="Select ${esc(p.name)} for labels"></label>
+          <button type="button" data-go="product" data-id="${p.id}">${cardPhoto(p.name, p.img)}<div class="bd"><div class="nm">${esc(p.name)} ${p.active ? "" : badge("inactive")}</div>
+          <div class="meta">${esc(p.category || (p.kind === "flower" ? "Flower" : "Hard good"))} · ${esc(p.sku)}</div>
+          <div class="row2"><span class="${low ? "t-warn" : ""}">${qty(s?.qty || 0)} ${esc(p.baseUnit)}</span><span class="small">${s?.avgCost ? money4(s.avgCost) + "/" + esc(p.baseUnit) : ""}</span></div></div></button></li>`;
+      }).join("")}</ul>`
+      : list.length ? table(["", "SKU", "Name", "Category", ">On hand", ">Avg landed cost", ">Value"], list.map((p) => {
         const s = st[p.id];
         const low = p.reorder > 0 && (s?.qty || 0) <= p.reorder;
         return `<tr><td><input type="checkbox" data-pl="${p.id}" aria-label="Select ${esc(p.name)} for labels"></td><td class="code nowrap">${esc(p.sku)}</td><td><div class="ic">${thumb(p.name, p.img, 34)}<div>${link("product", p.id, esc(p.name))} ${p.active ? "" : badge("inactive")}<div class="small">${p.kind === "flower" ? "Flower" : "Hard good"}</div></div></div></td><td>${esc(p.category || "—")}</td>
@@ -2980,12 +3097,19 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
         ${ui.q.product ? `<input type="hidden" name="product" value="${esc(ui.q.product)}"><span class="chip chip-demo">${esc(P(ui.q.product)?.name)}</span>` : ""}
         <button class="btn">Apply</button>${ui.q.q || ui.q.location || ui.q.kind || ui.q.product ? `<button type="button" class="btn" data-go="inventory" data-q='{"view":"${view}"}'>Clear</button>` : ""}
       </form>
-      ${tabs([["stock", "By product"], ["lots", "By lot"]], view, "invTab")}
+      <div class="row" style="justify-content:space-between;align-items:flex-end">${tabs([["stock", "By product"], ["lots", "By lot"]], view, "invTab")}${view === "lots" && lots.length ? viewToggle("lots") : ""}</div>
       ${!lots.length ? empty("Nothing on hand matches.") : view === "stock"
         ? table(["Product", ">On hand", ">Lots", ">Oldest", "Soonest expiry", ">Value"], Object.entries(byP).sort((a, b) => P(a[0]).name.localeCompare(P(b[0]).name)).map(([pid, x]) => {
             const p = P(pid);
             return `<tr><td><div class="ic">${thumb(p.name, p.img, 32)}<div>${link("product", pid, esc(p.name))}<div class="small code">${esc(p.sku)}</div></div></div></td><td class="n">${qty(x.qty)} ${esc(p.baseUnit)}</td><td class="n"><button type="button" class="lnk" data-go="inventory" data-q='${esc(JSON.stringify({ view: "lots", product: pid }))}'>${x.lots}</button></td><td class="n">${x.oldest}d</td><td>${expiry(x.soonest)}</td><td class="n">${money(x.value)}</td></tr>`;
           }))
+        : listView("lots") === "cards" ? `<ul class="pcards" data-testid="lot-cards">${lots.map((l) => {
+            const p = P(l.productId);
+            const d = daysTo(l.expires);
+            return `<li class="pcard"><button type="button" data-go="lot" data-id="${l.id}">${cardPhoto(p.name, l.img || p.img)}<div class="bd"><span class="loc">${esc(loc(l.locationId)?.name || "")}</span><div class="nm">${esc(p.name)}</div>
+              <div class="meta">Lot ${esc(l.code)} · received ${fdate(l.receivedAt)}</div>
+              <div class="row2"><span>${qty(l.qty)} ${esc(p.baseUnit)}</span><span class="small">${d !== null ? `Expires ${expiry(d)}` : `${DK.daysBetween(DK.ymd(l.receivedAt), today())}d old`}</span></div></div></button></li>`;
+          }).join("")}</ul>`
         : table(["Lot", "Product", "Location", "Received", ">Age", "Expires", ">On hand", ">Cost / base", ">Value"], lots.map((l) => {
             const p = P(l.productId);
             return `<tr><td>${link("lot", l.id, esc(l.code), "code nowrap")}</td><td><div class="ic">${thumb(p.name, l.img || p.img, 28)}<span>${esc(p.name)}</span></div></td><td>${esc(loc(l.locationId)?.name)}</td><td>${fdate(l.receivedAt)}</td><td class="n">${DK.daysBetween(DK.ymd(l.receivedAt), today())}d</td><td>${expiry(daysTo(l.expires))}</td><td class="n">${qty(l.qty)} ${esc(p.baseUnit)}</td><td class="n">${money4(l.cost)}</td><td class="n">${money(l.qty * l.cost)}</td></tr>`;
@@ -3324,8 +3448,15 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
       ["dark", "Dark", "Always dark", '<div class="D"><div class="s"></div><div class="m"><div class="t"></div><div class="c"></div><div class="b"></div></div></div>'],
       ["system", "System", "Match this device", '<div class="L"><div class="s"></div><div class="m"><div class="t"></div><div class="c"></div><div class="b"></div></div></div><div class="D"><div class="s"></div><div class="m"><div class="t"></div><div class="c"></div><div class="b"></div></div></div>'],
     ];
+    const palMini = (L, D) => `<div class="pal-mini" aria-hidden="true"><div style="background:${L[0]}"><div class="s" style="background:${L[1]}"></div><div class="m"><div class="t" style="background:${L[2]}"></div><div class="c" style="background:${L[1]}"></div><div class="b" style="background:${L[3]}"></div></div></div><div style="background:${D[0]}"><div class="s" style="background:${D[0]};filter:brightness(1.6)"></div><div class="m"><div class="t" style="background:${L[0]}"></div><div class="c" style="background:${D[0]};filter:brightness(1.6)"></div><div class="b" style="background:${D[1]}"></div></div></div></div>`;
     return `${head("Settings", "Preferences for you on this device")}
-      ${section("Appearance", `<p class="sub" style="margin:0">Choose how the app looks. System follows your device's (or Claude app's) light or dark setting and switches with it. This only changes your view, not your teammates'.</p>
+      ${section("Appearance", `<p class="sub" style="margin:0">Pick a colour palette and whether it shows light or dark. System follows your device's (or Claude app's) setting and switches with it. This only changes your view, not your teammates'.</p>
+        <span class="lbl">Colours</span>
+        <div class="pal-opts" role="radiogroup" aria-label="Colours">${PALETTES.map(([v, l, h, L, D]) => `
+          <button type="button" class="theme-opt" role="radio" aria-checked="${ui.palette === v}" data-act="setPalette" data-v="${v}">${palMini(L, D)}
+            <span class="head" style="align-items:center"><span><b>${l}</b><div class="small">${h}</div></span><span class="dot"></span></span>
+          </button>`).join("")}</div>
+        <span class="lbl">Light or dark</span>
         <div class="theme-opts" role="radiogroup" aria-label="Theme">${opts.map(([v, l, h, mini]) => `
           <button type="button" class="theme-opt" role="radio" aria-checked="${ui.theme === v}" data-act="setTheme" data-v="${v}">
             <div class="mini" aria-hidden="true">${mini}</div>
@@ -3534,6 +3665,12 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
     sampleCsv: () => { const e = ["products", "vendors", "customers"].includes(ui.q.entity) ? ui.q.entity : "products"; loadCsv(e, SAMPLE_CSV[e], `sample-${e}.csv`); },
     doImport: () => { const imp = ui.imp; commit("importRows", { entity: imp.entity, rows: imp.rows }, { after: () => { ui.imp = null; }, msg: (r) => `Imported ${r.created} new and updated ${r.updated} ${imp.entity}` }); },
     scanTry: (el) => FORMS.scan({ code: el.dataset.v }),
+    setPalette: (el) => {
+      ui.palette = el.dataset.v;
+      store.set("dk-palette", ui.palette);
+      applyTheme(ui.theme, true);
+      document.querySelectorAll("[data-act=setPalette]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v === ui.palette)));
+    },
     setTheme: (el) => {
       ui.theme = el.dataset.v;
       store.set("dk-theme", ui.theme);
@@ -3733,6 +3870,13 @@ tr.bad-row td { background: var(--bad-soft); } tr.warn-row td { background: var(
   const thumb = (name, img, size = 32) => img
     ? `<img class="thumb" src="${imgUrl(img)}" alt="${esc(name)}" width="${size}" height="${size}" style="width:${size}px;height:${size}px" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'thumb ph',textContent:'${esc(initials(name))}'}))">`
     : `<span class="thumb ph" style="width:${size}px;height:${size}px;--h:${hue(name)}" aria-hidden="true">${esc(initials(name))}</span>`;
+  // photo cards: full-width photo, or a soft category tile with initials
+  const cardPhoto = (name, img) => img
+    ? `<img class="ph" src="${imgUrl(img)}" alt="${esc(name)}" loading="lazy">`
+    : `<div class="ph" style="--h:${hue(name)}" aria-hidden="true">${esc(initials(name))}</div>`;
+  const listView = (list) => (store.get("dk-view-" + list, "cards") === "table" ? "table" : "cards");
+  const viewToggle = (list) => `<span class="vt" role="group" aria-label="Show as">${[["cards", "Cards"], ["table", "Table"]].map(([v, l]) => `<button type="button" aria-pressed="${listView(list) === v}" data-act="setView" data-id="${list}" data-v="${v}">${l}</button>`).join("")}</span>`;
+  ACTS.setView = (el) => { store.set("dk-view-" + el.dataset.id, el.dataset.v); render(); };
   const photoControl = (kind, id, img, name, roles) => {
     const can0 = can(...roles) && writable();
     return `<div class="photo">${img ? `<img src="${imgUrl(img)}" alt="${esc(name)}" class="photo-big">` : `<div class="photo-big ph" style="--h:${hue(name)}">${esc(initials(name))}<span class="small">No photo yet</span></div>`}
