@@ -64,7 +64,7 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
         {req && req.message && req.status === "approved" && req.message.startsWith("Paid, but") && <ErrorBanner error={req.message} />}
         <div className="card mx-auto max-w-md space-y-4" data-testid="counter-receipt">
           <div className="text-center">
-            <div className="text-xs font-semibold tracking-widest text-brand-700 uppercase">Sale complete</div>
+            <div className="text-sm font-medium text-brand-700">Sale complete</div>
             <div className="text-3xl font-semibold tabular-nums">{money(inv!.total)}</div>
             <div className="text-sm text-stone-500">
               {inv!.invoice_number} · {(inv as any).customers?.name} · {inv!.status === "paid" ? "Paid" : "Balance due"}

@@ -99,7 +99,7 @@ export function PickForm({ lines, action }: { lines: PickLine[]; action: (fd: Fo
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-stone-200 bg-stone-50 px-3 py-2">
               <div>
                 <span className="font-medium">{l.product}</span>{" "}
-                <span className="font-mono text-xs text-stone-500">{l.sku}</span>
+                <span className="text-xs text-stone-500 tabular-nums">{l.sku}</span>
               </div>
               <div className={`text-sm tabular-nums ${ok ? "text-brand-700" : "font-medium text-amber-700"}`}>
                 Picked {fmt(totals[l.id])} of {fmt(l.need)} {l.base_unit}
@@ -124,7 +124,7 @@ export function PickForm({ lines, action }: { lines: PickLine[]; action: (fd: Fo
                     const key = `${l.id}:${lot.lot_id}`;
                     return (
                       <tr key={lot.lot_id} className={flash === key ? "bg-brand-50" : ""}>
-                        <td className="font-mono text-xs">{lot.lot_code}</td>
+                        <td className="text-xs tabular-nums">{lot.lot_code}</td>
                         <td>{lot.location}</td>
                         <td>{lot.received}</td>
                         <td className={lot.days_to_expiry !== null && lot.days_to_expiry <= 3 ? "font-medium text-amber-700" : ""}>

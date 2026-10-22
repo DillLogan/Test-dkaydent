@@ -10,8 +10,8 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" subtitle="Preferences for this browser" />
       <Section title="Appearance">
         <p className="mb-3 text-sm text-stone-500">
-          Choose how DKaydent Wholesale looks. System follows your device&apos;s light or dark setting and switches with it. Saved on this
-          device; invoices and labels always print in light.
+          Pick a colour palette and whether it shows light or dark. System follows your device and switches with it. Saved on this device;
+          invoices, labels and pull tickets always print in black and white.
         </p>
         <ThemePicker />
       </Section>

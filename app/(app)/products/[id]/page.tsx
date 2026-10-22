@@ -77,7 +77,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         title={product.name}
         subtitle={
           <>
-            <span className="font-mono">{product.sku}</span> · {product.kind === "flower" ? "Flower" : "Hard good"}
+            <span className="tabular-nums">{product.sku}</span> · {product.kind === "flower" ? "Flower" : "Hard good"}
             {product.category ? ` · ${product.category}` : ""}
           </>
         }

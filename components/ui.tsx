@@ -15,16 +15,16 @@ export function PageHeader({
   corner?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6">
+    <div className="mb-8">
       {back && (
-        <Link href={back.href} className="mb-2 inline-block text-sm text-stone-500 hover:text-stone-800 print:hidden">
+        <Link href={back.href} className="mb-3 inline-block text-sm text-stone-500 transition-colors hover:text-brand-700 print:hidden">
           ← {back.label}
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className={corner ? "min-w-0 flex-1 basis-80" : undefined}>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && <div className="mt-1 text-sm text-stone-500">{subtitle}</div>}
+          <h1 className="text-[2rem] leading-tight text-stone-900">{title}</h1>
+          {subtitle && <div className="mt-1.5 text-[15px] text-stone-500">{subtitle}</div>}
         </div>
         {corner ? (
           <div className="ml-auto flex flex-col items-end gap-3">
@@ -42,7 +42,7 @@ export function PageHeader({
 export function ErrorBanner({ error }: { error?: string | null }) {
   if (!error) return null;
   return (
-    <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <div role="alert" className="settle-in mb-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm text-red-800">
       {error}
     </div>
   );
@@ -51,7 +51,7 @@ export function ErrorBanner({ error }: { error?: string | null }) {
 export function Notice({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <div className="mb-4 rounded-md border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-800">{message}</div>
+    <div role="status" className="settle-in mb-5 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-3.5 text-sm text-brand-800">{message}</div>
   );
 }
 
@@ -79,7 +79,7 @@ const STATUS_STYLES: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap capitalize ${
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap first-letter:uppercase ${
         STATUS_STYLES[status] ?? "bg-stone-100 text-stone-700"
       }`}
     >
@@ -100,9 +100,9 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={`mb-8 ${className}`}>
+    <section className={`mb-10 ${className}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-xl text-stone-900">{title}</h2>
         {actions && <div className="flex gap-2 print:hidden">{actions}</div>}
       </div>
       {children}
@@ -126,8 +126,8 @@ export function Stat({
   const color = tone === "bad" ? "text-red-700" : tone === "warn" ? "text-amber-700" : "text-stone-900";
   const body = (
     <>
-      <div className="text-xs font-medium tracking-wide text-stone-500 uppercase">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${color}`}>{value}</div>
+      <div className="text-sm text-stone-500">{label}</div>
+      <div className={`font-display mt-1 text-[2rem] leading-tight tabular-nums ${color}`}>{value}</div>
       {hint && <div className="mt-1 text-xs text-stone-500">{hint}</div>}
     </>
   );
@@ -142,7 +142,7 @@ export function Stat({
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
+    <div className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-10 text-center text-[15px] text-stone-500">
       {children}
     </div>
   );
@@ -168,15 +168,16 @@ export function Field({
 /** Tabs driven by a search param. */
 export function Tabs({ items, current }: { items: { href: string; label: string; key: string }[]; current: string }) {
   return (
-    <div className="mb-4 flex gap-1 overflow-x-auto border-b border-stone-200">
+    <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
       {items.map((t) => (
         <Link
           key={t.key}
           href={t.href}
-          className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
+          aria-current={t.key === current ? "page" : undefined}
+          className={`rounded-full px-4 py-1.5 text-sm whitespace-nowrap transition-colors duration-200 ${
             t.key === current
-              ? "border-brand-700 font-medium text-brand-800"
-              : "border-transparent text-stone-500 hover:text-stone-800"
+              ? "bg-brand-700 font-medium text-white"
+              : "bg-white text-stone-600 ring-1 ring-stone-200 hover:text-stone-900 hover:ring-stone-300"
           }`}
         >
           {t.label}

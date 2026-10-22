@@ -24,7 +24,7 @@ export function ItemThumb({
         alt={name}
         loading="lazy"
         style={style}
-        className={`shrink-0 rounded-md border border-stone-200 bg-stone-100 object-cover ${className}`}
+        className={`shrink-0 rounded-lg border border-stone-200 bg-stone-100 object-cover ${className}`}
       />
     );
   }
@@ -32,13 +32,8 @@ export function ItemThumb({
   return (
     <span
       aria-hidden="true"
-      style={{
-        ...style,
-        fontSize: Math.max(10, size * 0.34),
-        background: `hsl(${hue} 45% 88%)`,
-        color: `hsl(${hue} 45% 28%)`,
-      }}
-      className="inline-grid shrink-0 place-items-center rounded-md font-semibold tracking-wide"
+      style={{ ...style, fontSize: Math.max(10, size * 0.34), ["--h" as string]: hue }}
+      className="tile-thumb inline-grid shrink-0 place-items-center rounded-lg font-semibold tracking-wide"
     >
       {initials(name)}
     </span>
@@ -64,8 +59,27 @@ export function ItemCell({
       <ItemThumb path={path} name={typeof name === "string" ? name : sku ?? "?"} category={category} size={34} />
       <div className="min-w-0">
         {children ?? name}
-        {sku && <div className="font-mono text-xs text-stone-500">{sku}</div>}
+        {sku && <div className="text-xs text-stone-500 tabular-nums">{sku}</div>}
       </div>
+    </div>
+  );
+}
+
+/** Full-width photo for cards; a soft category-coloured tile with initials when there's no photo. */
+export function ItemPhoto({ path, name, category }: { path?: string | null; name: string; category?: string | null }) {
+  const url = imageUrl(path);
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt={name} loading="lazy" className="aspect-[4/3] w-full bg-stone-100 object-cover" />;
+  }
+  const hue = tileColor(category || name);
+  return (
+    <div
+      aria-hidden="true"
+      className="tile-photo font-display grid aspect-[4/3] w-full place-items-center text-4xl"
+      style={{ ["--h" as string]: hue }}
+    >
+      {initials(name)}
     </div>
   );
 }

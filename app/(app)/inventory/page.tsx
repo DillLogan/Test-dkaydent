@@ -3,7 +3,9 @@ import { getSession } from "@/lib/auth";
 import { searchTerm } from "@/lib/forms";
 import { date, money, qty, sum, unitMoney } from "@/lib/format";
 import { Empty, ErrorBanner, ExpiryText, PageHeader, Stat, Tabs } from "@/components/ui";
-import { ItemCell } from "@/components/ItemThumb";
+import { ItemCell, ItemPhoto } from "@/components/ItemThumb";
+import { ViewToggle } from "@/components/ViewToggle";
+import { listView } from "@/lib/view";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -23,9 +25,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
       ? lotsQ.order("expires_at", { ascending: true, nullsFirst: false })
       : lotsQ.order("received_at", { ascending: true });
 
-  const [{ data: lots }, { data: locations }] = await Promise.all([
+  const [{ data: lots }, { data: locations }, lotView] = await Promise.all([
     lotsQ.limit(1000),
     supabase.from("locations").select("id, name").order("name"),
+    listView("lots"),
   ]);
   const rows = lots ?? [];
 
@@ -122,13 +125,20 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
         )}
       </form>
 
-      <Tabs
-        current={view}
-        items={[
-          { key: "stock", label: "By product", href: qs({ view: "stock" }) },
-          { key: "lots", label: "By lot", href: qs({ view: "lots" }) },
-        ]}
-      />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Tabs
+          current={view}
+          items={[
+            { key: "stock", label: "By product", href: qs({ view: "stock" }) },
+            { key: "lots", label: "By lot", href: qs({ view: "lots" }) },
+          ]}
+        />
+        {view === "lots" && rows.length > 0 && (
+          <div className="mb-4">
+            <ViewToggle list="lots" view={lotView} />
+          </div>
+        )}
+      </div>
 
       {rows.length === 0 ? (
         <Empty>Nothing on hand matches. Receive a purchase order to add stock.</Empty>
@@ -173,6 +183,41 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
             </tbody>
           </table>
         </div>
+      ) : lotView === "cards" ? (
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" data-testid="lot-cards">
+          {rows.map((l) => (
+            <li key={l.lot_id} className="lift group overflow-hidden rounded-2xl border border-stone-200/80 bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
+              <Link href={`/inventory/lots/${l.lot_id}`} className="block">
+                <div className="relative">
+                  <ItemPhoto path={l.lot_image || l.product_image} name={l.product_name} category={l.category} />
+                  <span className="absolute right-2.5 bottom-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-stone-800 shadow-sm">
+                    {l.location_name}
+                  </span>
+                </div>
+                <div className="space-y-1 p-3.5">
+                  <div className="leading-snug font-medium text-stone-900 group-hover:text-brand-700">{l.product_name}</div>
+                  <div className="text-xs text-stone-500 tabular-nums">
+                    Lot {l.lot_code} · received {date(l.received_at)}
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2 pt-1 text-sm">
+                    <span className="text-stone-700">
+                      {qty(l.qty_on_hand_base)} {l.base_unit}
+                    </span>
+                    <span className="text-xs">
+                      {l.days_to_expiry !== null ? (
+                        <>
+                          Expires <ExpiryText days={l.days_to_expiry} />
+                        </>
+                      ) : (
+                        <span className="text-stone-500">{l.age_days}d old</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -193,7 +238,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
               {rows.map((l) => (
                 <tr key={l.lot_id}>
                   <td>
-                    <Link href={`/inventory/lots/${l.lot_id}`} className="link font-mono text-xs">
+                    <Link href={`/inventory/lots/${l.lot_id}`} className="link text-xs font-medium tabular-nums">
                       {l.lot_code}
                     </Link>
                   </td>

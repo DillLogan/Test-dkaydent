@@ -167,9 +167,9 @@ export function TerminalSyncForm({
                         <tr key={it.key} className={c ? "" : "bg-amber-50/60"}>
                           <td>
                             {it.name || "—"}
-                            {it.sku && <div className="font-mono text-xs text-stone-500">{it.sku}</div>}
+                            {it.sku && <div className="text-xs text-stone-500 tabular-nums">{it.sku}</div>}
                             {c && c.source !== "picked" && (
-                              <div className="text-[10px] font-semibold text-brand-700 uppercase">
+                              <div className="text-[11px] font-medium text-brand-700">
                                 {c.source === "saved" ? "remembered" : `matched by ${c.source}`}
                               </div>
                             )}

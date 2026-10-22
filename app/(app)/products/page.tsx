@@ -4,7 +4,9 @@ import { can } from "@/lib/roles";
 import { searchTerm } from "@/lib/forms";
 import { money, qty, unitMoney } from "@/lib/format";
 import { Empty, ErrorBanner, PageHeader, StatusBadge } from "@/components/ui";
-import { ItemThumb } from "@/components/ItemThumb";
+import { ItemPhoto, ItemThumb } from "@/components/ItemThumb";
+import { ViewToggle } from "@/components/ViewToggle";
+import { listView } from "@/lib/view";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -24,7 +26,7 @@ export default async function ProductsPage({
     );
   if (kind === "flower" || kind === "hard_good") query = query.eq("kind", kind);
   if (!inactive) query = query.eq("active", true);
-  const { data: products } = await query;
+  const [{ data: products }, view] = await Promise.all([query, listView("products")]);
 
   return (
     <>
@@ -80,12 +82,48 @@ export default async function ProductsPage({
       ) : (
         <form action="/labels" method="get">
           <input type="hidden" name="from" value="products" />
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <button className="btn">Print labels for selected</button>
             <span className="text-xs text-stone-500">
               Tick any products, then print. Uses your print settings.
             </span>
+            <span className="ml-auto">
+              <ViewToggle list="products" view={view} />
+            </span>
           </div>
+          {view === "cards" ? (
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" data-testid="product-cards">
+              {products.map((p) => {
+                const low = Number(p.reorder_point_base) > 0 && Number(p.qty_on_hand_base) <= Number(p.reorder_point_base);
+                return (
+                  <li key={p.product_id} className="lift group relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
+                    <label className="absolute top-2.5 left-2.5 z-10 grid h-7 w-7 cursor-pointer place-items-center rounded-full bg-white/90 shadow-sm">
+                      <input type="checkbox" name="pid" value={p.product_id} aria-label={`Select ${p.name} for labels`} />
+                    </label>
+                    <Link href={`/products/${p.product_id}`} className="block">
+                      <ItemPhoto path={p.image_path} name={p.name} category={p.category} />
+                      <div className="space-y-1 p-3.5">
+                        <div className="leading-snug font-medium text-stone-900 group-hover:text-brand-700">
+                          {p.name} {!p.active && <StatusBadge status="inactive" />}
+                        </div>
+                        <div className="text-xs text-stone-500">
+                          {p.category ?? (p.kind === "flower" ? "Flower" : "Hard good")} · <span className="tabular-nums">{p.sku}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between gap-2 pt-1 text-sm">
+                          <span className={low ? "font-medium text-amber-700" : "text-stone-700"}>
+                            {qty(p.qty_on_hand_base)} {p.base_unit}
+                          </span>
+                          <span className="text-xs text-stone-500 tabular-nums">
+                            {p.avg_cost_base ? `${unitMoney(p.avg_cost_base)}/${p.base_unit}` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -116,7 +154,7 @@ export default async function ProductsPage({
                           aria-label={`Select ${p.name} for labels`}
                         />
                       </td>
-                      <td className="font-mono text-xs whitespace-nowrap">
+                      <td className="text-xs whitespace-nowrap text-stone-500 tabular-nums">
                         {p.sku}
                       </td>
                       <td>
@@ -159,6 +197,7 @@ export default async function ProductsPage({
               </tbody>
             </table>
           </div>
+          )}
         </form>
       )}
     </>
