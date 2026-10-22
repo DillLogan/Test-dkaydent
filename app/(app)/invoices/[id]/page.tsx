@@ -75,12 +75,12 @@ export default async function InvoicePage({ params, searchParams }: Props) {
       <article className="card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none">
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-xs font-semibold tracking-widest text-brand-700 uppercase">DKaydent</div>
+            <div className="font-display text-xl text-brand-700">DKaydent</div>
             <div className="text-xl font-semibold">Wholesale</div>
           </div>
           <div className="text-right">
             <div className="text-2xl font-semibold">Invoice</div>
-            <div className="font-mono">{inv.invoice_number}</div>
+            <div className="tabular-nums">{inv.invoice_number}</div>
             <div className="mt-1 print:hidden">
               <StatusBadge status={overdue ? "overdue" : inv.status} />
             </div>
@@ -132,7 +132,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
               <tr key={l.id}>
                 <td>
                   {l.products?.name}
-                  <div className="font-mono text-xs text-stone-500">{l.products?.sku}</div>
+                  <div className="text-xs text-stone-500 tabular-nums">{l.products?.sku}</div>
                 </td>
                 <td className="num">
                   {qty(l.qty)} {l.product_units?.name}

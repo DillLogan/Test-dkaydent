@@ -68,7 +68,7 @@ export default async function MovementsPage({ searchParams }: { searchParams: SP
                   <td>{KINDS[m.kind]}</td>
                   <td>{m.products?.name}</td>
                   <td>
-                    <Link href={`/inventory/lots/${m.lot_id}`} className="link font-mono text-xs">
+                    <Link href={`/inventory/lots/${m.lot_id}`} className="link text-xs font-medium tabular-nums">
                       {m.lots?.lot_code}
                     </Link>
                   </td>

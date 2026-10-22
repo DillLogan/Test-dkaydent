@@ -96,7 +96,7 @@ export function TerminalCharge({
     <div className={`card space-y-3 border-2 ${tone}`} role="status" aria-live="polite" data-terminal-status={status}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <div className="text-xs font-medium tracking-wide text-stone-500 uppercase">{terminalName}</div>
+          <div className="text-sm text-stone-500">{terminalName}</div>
           <div className="text-xl font-semibold">
             {TITLE[status]} · {amount}
           </div>

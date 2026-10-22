@@ -183,7 +183,7 @@ export default async function POPage({ params, searchParams }: Props) {
                   <tr key={r.id}>
                     <td>
                       {r.products.name}
-                      <div className="font-mono text-xs text-stone-500">{r.products.sku}</div>
+                      <div className="text-xs text-stone-500 tabular-nums">{r.products.sku}</div>
                     </td>
                     <td className="num">
                       {qty(r.qty)} {r.product_units.name}

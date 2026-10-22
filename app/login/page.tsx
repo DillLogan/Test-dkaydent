@@ -10,11 +10,11 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="card w-full max-w-sm p-6">
+      <div className="card page-in w-full max-w-sm p-8">
         <div className="mb-6">
-          <div className="text-xs font-semibold tracking-widest text-brand-700 uppercase">DKaydent</div>
-          <h1 className="text-xl font-semibold">Wholesale</h1>
-          <p className="text-sm text-stone-500">{isSignup ? "Create an account" : "Sign in to continue"}</p>
+          <h1 className="text-4xl leading-none text-stone-900">DKaydent</h1>
+          <div className="mt-1 text-brand-700">Wholesale flowers &amp; goods</div>
+          <p className="mt-4 text-[15px] text-stone-500">{isSignup ? "Create an account" : "Sign in to continue"}</p>
         </div>
 
         {inactive && (

@@ -170,7 +170,7 @@ export default async function RecurringSalePage({
                   <tr key={l.id}>
                     <td>
                       {l.products.name}
-                      <div className="font-mono text-xs text-stone-500">
+                      <div className="text-xs text-stone-500 tabular-nums">
                         {l.products.sku}
                       </div>
                     </td>

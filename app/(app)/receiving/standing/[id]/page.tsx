@@ -110,7 +110,7 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
                   <tr key={l.id}>
                     <td>
                       {l.products.name}
-                      <div className="font-mono text-xs text-stone-500">{l.products.sku}</div>
+                      <div className="text-xs text-stone-500 tabular-nums">{l.products.sku}</div>
                     </td>
                     <td className="num">
                       {qty(l.qty)} {l.product_units.name}

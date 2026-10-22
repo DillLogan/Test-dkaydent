@@ -76,7 +76,7 @@ export default async function LotPage({ params, searchParams }: Props) {
   return (
     <>
       <PageHeader
-        title={<span className="font-mono">{lot.lot_code}</span>}
+        title={<span className="tabular-nums">{lot.lot_code}</span>}
         subtitle={
           <>
             <Link href={`/products/${lot.products.id}`} className="link">

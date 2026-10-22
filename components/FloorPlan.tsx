@@ -427,7 +427,7 @@ export function FloorPlan(props: {
                     >
                       <ItemThumb path={m.image} name={m.name} category={m.category} size={28} />
                       <span className="min-w-0 flex-1 truncate">{m.name}</span>
-                      <span className="font-mono text-xs text-stone-500">{m.sku}</span>
+                      <span className="text-xs text-stone-500 tabular-nums">{m.sku}</span>
                     </button>
                   </li>
                 ))}
@@ -700,7 +700,7 @@ export function FloorPlan(props: {
                 <Link href={`/products/${item.id}`} className="link font-semibold">
                   {item.name}
                 </Link>
-                <div className="font-mono text-xs text-stone-500">{item.sku}</div>
+                <div className="text-xs text-stone-500 tabular-nums">{item.sku}</div>
                 <div className="text-xs text-stone-500">{item.category ?? "Uncategorized"}</div>
               </div>
             </div>

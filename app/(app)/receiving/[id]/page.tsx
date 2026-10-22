@@ -101,7 +101,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
             {s.tracking && (
               <>
                 {" · "}
-                <span className="font-mono">{s.tracking}</span>
+                <span className="tabular-nums">{s.tracking}</span>
               </>
             )}
             {s.received_at && ` · received ${dateTime(s.received_at)}`}

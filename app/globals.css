@@ -5,71 +5,185 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  --color-brand-50: #f2f6f1;
-  --color-brand-100: #e0eadd;
-  --color-brand-500: #4f7d56;
-  --color-brand-600: #3d6844;
-  --color-brand-700: #2e5234;
-  --color-brand-800: #233f28;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-white: #ffffff;
+  --color-stone-50: #f6f8f5;
+  --color-stone-100: #edf1ec;
+  --color-stone-200: #dfe6de;
+  --color-stone-300: #c8d2c7;
+  --color-stone-400: #96a396;
+  --color-stone-500: #6b786c;
+  --color-stone-600: #4f5b50;
+  --color-stone-700: #3a443b;
+  --color-stone-800: #263027;
+  --color-stone-900: #18211a;
+  --color-brand-50: #eef6ef;
+  --color-brand-100: #d6ead9;
+  --color-brand-500: #3f8a55;
+  --color-brand-600: #2f7345;
+  --color-brand-700: #255e38;
+  --color-brand-800: #1b4729;
+  --font-sans: var(--app-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--app-display), Georgia, "Times New Roman", serif;
+}
+
+/* ---------- Palettes ----------
+   Chosen in Settings → Appearance and set as data-palette on <html> (Fern when unset).
+   Each palette remaps the neutral (stone), surface (white) and accent (brand) colours
+   plus the two typefaces, so every page follows. Screen only: invoices, labels and
+   pull tickets always print in plain black and white. */
+:root {
+  --ff-newsreader: "Newsreader Variable";
+  --ff-figtree: "Figtree Variable";
+  --ff-gloock: "Gloock";
+  --ff-nunito-sans: "Nunito Sans Variable";
+  --ff-instrument-serif: "Instrument Serif";
+  --ff-outfit: "Outfit Variable";
+  --app-sans: var(--ff-figtree);
+  --app-display: var(--ff-newsreader);
+  --display-weight: 500;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-soft: 0 1px 2px color-mix(in srgb, var(--color-stone-900) 5%, transparent),
+    0 10px 30px -18px color-mix(in srgb, var(--color-stone-900) 28%, transparent);
+}
+[data-palette="peony"] { --app-sans: var(--ff-figtree); --app-display: var(--ff-newsreader); --display-weight: 500; }
+[data-palette="ranunculus"] { --app-sans: var(--ff-nunito-sans); --app-display: var(--ff-gloock); --display-weight: 400; }
+[data-palette="hydrangea"] { --app-sans: var(--ff-outfit); --app-display: var(--ff-instrument-serif); --display-weight: 400; }
+
+@media screen {
+  :root[data-palette="peony"] {
+    --color-white: #fbfcfa;
+    --color-stone-50: #eef2ec;
+    --color-stone-100: #e4ebe2;
+    --color-stone-200: #d3ddd2;
+    --color-stone-300: #bacab9;
+    --color-stone-400: #8fa08f;
+    --color-stone-500: #66786a;
+    --color-stone-600: #4a5c4f;
+    --color-stone-700: #36483c;
+    --color-stone-800: #263a2e;
+    --color-stone-900: #1f3a2b;
+    --color-brand-50: #fbeff3;
+    --color-brand-100: #f5e1e8;
+    --color-brand-500: #c9658a;
+    --color-brand-600: #b84d72;
+    --color-brand-700: #9e3b5e;
+    --color-brand-800: #7c2c49;
+  }
+  :root[data-palette="ranunculus"] {
+    --color-white: #fffdf9;
+    --color-stone-50: #f3efe8;
+    --color-stone-100: #ece6dc;
+    --color-stone-200: #e2d9cc;
+    --color-stone-300: #cfc3b3;
+    --color-stone-400: #a3968a;
+    --color-stone-500: #7a6b66;
+    --color-stone-600: #5e4d52;
+    --color-stone-700: #4a3a41;
+    --color-stone-800: #3a2a33;
+    --color-stone-900: #2b1e26;
+    --color-brand-50: #fbf4e2;
+    --color-brand-100: #f6ebd2;
+    --color-brand-500: #c9962b;
+    --color-brand-600: #a87a1c;
+    --color-brand-700: #8a6214;
+    --color-brand-800: #6b4b10;
+  }
+  :root[data-palette="hydrangea"] {
+    --color-white: #fafbfd;
+    --color-stone-50: #edf0f4;
+    --color-stone-100: #e4e8ee;
+    --color-stone-200: #d6dce5;
+    --color-stone-300: #bec6d2;
+    --color-stone-400: #8e98a8;
+    --color-stone-500: #67718a;
+    --color-stone-600: #4d576c;
+    --color-stone-700: #3a4357;
+    --color-stone-800: #283244;
+    --color-stone-900: #1e2a3b;
+    --color-brand-50: #eff0fb;
+    --color-brand-100: #e6e8f8;
+    --color-brand-500: #6c74c9;
+    --color-brand-600: #5a62bb;
+    --color-brand-700: #4950a3;
+    --color-brand-800: #383e82;
+  }
+}
+
+@layer base {
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-brand-500) 28%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 focus:outline-none disabled:bg-stone-100 disabled:text-stone-500;
+    @apply w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none disabled:bg-stone-100 disabled:text-stone-500;
     transition:
-      border-color 150ms ease,
-      box-shadow 150ms ease;
+      border-color 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out);
+  }
+  .input:focus {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-brand-500) 18%, transparent);
   }
   .label {
-    @apply mb-1 block text-xs font-medium tracking-wide text-stone-500 uppercase;
+    @apply mb-1.5 block text-sm font-medium text-stone-600;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-1 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium whitespace-nowrap text-stone-800 hover:border-stone-300 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-stone-900) 6%, transparent);
     transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease,
-      box-shadow 150ms ease,
-      transform 120ms ease;
-  }
-  .btn:not(:disabled):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--color-stone-900) 22%, transparent);
+      background-color 200ms var(--ease-out),
+      border-color 200ms var(--ease-out),
+      color 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out),
+      transform 160ms var(--ease-out);
   }
   .btn:not(:disabled):active {
-    transform: translateY(0) scale(0.98);
-    box-shadow: none;
+    transform: scale(0.97);
   }
   .btn-primary {
-    @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-600;
+    @apply border-transparent bg-brand-700 text-white hover:border-transparent hover:bg-brand-600;
+    box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--color-brand-700) 70%, transparent);
   }
   .btn-danger {
-    @apply border-red-300 text-red-700 hover:bg-red-50;
+    @apply border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50;
   }
   .btn-sm {
-    @apply px-2 py-1 text-xs;
+    @apply px-3 py-1 text-xs;
   }
   .card {
-    @apply rounded-lg border border-stone-200 bg-white p-4 shadow-xs;
+    @apply rounded-2xl border border-stone-200/80 bg-white p-5;
+    box-shadow: var(--shadow-soft);
   }
   .table-wrap {
-    @apply overflow-x-auto rounded-lg border border-stone-200 bg-white;
+    @apply overflow-x-auto rounded-2xl border border-stone-200/80 bg-white;
+    box-shadow: var(--shadow-soft);
   }
   .table {
     @apply w-full text-left text-sm;
   }
   .table th {
-    @apply border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium tracking-wide whitespace-nowrap text-stone-500 uppercase;
+    @apply border-b border-stone-200 px-4 py-3 text-[13px] font-medium whitespace-nowrap text-stone-500;
   }
   .table td {
-    @apply border-b border-stone-100 px-3 py-2 align-top;
+    @apply border-b border-stone-100 px-4 py-3 align-middle;
   }
   .table tbody tr {
-    transition: background-color 150ms ease;
+    transition: background-color 200ms var(--ease-out);
   }
   .table tbody tr:hover {
-    background-color: color-mix(in srgb, var(--color-brand-50) 65%, transparent);
+    background-color: color-mix(in srgb, var(--color-brand-50) 70%, transparent);
   }
   .table tr:last-child td {
     @apply border-b-0;
@@ -79,60 +193,39 @@
   }
   .link {
     @apply text-brand-700;
-    /* animated underline */
     background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
     transition:
-      background-size 200ms ease,
-      color 150ms ease;
+      background-size 260ms var(--ease-out),
+      color 200ms var(--ease-out);
   }
   .link:hover {
     background-size: 100% 1px;
   }
   .lift {
     transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      border-color 160ms ease;
+      transform 260ms var(--ease-out),
+      box-shadow 260ms var(--ease-out),
+      border-color 200ms var(--ease-out);
   }
   .lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--color-stone-900) 35%, transparent);
+    box-shadow: 0 14px 30px -16px color-mix(in srgb, var(--color-stone-900) 35%, transparent);
   }
   .nav-link {
     transition:
-      background-color 150ms ease,
-      color 150ms ease,
-      transform 150ms ease;
+      background-color 220ms var(--ease-out),
+      color 220ms var(--ease-out);
   }
-  .nav-link:hover {
-    transform: translateX(2px);
+  .settle-in {
+    animation: settle-in 420ms var(--ease-out) both;
   }
 }
 
-/* ---------- Dark theme ----------
-   Tailwind utilities read colors from these variables, so remapping them here
-   themes every page. Screen only: invoices and labels always print light. */
+/* ---------- Dark ---------- */
 @media screen {
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --color-white: #1a1e1b;
     --color-black: #000000;
-    --color-stone-50: #121513;
-    --color-stone-100: #222723;
-    --color-stone-200: #323933;
-    --color-stone-300: #434b44;
-    --color-stone-400: #6f7971;
-    --color-stone-500: #a3ada5;
-    --color-stone-600: #bdc6bf;
-    --color-stone-700: #d3dad4;
-    --color-stone-800: #e1e6e2;
-    --color-stone-900: #e9ede8;
-    --color-brand-50: #1c2a1f;
-    --color-brand-100: #2b3f2f;
-    --color-brand-500: #6fa678;
-    --color-brand-600: #95c49c;
-    --color-brand-700: #7fb487;
-    --color-brand-800: #b9dcbd;
     --color-red-50: #3a1f1c;
     --color-red-200: #6b2f29;
     --color-red-300: #8a3a32;
@@ -149,6 +242,82 @@
     --color-blue-800: #a5c9ee;
     --color-violet-50: #2b2440;
     --color-violet-700: #c0a6ec;
+  }
+  :root[data-theme="dark"] {
+    --color-white: #18201b;
+    --color-stone-50: #101612;
+    --color-stone-100: #1f2822;
+    --color-stone-200: #2c372f;
+    --color-stone-300: #3d4a40;
+    --color-stone-400: #66746a;
+    --color-stone-500: #9daaa0;
+    --color-stone-600: #bac5bc;
+    --color-stone-700: #d0d9d2;
+    --color-stone-800: #e0e7e1;
+    --color-stone-900: #eaf0eb;
+    --color-brand-50: #1a2c20;
+    --color-brand-100: #26402e;
+    --color-brand-500: #5fae77;
+    --color-brand-600: #8fcb9f;
+    --color-brand-700: #7dc191;
+    --color-brand-800: #b4dfbf;
+  }
+  :root[data-theme="dark"][data-palette="peony"] {
+    --color-white: #1a221d;
+    --color-stone-50: #121915;
+    --color-stone-100: #212b25;
+    --color-stone-200: #2f3b33;
+    --color-stone-300: #405046;
+    --color-stone-400: #6c7d71;
+    --color-stone-500: #a2b2a6;
+    --color-stone-600: #becac1;
+    --color-stone-700: #d3dcd5;
+    --color-stone-800: #e2e9e3;
+    --color-stone-900: #ecf1ed;
+    --color-brand-50: #3a1e2a;
+    --color-brand-100: #50283a;
+    --color-brand-500: #d9799c;
+    --color-brand-600: #f0a3bf;
+    --color-brand-700: #e88fb0;
+    --color-brand-800: #f6c2d5;
+  }
+  :root[data-theme="dark"][data-palette="ranunculus"] {
+    --color-white: #231b20;
+    --color-stone-50: #181216;
+    --color-stone-100: #2a2026;
+    --color-stone-200: #3a2e35;
+    --color-stone-300: #4d3f47;
+    --color-stone-400: #7b6b72;
+    --color-stone-500: #b0a2a6;
+    --color-stone-600: #cbbfc1;
+    --color-stone-700: #ded4d3;
+    --color-stone-800: #eae2df;
+    --color-stone-900: #f3ede8;
+    --color-brand-50: #33270f;
+    --color-brand-100: #4a3815;
+    --color-brand-500: #d9a63e;
+    --color-brand-600: #f0cb78;
+    --color-brand-700: #e8bc5c;
+    --color-brand-800: #f5d995;
+  }
+  :root[data-theme="dark"][data-palette="hydrangea"] {
+    --color-white: #1a2030;
+    --color-stone-50: #111623;
+    --color-stone-100: #1f2636;
+    --color-stone-200: #2d3548;
+    --color-stone-300: #3e475c;
+    --color-stone-400: #6a7489;
+    --color-stone-500: #a1aabd;
+    --color-stone-600: #bec5d4;
+    --color-stone-700: #d3d9e4;
+    --color-stone-800: #e2e7ef;
+    --color-stone-900: #eceff5;
+    --color-brand-50: #22264a;
+    --color-brand-100: #2e3363;
+    --color-brand-500: #8890dd;
+    --color-brand-600: #b0b6f0;
+    --color-brand-700: #9ea5ea;
+    --color-brand-800: #c8cdf6;
   }
 }
 
@@ -168,8 +337,8 @@ html.theme-anim *::after {
 /* Page entrance on navigation (app/(app)/template.tsx) */
 @keyframes page-in {
   from {
-    opacity: 0.55;
-    transform: translateY(6px);
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -177,7 +346,17 @@ html.theme-anim *::after {
   }
 }
 .page-in {
-  animation: page-in 220ms ease-out both;
+  animation: page-in 420ms var(--ease-out) both;
+}
+@keyframes settle-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -187,9 +366,8 @@ html.theme-anim *::after {
     animation: none !important;
     transition: none !important;
   }
-  .btn:not(:disabled):hover,
-  .lift:hover,
-  .nav-link:hover {
+  .btn:not(:disabled):active,
+  .lift:hover {
     transform: none;
   }
 }
@@ -208,4 +386,24 @@ html.theme-anim *::after {
 }
 .plan-pulse {
   animation: plan-pulse 1.6s ease-in-out infinite;
+}
+
+/* ---------- Item tiles (no photo yet), coloured by category ---------- */
+.tile-thumb {
+  background: hsl(var(--h) 45% 88%);
+  color: hsl(var(--h) 45% 28%);
+}
+.tile-photo {
+  background: linear-gradient(160deg, hsl(var(--h) 50% 91%), hsl(var(--h) 40% 81%));
+  color: hsl(var(--h) 40% 30%);
+}
+@media screen {
+  :root[data-theme="dark"] .tile-thumb {
+    background: hsl(var(--h) 22% 24%);
+    color: hsl(var(--h) 45% 82%);
+  }
+  :root[data-theme="dark"] .tile-photo {
+    background: linear-gradient(160deg, hsl(var(--h) 24% 24%), hsl(var(--h) 20% 17%));
+    color: hsl(var(--h) 45% 82%);
+  }
 }

@@ -169,11 +169,11 @@ export function StockBatchForm({
                         <span>{r.name || "—"}</span>
                         {r.isNew && <span className="rounded-full bg-blue-50 px-1.5 text-[10px] font-semibold text-blue-700">NEW</span>}
                       </div>
-                      <div className="font-mono text-xs text-stone-500">{r.sku}</div>
+                      <div className="text-xs text-stone-500 tabular-nums">{r.sku}</div>
                     </td>
                     <td>
                       {r.category ?? <span className="text-amber-700">Uncategorized</span>}
-                      {r.categorySource === "rules" && <span className="ml-1 text-[10px] font-semibold text-brand-700 uppercase">auto</span>}
+                      {r.categorySource === "rules" && <span className="ml-1 rounded-full bg-brand-50 px-1.5 text-[11px] font-medium text-brand-700">auto</span>}
                     </td>
                     <td className="num">
                       {r.qty || "—"} {r.unit}

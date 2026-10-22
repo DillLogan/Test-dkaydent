@@ -209,7 +209,7 @@ export default async function ReceivingPage({ searchParams }: { searchParams: SP
                       <td>{s.vendors || <span className="text-stone-400">—</span>}</td>
                       <td>
                         {s.carrier || "—"}
-                        {s.tracking && <div className="font-mono text-xs text-stone-500">{s.tracking}</div>}
+                        {s.tracking && <div className="text-xs text-stone-500 tabular-nums">{s.tracking}</div>}
                       </td>
                       <td className="num">{s.po_count}</td>
                       <td className="num">{money(s.value)}</td>

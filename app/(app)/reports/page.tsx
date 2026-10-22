@@ -189,7 +189,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
                       <Link href={`/products/${id}`} className="link">
                         {f.name}
                       </Link>
-                      <div className="font-mono text-xs text-stone-500">{f.sku}</div>
+                      <div className="text-xs text-stone-500 tabular-nums">{f.sku}</div>
                     </td>
                     <td className="num">
                       {qty(f.received)} {f.unit}
@@ -289,7 +289,7 @@ function MarginTable({ rows, qtyLabel, linkBase }: { rows: Agg[]; qtyLabel: stri
                 <Link href={`${linkBase}${r.key}`} className="link">
                   {r.label}
                 </Link>
-                {r.sub && <div className="font-mono text-xs text-stone-500">{r.sub}</div>}
+                {r.sub && <div className="text-xs text-stone-500 tabular-nums">{r.sub}</div>}
               </td>
               <td className="num">
                 {qty(r.qty)} {r.unit ?? ""}
