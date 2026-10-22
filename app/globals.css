@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/* Theme is chosen on the Settings page (light / dark / system) and applied as
+   data-theme on <html> by the inline script in app/layout.tsx. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-brand-50: #f2f6f1;
+  --color-brand-100: #e0eadd;
+  --color-brand-500: #4f7d56;
+  --color-brand-600: #3d6844;
+  --color-brand-700: #2e5234;
+  --color-brand-800: #233f28;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 focus:outline-none disabled:bg-stone-100 disabled:text-stone-500;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium tracking-wide text-stone-500 uppercase;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease,
+      transform 120ms ease;
+  }
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--color-stone-900) 22%, transparent);
+  }
+  .btn:not(:disabled):active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+  }
+  .btn-primary {
+    @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-600;
+  }
+  .btn-danger {
+    @apply border-red-300 text-red-700 hover:bg-red-50;
+  }
+  .btn-sm {
+    @apply px-2 py-1 text-xs;
+  }
+  .card {
+    @apply rounded-lg border border-stone-200 bg-white p-4 shadow-xs;
+  }
+  .table-wrap {
+    @apply overflow-x-auto rounded-lg border border-stone-200 bg-white;
+  }
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table th {
+    @apply border-b border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium tracking-wide whitespace-nowrap text-stone-500 uppercase;
+  }
+  .table td {
+    @apply border-b border-stone-100 px-3 py-2 align-top;
+  }
+  .table tbody tr {
+    transition: background-color 150ms ease;
+  }
+  .table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--color-brand-50) 65%, transparent);
+  }
+  .table tr:last-child td {
+    @apply border-b-0;
+  }
+  .num {
+    @apply text-right tabular-nums whitespace-nowrap;
+  }
+  .link {
+    @apply text-brand-700;
+    /* animated underline */
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition:
+      background-size 200ms ease,
+      color 150ms ease;
+  }
+  .link:hover {
+    background-size: 100% 1px;
+  }
+  .lift {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--color-stone-900) 35%, transparent);
+  }
+  .nav-link {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+  }
+  .nav-link:hover {
+    transform: translateX(2px);
+  }
+}
+
+/* ---------- Dark theme ----------
+   Tailwind utilities read colors from these variables, so remapping them here
+   themes every page. Screen only: invoices and labels always print light. */
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-white: #1a1e1b;
+    --color-black: #000000;
+    --color-stone-50: #121513;
+    --color-stone-100: #222723;
+    --color-stone-200: #323933;
+    --color-stone-300: #434b44;
+    --color-stone-400: #6f7971;
+    --color-stone-500: #a3ada5;
+    --color-stone-600: #bdc6bf;
+    --color-stone-700: #d3dad4;
+    --color-stone-800: #e1e6e2;
+    --color-stone-900: #e9ede8;
+    --color-brand-50: #1c2a1f;
+    --color-brand-100: #2b3f2f;
+    --color-brand-500: #6fa678;
+    --color-brand-600: #95c49c;
+    --color-brand-700: #7fb487;
+    --color-brand-800: #b9dcbd;
+    --color-red-50: #3a1f1c;
+    --color-red-200: #6b2f29;
+    --color-red-300: #8a3a32;
+    --color-red-500: #e5675a;
+    --color-red-700: #f08b80;
+    --color-red-800: #f5a59c;
+    --color-amber-50: #362b16;
+    --color-amber-200: #6b5323;
+    --color-amber-700: #e2b05c;
+    --color-amber-800: #e8bd73;
+    --color-amber-900: #f0cc8a;
+    --color-blue-50: #1b2a3a;
+    --color-blue-700: #8dbbe8;
+    --color-blue-800: #a5c9ee;
+    --color-violet-50: #2b2440;
+    --color-violet-700: #c0a6ec;
+  }
+}
+
+/* Smooth cross-fade while the theme changes (class added briefly by the switcher) */
+html.theme-anim,
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease,
+    fill 300ms ease,
+    box-shadow 300ms ease !important;
+}
+
+/* Page entrance on navigation (app/(app)/template.tsx) */
+@keyframes page-in {
+  from {
+    opacity: 0.55;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-in {
+  animation: page-in 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .btn:not(:disabled):hover,
+  .lift:hover,
+  .nav-link:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Floor plan ---------- */
+.plan-grid {
+  background-color: var(--color-stone-100);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-stone-400) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-stone-400) 22%, transparent) 1px, transparent 1px);
+  background-size: 5% 8%;
+}
+@keyframes plan-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-brand-600) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-brand-600) 0%, transparent); }
+}
+.plan-pulse {
+  animation: plan-pulse 1.6s ease-in-out infinite;
+}
