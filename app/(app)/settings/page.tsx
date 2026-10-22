@@ -1,10 +1,12 @@
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { ThemePicker } from "@/components/ThemePicker";
 import { PrintSettingsForm } from "@/components/PrintSettingsForm";
 import { PageHeader, Section } from "@/components/ui";
 
 export default async function SettingsPage() {
-  await getSession();
+  const { profile } = await getSession();
   return (
     <>
       <PageHeader title="Settings" subtitle="Preferences for this browser" />
@@ -15,6 +17,16 @@ export default async function SettingsPage() {
         </p>
         <ThemePicker />
       </Section>
+      {can(profile) && (
+        <Section title="Web store">
+          <div className="card flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-stone-500">Bring stock counts and web orders in from your ordering website.</p>
+            <Link href="/settings/web-store" className="btn">
+              Set up web store
+            </Link>
+          </div>
+        </Section>
+      )}
       <Section title="Printing">
         <p className="mb-3 text-sm text-stone-500">
           How labels print from this computer. Use Label printer for a thermal or roll label printer, and Regular printer for an office or home

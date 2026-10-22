@@ -36,7 +36,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function Nav({ profile }: { profile: Profile }) {
   const groups = can(profile)
-    ? [...GROUPS, { title: "Admin", links: [{ href: "/admin/users", label: "Users & roles" }] }]
+    ? [...GROUPS, { title: "Admin", links: [{ href: "/admin/users", label: "Users & roles" }, { href: "/settings/web-store", label: "Web store" }] }]
     : GROUPS;
   const roleLabel = ROLES.find((r) => r.value === profile.role)?.label;
 
