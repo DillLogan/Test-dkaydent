@@ -382,13 +382,37 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
 
 // ---------- Floor plan, home areas, photos ----------
 const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
-await q(`select set_home_location($1, $2)`, [tulip.id, c1]);
-ok((await one(`select home_location_id h from products where id=$1`, [tulip.id])).h === c1, "home area set");
+const main = (await one(`select id, aspect from shop_layouts where name='Main shop'`));
+ok(Number(main.aspect) === 1.6, "existing plan became the Main shop layout");
+ok(Number((await one(`select count(*) c from locations where layout_id is null or layout_id<>$1`, [main.id])).c) === 0, "all sections belong to Main shop");
+ok(Number((await one(`select count(*) c from product_homes`)).c) >= 5, "seed home areas carried over");
+await q(`select set_home_location($1, $2, $3)`, [tulip.id, main.id, c1]);
+ok((await one(`select location_id h from product_homes where product_id=$1 and layout_id=$2`, [tulip.id, main.id])).h === c1, "home area set");
+const north = (await one(`insert into shop_layouts (name) values ('North shop') returning id`)).id;
+await expectErr(`insert into shop_layouts (name) values (' north SHOP')`, [], "unique", "layout names are unique");
+const nloc = (await one(`insert into locations (name, kind, layout_id) values ('North Cooler','cooler',$1) returning id`, [north])).id;
+ok((await one(`select layout_id from locations where name='North Cooler'`)).layout_id === north, "section created in the North shop");
+const dflt = (await one(`insert into locations (name) values ('Spare Shelf') returning layout_id`)).layout_id;
+ok(dflt === main.id, "a section without a shop goes to the first layout");
+await expectErr(`select set_home_location($1, $2, $3)`, [tulip.id, north, c1], "isn't in this shop", "home must be a section of that shop");
+await q(`select set_home_location($1, $2, $3)`, [tulip.id, north, nloc]);
+ok(Number((await one(`select count(*) c from product_homes where product_id=$1`, [tulip.id])).c) === 2, "one home per shop");
+await q(`insert into plan_doors (layout_id, kind, label, side, pos) values ($1,'entry','Front door','bottom',20), ($1,'exit','Loading dock','right',80), ($1,'entry','Side door','left',50)`, [north]);
+await expectErr(`insert into plan_doors (layout_id, kind, label, side) values ($1,'exit',' ','top')`, [north], "check", "entries/exits need a label");
+await expectErr(`insert into plan_doors (layout_id, kind, label, side) values ($1,'exit','X','middle')`, [north], "check", "entries/exits sit on a wall");
+await q(`update locations set map_x=10, map_y=10, map_w=20, map_h=20 where id=$1`, [nloc]);
+await expectErr(`select delete_shop_layout($1, $1)`, [north], "Choose another layout", "deleting needs another layout for its sections");
+await q(`select delete_shop_layout($1, $2)`, [north, main.id]);
+const movedLoc = await one(`select layout_id, map_x from locations where id=$1`, [nloc]);
+ok(movedLoc.layout_id === main.id && movedLoc.map_x === null, "deleted layout's sections move unplaced");
+ok(Number((await one(`select count(*) c from product_homes where product_id=$1`, [tulip.id])).c) === 1, "homes in a deleted shop are cleared");
+ok(Number((await one(`select count(*) c from plan_doors`)).c) === 0, "its entries/exits are removed");
+await expectErr(`select delete_shop_layout($1, null)`, [main.id], "Keep at least one", "the last layout can't be deleted");
+await q(`delete from locations where name in ('North Cooler','Spare Shelf')`);
 await q(`select set_product_image($1, 'products/x.webp')`, [tulip.id]);
 await q(`select set_lot_image($1, 'lots/y.webp')`, [lotA.id]);
 ok((await one(`select image_path from lots where id=$1`, [lotA.id])).image_path === "lots/y.webp", "photo paths saved");
 await expectErr(`update locations set map_x = 140 where id=$1`, [c1], "check", "map coordinates must be within the plan");
-ok(Number((await one(`select aspect from shop_layout`)).aspect) === 1.6, "shop layout row exists");
 
 // role checks (functions)
 await as(sales);
@@ -414,18 +438,32 @@ await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_pr
 ok(true, "sales can create draft SO + lines");
 await expectErr(`insert into returns (so_id, customer_id) values ($1,$2)`, [so.id, cust], "row-level security", "returns only via create_return");
 await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Not authorized", "sales can't import stock");
-await expectErr(`select set_home_location($1, null)`, [rose], "Not authorized", "sales can't set home areas");
+await expectErr(`select set_home_location($1, $2, null)`, [rose, main.id], "Not authorized", "sales can't set home areas");
+await expectErr(`select delete_shop_layout($1, $1)`, [main.id], "Not authorized", "sales can't delete layouts");
+await expectErr(`insert into shop_layouts (name) values ('Sales shop')`, [], "row-level security", "sales can't add layouts");
+await expectErr(`insert into plan_doors (layout_id, kind, label, side) values ($1,'entry','X','top')`, [main.id], "row-level security", "sales can't add entries/exits");
+await expectErr(`insert into product_homes (product_id, layout_id, location_id) values ($1,$2,$3)`, [rose, main.id, c1], "row-level security", "homes only via set_home_location");
 await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-level security", "sales can't plan shipments");
 await expectErr(`select generate_standing_orders()`, [], "Not authorized", "sales can't run standing orders");
 await expectErr(`insert into payments (customer_id, kind, method, amount) values ($1,'payment','cash',1)`, [cust], "row-level security", "payments only through record_payment");
 await expectErr(`insert into payment_terminals (name, model, epi) values ('T','VL100','X1')`, [], "row-level security", "only admins add terminals");
-ok((await db.query(`update shop_layout set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
+ok((await db.query(`update shop_layouts set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
 ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");
 await db.exec(`reset role`);
 await as(admin);
 await db.exec(`set role authenticated`);
 await expectErr(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,1,1)`, [po2, rose, box.id], "row-level security", "PO lines locked after ordering");
+{
+  // warehouse/admin moving a section with item homes to another shop (runs under RLS)
+  const west = (await one(`insert into shop_layouts (name) values ('West shop') returning id`)).id;
+  const c2 = (await one(`select id from locations where name='Cooler 2'`)).id;
+  ok(Number((await one(`select count(*) c from product_homes where location_id=$1`, [c2])).c) > 0, "Cooler 2 is a home before moving");
+  await q(`update locations set layout_id=$1 where id=$2`, [west, c2]);
+  ok(Number((await one(`select count(*) c from product_homes where location_id=$1`, [c2])).c) === 0, "moving a section to another shop clears its homes");
+  await q(`update locations set layout_id=$1 where id=$2`, [main.id, c2]);
+  await q(`select delete_shop_layout($1, $2)`, [west, main.id]);
+}
 const delRes = await db.query(`delete from product_units where id=$1`, [unitsRose[0].id]);
 ok(delRes.affectedRows === 0, "base unit cannot be deleted");
 await db.exec(`reset role`);

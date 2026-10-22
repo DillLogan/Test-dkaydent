@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { ItemThumb } from "./ItemThumb";
 import { resizeImage } from "@/lib/resizeImage";
-import { AREA_COLORS } from "@/lib/plan";
+import { AREA_COLORS, type DoorSide, type PlanDoor } from "@/lib/plan";
 
 type Rect = { x: number; y: number; w: number; h: number };
 export type PlanArea = Rect & { id: string; name: string; color: string };
@@ -20,6 +21,13 @@ export type PlanItem = {
   stock: Record<string, number>; // location id → base qty
 };
 type Result = { error?: string } | void;
+type Created = { error?: string; id?: string };
+type Drag =
+  | { kind: "area"; id: string; mode: "move" | "resize"; sx: number; sy: number; r: Rect; moved: boolean }
+  | { kind: "door"; id: string; before: PlanDoor; moved: boolean };
+
+/** Grab zone (px) at an area's bottom-right corner that resizes instead of moving. */
+const CORNER = 22;
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(n);
 const SHAPES: [string, number][] = [
@@ -29,6 +37,9 @@ const SHAPES: [string, number][] = [
 ];
 
 export function FloorPlan(props: {
+  layout: { id: string; name: string };
+  layouts: { id: string; name: string }[];
+  doors: PlanDoor[];
   aspect: number;
   backgroundUrl: string | null;
   areas: PlanArea[];
@@ -40,14 +51,25 @@ export function FloorPlan(props: {
   actions: {
     saveArea: (id: string, r: Rect & { color?: string }) => Promise<Result>;
     removeArea: (id: string) => Promise<Result>;
-    setPlanShape: (aspect: number) => Promise<Result>;
+    setPlanShape: (layoutId: string, aspect: number) => Promise<Result>;
     uploadBackground: (fd: FormData) => Promise<Result>;
-    removeBackground: () => Promise<Result>;
-    setHome: (productId: string, locationId: string | null) => Promise<Result>;
+    removeBackground: (layoutId: string) => Promise<Result>;
+    setHome: (productId: string, layoutId: string, locationId: string | null) => Promise<Result>;
+    createLayout: (name: string) => Promise<Created>;
+    renameLayout: (id: string, name: string) => Promise<Result>;
+    deleteLayout: (id: string, moveTo: string) => Promise<Result>;
+    addDoor: (layoutId: string, d: { kind: string; label: string; side: string; pos: number }) => Promise<Created>;
+    saveDoor: (id: string, d: { kind?: string; label?: string; side?: string; pos?: number }) => Promise<Result>;
+    removeDoor: (id: string) => Promise<Result>;
   };
 }) {
   const { actions, canEdit, canAssign } = props;
+  const layoutId = props.layout.id;
+  const router = useRouter();
   const [areas, setAreas] = useState<PlanArea[]>(props.areas);
+  const [doors, setDoors] = useState<PlanDoor[]>(props.doors);
+  const [selectedDoor, setSelectedDoor] = useState<string | null>(null);
+  const [layoutForm, setLayoutForm] = useState<null | "new" | "rename" | "delete">(null);
   const [items, setItems] = useState<PlanItem[]>(props.items);
   const [aspect, setAspect] = useState(props.aspect);
   const [editing, setEditing] = useState(false);
@@ -57,13 +79,19 @@ export function FloorPlan(props: {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const planRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ id: string; mode: "move" | "resize"; sx: number; sy: number; r: Rect; moved: boolean } | null>(null);
+  const drag = useRef<Drag | null>(null);
+  const areasRef = useRef(areas);
+  areasRef.current = areas;
+  const bgDown = useRef(false);
+  const doorsRef = useRef(doors);
+  doorsRef.current = doors;
 
   const locName = (id: string | null) => props.locations.find((l) => l.id === id)?.name ?? "—";
   const placedIds = new Set(areas.map((a) => a.id));
   const unplaced = props.locations.filter((l) => l.active && !placedIds.has(l.id));
   const item = items.find((i) => i.id === found) ?? null;
   const area = areas.find((a) => a.id === selected) ?? null;
+  const door = doors.find((d) => d.id === selectedDoor) ?? null;
 
   const stockIn = useMemo(() => {
     const m: Record<string, { item: PlanItem; qty: number }[]> = {};
@@ -91,17 +119,50 @@ export function FloorPlan(props: {
 
   // ---------- dragging ----------
   function onPointerDown(e: React.PointerEvent, a: PlanArea, mode: "move" | "resize") {
-    if (!editing) return;
+    if (!editing || e.button > 0) return;
     e.preventDefault();
     e.stopPropagation();
-    (e.target as Element).setPointerCapture(e.pointerId);
-    drag.current = { id: a.id, mode, sx: e.clientX, sy: e.clientY, r: { x: a.x, y: a.y, w: a.w, h: a.h }, moved: false };
+    // Pressing near the bottom-right corner resizes, even outside the visible grip
+    const el = e.currentTarget.closest("[data-area]") as HTMLElement | null;
+    if (mode === "move" && el) {
+      const r = el.getBoundingClientRect();
+      if (r.right - e.clientX <= CORNER && r.bottom - e.clientY <= CORNER) mode = "resize";
+    }
+    planRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { kind: "area", id: a.id, mode, sx: e.clientX, sy: e.clientY, r: { x: a.x, y: a.y, w: a.w, h: a.h }, moved: false };
     setSelected(a.id);
+    setSelectedDoor(null);
+  }
+  function onDoorDown(e: React.PointerEvent, d: PlanDoor) {
+    e.stopPropagation();
+    setSelectedDoor(d.id);
+    setSelected(null);
+    if (!editing || e.button > 0) return;
+    e.preventDefault();
+    planRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { kind: "door", id: d.id, before: d, moved: false };
   }
   function onPointerMove(e: React.PointerEvent) {
     const d = drag.current;
     const box = planRef.current?.getBoundingClientRect();
     if (!d || !box) return;
+    if (d.kind === "door") {
+      // Snap to the nearest wall, slide along it
+      const px = Math.min(box.width, Math.max(0, e.clientX - box.left));
+      const py = Math.min(box.height, Math.max(0, e.clientY - box.top));
+      const dist: [DoorSide, number][] = [
+        ["top", py],
+        ["bottom", box.height - py],
+        ["left", px],
+        ["right", box.width - px],
+      ];
+      const side = dist.sort((x, y) => x[1] - y[1])[0][0];
+      const along = side === "top" || side === "bottom" ? (px / box.width) * 100 : (py / box.height) * 100;
+      const pos = Math.round(Math.min(97, Math.max(3, along)) * 2) / 2;
+      d.moved = true;
+      setDoors((all) => all.map((x) => (x.id === d.id ? { ...x, side, pos } : x)));
+      return;
+    }
     const dx = ((e.clientX - d.sx) / box.width) * 100;
     const dy = ((e.clientY - d.sy) / box.height) * 100;
     if (Math.abs(dx) + Math.abs(dy) > 0.3) d.moved = true;
@@ -112,15 +173,25 @@ export function FloorPlan(props: {
         if (d.mode === "move") {
           return { ...a, x: snap(Math.min(100 - a.w, Math.max(0, d.r.x + dx))), y: snap(Math.min(100 - a.h, Math.max(0, d.r.y + dy))) };
         }
-        return { ...a, w: snap(Math.min(100 - a.x, Math.max(4, d.r.w + dx))), h: snap(Math.min(100 - a.y, Math.max(4, d.r.h + dy))) };
+        return { ...a, w: snap(Math.min(100 - d.r.x, Math.max(4, d.r.w + dx))), h: snap(Math.min(100 - d.r.y, Math.max(4, d.r.h + dy))) };
       }),
     );
   }
-  function onPointerUp() {
+  function onPointerUp(e: React.PointerEvent) {
     const d = drag.current;
     drag.current = null;
+    if (planRef.current?.hasPointerCapture(e.pointerId)) planRef.current.releasePointerCapture(e.pointerId);
     if (!d || !d.moved) return;
-    const a = areas.find((x) => x.id === d.id);
+    if (d.kind === "door") {
+      const cur = doorsRef.current.find((x) => x.id === d.id);
+      if (!cur) return;
+      run(
+        () => actions.saveDoor(d.id, { side: cur.side, pos: cur.pos }),
+        () => setDoors((all) => all.map((x) => (x.id === d.id ? d.before : x))),
+      );
+      return;
+    }
+    const a = areasRef.current.find((x) => x.id === d.id);
     if (!a) return;
     const before = d.r;
     run(
@@ -162,7 +233,7 @@ export function FloorPlan(props: {
   function setHome(it: PlanItem, locId: string | null) {
     const prev = it.home;
     setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: locId } : x)));
-    run(() => actions.setHome(it.id, locId), () => setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: prev } : x))));
+    run(() => actions.setHome(it.id, layoutId, locId), () => setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: prev } : x))));
   }
   async function onBackground(file?: File) {
     if (!file) return;
@@ -172,6 +243,7 @@ export function FloorPlan(props: {
       const fd = new FormData();
       fd.append("file", new File([blob], "plan.webp", { type: blob.type }));
       fd.append("aspect", String(width / height));
+      fd.append("layout_id", layoutId);
       run(async () => {
         const r = await actions.uploadBackground(fd);
         if (!r || !r.error) setAspect(Math.round((width / height) * 1000) / 1000);
@@ -181,6 +253,56 @@ export function FloorPlan(props: {
       setError(e?.message ?? "Upload failed");
     }
   }
+
+  function newDoor(fd: FormData) {
+    const kind = String(fd.get("kind") ?? "entry");
+    const label = String(fd.get("label") ?? "");
+    // First free spot on the wall so new markers don't stack on each other
+    const side = kind === "exit" ? "top" : "bottom";
+    const taken = doors.filter((d) => d.side === side).map((d) => d.pos);
+    const pos = [50, 25, 75, 12.5, 37.5, 62.5, 87.5].find((p) => taken.every((t) => Math.abs(t - p) > 8)) ?? 50;
+    const spot = { side, pos };
+    setError(null);
+    start(async () => {
+      const r = await actions.addDoor(layoutId, { kind, label, ...spot });
+      if (r.error || !r.id) return setError(r.error ?? "Couldn't add it.");
+      setDoors((all) => [...all, { id: r.id!, kind: kind as PlanDoor["kind"], label: label.trim().replace(/\s+/g, " "), side: spot.side as DoorSide, pos: spot.pos }]);
+      setSelectedDoor(r.id);
+      setSelected(null);
+    });
+  }
+  function editDoor(d: PlanDoor, patch: Partial<PlanDoor>) {
+    setDoors((all) => all.map((x) => (x.id === d.id ? { ...x, ...patch } : x)));
+    run(() => actions.saveDoor(d.id, patch), () => setDoors((all) => all.map((x) => (x.id === d.id ? d : x))));
+  }
+  function dropDoor(d: PlanDoor) {
+    setDoors((all) => all.filter((x) => x.id !== d.id));
+    setSelectedDoor(null);
+    run(() => actions.removeDoor(d.id), () => setDoors((all) => [...all, d]));
+  }
+  function layoutSubmit(fd: FormData) {
+    setError(null);
+    start(async () => {
+      if (layoutForm === "new") {
+        const r = await actions.createLayout(String(fd.get("name") ?? ""));
+        if (r.error || !r.id) return setError(r.error ?? "Couldn't create it.");
+        setLayoutForm(null);
+        router.push(`/floor-plan?layout=${r.id}`);
+      } else if (layoutForm === "rename") {
+        const r = await actions.renameLayout(layoutId, String(fd.get("name") ?? ""));
+        if (r && r.error) return setError(r.error);
+        setLayoutForm(null);
+        router.refresh();
+      } else if (layoutForm === "delete") {
+        const to = String(fd.get("move_to") ?? "");
+        const r = await actions.deleteLayout(layoutId, to);
+        if (r && r.error) return setError(r.error);
+        setLayoutForm(null);
+        router.push(`/floor-plan?layout=${to}`);
+      }
+    });
+  }
+  const others = props.layouts.filter((l) => l.id !== layoutId);
 
   // ---------- render ----------
   const markFor = (a: PlanArea) => {
@@ -196,6 +318,90 @@ export function FloorPlan(props: {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-3">
+        <div className="flex flex-wrap items-center gap-2" data-testid="layout-bar">
+          <label className="flex items-center gap-2">
+            <span className="label mb-0">Layout</span>
+            <select
+              className="input w-auto py-1.5"
+              value={layoutId}
+              onChange={(e) => router.push(`/floor-plan?layout=${e.target.value}`)}
+              aria-label="Choose a layout"
+            >
+              {props.layouts.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {canEdit && (
+            <>
+              <button type="button" className="btn btn-sm" onClick={() => setLayoutForm(layoutForm === "new" ? null : "new")} aria-expanded={layoutForm === "new"}>
+                + New layout
+              </button>
+              <button type="button" className="btn btn-sm" onClick={() => setLayoutForm(layoutForm === "rename" ? null : "rename")} aria-expanded={layoutForm === "rename"}>
+                Rename
+              </button>
+              {others.length > 0 && (
+                <button type="button" className="btn btn-sm btn-danger" onClick={() => setLayoutForm(layoutForm === "delete" ? null : "delete")} aria-expanded={layoutForm === "delete"}>
+                  Delete layout
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        {canEdit && layoutForm && (
+          <form
+            key={layoutForm}
+            className="card flex flex-wrap items-end gap-2 text-sm"
+            onSubmit={(e) => {
+              e.preventDefault();
+              layoutSubmit(new FormData(e.currentTarget));
+            }}
+          >
+            {layoutForm === "delete" ? (
+              <>
+                <p className="w-full text-stone-600">
+                  Delete <b>{props.layout.name}</b>? Its entries and exits are removed and its sections move, unplaced, to the layout you pick. Items lose their home area in this shop.
+                </p>
+                <label className="min-w-48">
+                  <span className="label">Move its sections to</span>
+                  <select name="move_to" className="input" defaultValue={others[0]?.id}>
+                    {others.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" className="btn btn-danger" disabled={pending}>
+                  Delete layout
+                </button>
+              </>
+            ) : (
+              <>
+                <label className="min-w-56 flex-1">
+                  <span className="label">{layoutForm === "new" ? "New layout name" : "Layout name"}</span>
+                  <input
+                    name="name"
+                    className="input"
+                    required
+                    maxLength={60}
+                    autoFocus
+                    placeholder="e.g. North shop"
+                    defaultValue={layoutForm === "rename" ? props.layout.name : ""}
+                  />
+                </label>
+                <button type="submit" className="btn btn-primary" disabled={pending}>
+                  {layoutForm === "new" ? "Create layout" : "Save name"}
+                </button>
+              </>
+            )}
+            <button type="button" className="btn" onClick={() => setLayoutForm(null)}>
+              Cancel
+            </button>
+          </form>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
             <input
@@ -215,6 +421,7 @@ export function FloorPlan(props: {
                       onClick={() => {
                         setFound(m.id);
                         setSelected(null);
+                        setSelectedDoor(null);
                         setQuery("");
                       }}
                     >
@@ -248,7 +455,7 @@ export function FloorPlan(props: {
 
         {editing && (
           <div className="card flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-stone-500">Drag areas to move them; drag the corner to resize; arrow keys nudge.</span>
+            <span className="text-stone-500">Drag areas to move them; drag the bottom-right corner to resize; arrow keys nudge. Drag entries and exits along the walls.</span>
             <div className="flex items-center gap-1">
               <span className="label mb-0">Shape</span>
               {SHAPES.map(([label, v]) => (
@@ -259,7 +466,7 @@ export function FloorPlan(props: {
                   onClick={() => {
                     const prev = aspect;
                     setAspect(v);
-                    run(() => actions.setPlanShape(v), () => setAspect(prev));
+                    run(() => actions.setPlanShape(layoutId, v), () => setAspect(prev));
                   }}
                 >
                   {label}
@@ -271,7 +478,7 @@ export function FloorPlan(props: {
               <input type="file" accept="image/*" className="sr-only" onChange={(e) => onBackground(e.target.files?.[0])} />
             </label>
             {props.backgroundUrl && (
-              <button type="button" className="btn btn-sm btn-danger" onClick={() => run(() => actions.removeBackground())}>
+              <button type="button" className="btn btn-sm btn-danger" onClick={() => run(() => actions.removeBackground(layoutId))}>
                 Remove image
               </button>
             )}
@@ -285,6 +492,24 @@ export function FloorPlan(props: {
                 ))}
               </div>
             )}
+            <form
+              className="flex flex-wrap items-center gap-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                newDoor(new FormData(e.currentTarget));
+                e.currentTarget.reset();
+              }}
+            >
+              <span className="label mb-0">Add</span>
+              <select name="kind" className="input w-auto py-1 text-xs" aria-label="Entry or exit">
+                <option value="entry">Entry</option>
+                <option value="exit">Exit</option>
+              </select>
+              <input name="label" className="input w-40 py-1 text-xs" placeholder="Label, e.g. Front door" required maxLength={60} aria-label="Entry or exit label" />
+              <button type="submit" className="btn btn-sm">
+                + Add
+              </button>
+            </form>
           </div>
         )}
 
@@ -292,11 +517,18 @@ export function FloorPlan(props: {
           ref={planRef}
           className={`relative w-full touch-none overflow-hidden rounded-lg border border-stone-200 select-none ${editing ? "ring-2 ring-brand-600/40" : ""}`}
           style={{ aspectRatio: String(aspect) }}
+          onPointerDownCapture={(e) => {
+            bgDown.current = e.target === e.currentTarget;
+          }}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClick={(e) => {
-            if (e.target === e.currentTarget) setSelected(null);
+            // Only a press that started on empty floor clears the selection (drags capture the pointer here)
+            if (e.target === e.currentTarget && bgDown.current) {
+              setSelected(null);
+              setSelectedDoor(null);
+            }
           }}
         >
           {props.backgroundUrl ? (
@@ -313,6 +545,7 @@ export function FloorPlan(props: {
             return (
               <div
                 key={a.id}
+                data-area={a.id}
                 role="button"
                 tabIndex={0}
                 aria-label={`${a.name}${count ? `, ${count} items stored` : ""}`}
@@ -332,6 +565,7 @@ export function FloorPlan(props: {
                 }}
                 onPointerDown={(e) => onPointerDown(e, a, "move")}
                 onClick={() => {
+                  setSelectedDoor(null);
                   if (!editing) setSelected(isSel ? null : a.id);
                 }}
                 onKeyDown={(e) => {
@@ -354,12 +588,50 @@ export function FloorPlan(props: {
                 )}
                 {editing && (
                   <span
-                    className="absolute right-0 bottom-0 h-4 w-4 cursor-nwse-resize rounded-tl bg-stone-900/50"
+                    data-resize={a.id}
+                    className="absolute right-0 bottom-0 grid cursor-nwse-resize touch-none place-items-end"
+                    style={{ width: CORNER, height: CORNER }}
                     onPointerDown={(e) => onPointerDown(e, a, "resize")}
+                    title="Drag to resize"
                     aria-hidden="true"
-                  />
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" className="m-0.5 text-stone-900/70">
+                      <path d="M13 3 3 13M13 7.5 7.5 13M13 11.5 11.5 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
                 )}
               </div>
+            );
+          })}
+          {doors.map((d) => {
+            const style: React.CSSProperties =
+              d.side === "top"
+                ? { left: `${d.pos}%`, top: 2, transform: "translateX(-50%)" }
+                : d.side === "bottom"
+                  ? { left: `${d.pos}%`, bottom: 2, transform: "translateX(-50%)" }
+                  : d.side === "left"
+                    ? { top: `${d.pos}%`, left: 2, transform: "translateY(-50%)" }
+                    : { top: `${d.pos}%`, right: 2, transform: "translateY(-50%)" };
+            const arrow = d.kind === "entry"
+              ? { top: "↓", bottom: "↑", left: "→", right: "←" }[d.side]
+              : { top: "↑", bottom: "↓", left: "←", right: "→" }[d.side];
+            return (
+              <button
+                key={d.id}
+                type="button"
+                data-door={d.id}
+                className={`absolute z-20 flex max-w-[45%] items-center gap-1 rounded-full border-2 border-white px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-white shadow ${
+                  d.kind === "entry" ? "bg-brand-700" : "bg-amber-700"
+                } ${editing ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${selectedDoor === d.id ? "ring-2 ring-stone-900/60 ring-offset-1" : ""}`}
+                style={style}
+                onPointerDown={(e) => onDoorDown(e, d)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`${d.kind === "entry" ? "Entry" : "Exit"}: ${d.label}`}
+                aria-pressed={selectedDoor === d.id}
+              >
+                <span aria-hidden="true">{arrow}</span>
+                <span className="truncate">{d.label}</span>
+              </button>
             );
           })}
           {areas.length === 0 && (
@@ -369,12 +641,58 @@ export function FloorPlan(props: {
           )}
         </div>
         <p className="text-xs text-stone-500">
-          Areas are your stock locations. Pulsing = an item&apos;s home area. Amber = stock sitting outside its home area.
+          Areas are your stock locations. Pulsing = an item&apos;s home area. Amber = stock sitting outside its home area. Green pills are entries, amber pills are exits.
         </p>
       </div>
 
       <aside className="space-y-4">
-        {item ? (
+        {door ? (
+          <div className="card space-y-3 text-sm" data-testid="door-panel">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold">{door.label}</h3>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold text-white ${door.kind === "entry" ? "bg-brand-700" : "bg-amber-700"}`}>
+                {door.kind === "entry" ? "Entry" : "Exit"}
+              </span>
+            </div>
+            <p className="text-stone-500">On the {door.side} wall.</p>
+            {canEdit && editing ? (
+              <form
+                key={door.id + door.label + door.kind}
+                className="space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  editDoor(door, { kind: String(fd.get("kind")) as PlanDoor["kind"], label: String(fd.get("label")).trim().replace(/\s+/g, " ") });
+                }}
+              >
+                <label className="block">
+                  <span className="label">Type</span>
+                  <select name="kind" className="input" defaultValue={door.kind}>
+                    <option value="entry">Entry</option>
+                    <option value="exit">Exit</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="label">Label</span>
+                  <input name="label" className="input" defaultValue={door.label} required maxLength={60} />
+                </label>
+                <div className="flex gap-2">
+                  <button type="submit" className="btn btn-sm btn-primary">
+                    Save
+                  </button>
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => dropDoor(door)}>
+                    Remove
+                  </button>
+                </div>
+              </form>
+            ) : (
+              canEdit && <p className="text-xs text-stone-500">Click Edit layout to move, relabel or remove it.</p>
+            )}
+            <button type="button" className="btn btn-sm" onClick={() => setSelectedDoor(null)}>
+              Close
+            </button>
+          </div>
+        ) : item ? (
           <div className="card space-y-3">
             <div className="flex items-start gap-3">
               <ItemThumb path={item.image} name={item.name} category={item.category} size={56} />

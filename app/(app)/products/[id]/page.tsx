@@ -10,7 +10,7 @@ import { Empty, ErrorBanner, Notice, PageHeader, Section } from "@/components/ui
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { MiniMap, type MapMark } from "@/components/MiniMap";
 import { imageUrl } from "@/lib/images";
-import { loadPlan } from "@/lib/plan";
+import { loadPlans } from "@/lib/plan";
 import { removeProductPhoto, uploadProductPhoto } from "../../photos/actions";
 import { setHomeArea } from "../../floor-plan/actions";
 
@@ -48,12 +48,27 @@ export default async function ProductPage({ params, searchParams }: Props) {
     byLocation.set(l.location_id, cur);
   }
   const onHand = sum(lots, (l) => l.qty_on_hand_base);
-  const plan = await loadPlan(supabase);
-  const marks: Record<string, MapMark> = {};
-  for (const locId of byLocation.keys()) marks[locId] = "here";
-  if (product.home_location_id) marks[product.home_location_id] = marks[product.home_location_id] ? "both" : "home";
-  const homeName = plan.locations.find((l) => l.id === product.home_location_id)?.name;
-  const misplaced = [...byLocation.keys()].filter((id) => product.home_location_id && id !== product.home_location_id);
+  const [plans, { data: homes }] = await Promise.all([
+    loadPlans(supabase),
+    supabase.from("product_homes").select("layout_id, location_id").eq("product_id", id),
+  ]);
+  // One map per shop: its home area and the stock sitting there
+  const shops = plans.map((plan) => {
+    const home = (homes ?? []).find((h) => h.layout_id === plan.layout.id)?.location_id ?? null;
+    const ids = new Set(plan.locations.map((l) => l.id));
+    const here = [...byLocation.keys()].filter((l) => ids.has(l));
+    const marks: Record<string, MapMark> = {};
+    for (const locId of here) marks[locId] = "here";
+    if (home) marks[home] = marks[home] ? "both" : "home";
+    return {
+      plan,
+      home,
+      marks,
+      homeName: plan.locations.find((l) => l.id === home)?.name,
+      stockNames: here.map((l) => byLocation.get(l)!.name),
+      misplaced: home ? here.filter((l) => l !== home) : [],
+    };
+  });
   const canPlace = can(profile, "buyer", "warehouse");
 
   return (
@@ -112,43 +127,51 @@ export default async function ProductPage({ params, searchParams }: Props) {
           />
         </Section>
         <Section title="Location in shop">
-          <MiniMap
-            aspect={plan.aspect}
-            background={plan.background}
-            areas={plan.areas}
-            marks={marks}
-            caption={
-              <>
-                {homeName ? (
-                  <>
-                    Belongs in <b>{homeName}</b> (pulsing).{" "}
-                  </>
-                ) : (
-                  "No home area set. "
+          <div className="space-y-6">
+            {shops.map(({ plan, home, marks, homeName, stockNames, misplaced }) => (
+              <div key={plan.layout.id} className="space-y-3">
+                {shops.length > 1 && <h3 className="text-sm font-semibold">{plan.layout.name}</h3>}
+                <MiniMap
+                  aspect={plan.layout.aspect}
+                  background={plan.layout.background}
+                  areas={plan.areas}
+                  marks={marks}
+                  href={`/floor-plan?layout=${plan.layout.id}&item=${id}`}
+                  caption={
+                    <>
+                      {homeName ? (
+                        <>
+                          Belongs in <b>{homeName}</b> (pulsing).{" "}
+                        </>
+                      ) : (
+                        "No home area set. "
+                      )}
+                      {stockNames.length > 0 && <>Stock is in {stockNames.join(", ")}. </>}
+                      {misplaced.length > 0 && <span className="font-medium text-amber-700">Some stock is outside its home area.</span>}
+                    </>
+                  }
+                />
+                {canPlace && (
+                  <form action={setHomeArea.bind(null, id, plan.layout.id)} className="flex flex-wrap items-end gap-2">
+                    <label className="min-w-48 flex-1">
+                      <span className="label">Home area{shops.length > 1 ? ` in ${plan.layout.name}` : ""}</span>
+                      <select name="location_id" defaultValue={home ?? ""} className="input">
+                        <option value="">Not set</option>
+                        {plan.locations
+                          .filter((l) => l.active)
+                          .map((l) => (
+                            <option key={l.id} value={l.id}>
+                              {l.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <SubmitButton className="btn">Save home area</SubmitButton>
+                  </form>
                 )}
-                {byLocation.size > 0 && <>Stock is in {[...byLocation.values()].map((l) => l.name).join(", ")}. </>}
-                {misplaced.length > 0 && <span className="font-medium text-amber-700">Some stock is outside its home area.</span>}
-              </>
-            }
-          />
-          {canPlace && (
-            <form action={setHomeArea.bind(null, id)} className="mt-3 flex flex-wrap items-end gap-2">
-              <label className="min-w-48 flex-1">
-                <span className="label">Home area</span>
-                <select name="location_id" defaultValue={product.home_location_id ?? ""} className="input">
-                  <option value="">Not set</option>
-                  {plan.locations
-                    .filter((l) => l.active)
-                    .map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <SubmitButton className="btn">Save home area</SubmitButton>
-            </form>
-          )}
+              </div>
+            ))}
+          </div>
         </Section>
       </div>
 

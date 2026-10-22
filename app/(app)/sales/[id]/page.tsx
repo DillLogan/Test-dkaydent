@@ -265,6 +265,11 @@ export default async function SOPage({ params, searchParams }: Props) {
             )}
           </>
         )}
+        {(isDraft || so.status === "confirmed") && (
+          <Link href={`/sales/${id}/pull-ticket`} className="btn">
+            Print pull ticket
+          </Link>
+        )}
         {invoice && (
           <Link href={`/invoices/${invoice.id}`} className="btn btn-primary">
             View {invoice.invoice_number}

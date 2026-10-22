@@ -34,7 +34,7 @@ export default async function LotPage({ params, searchParams }: Props) {
   const [{ data: lot }, { data: movements }, { data: locations }] = await Promise.all([
     supabase
       .from("lots")
-      .select("*, products(id, sku, name, base_unit, kind, image_path, home_location_id), locations(id, name), purchase_order_lines(po_id, purchase_orders(po_number))")
+      .select("*, products(id, sku, name, base_unit, kind, image_path, product_homes(layout_id, location_id)), locations(id, name, layout_id), purchase_order_lines(po_id, purchase_orders(po_number))")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("stock_movements").select("*, locations(name), profiles(full_name)").eq("lot_id", id).order("created_at"),
@@ -54,8 +54,10 @@ export default async function LotPage({ params, searchParams }: Props) {
     ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000)
     : null;
   const po = lot.purchase_order_lines?.purchase_orders;
-  const plan = await loadPlan(supabase);
-  const home = lot.products.home_location_id as string | null;
+  const plan = await loadPlan(supabase, lot.locations.layout_id);
+  const home =
+    ((lot.products.product_homes ?? []) as { layout_id: string; location_id: string }[]).find((h) => h.layout_id === plan.layout.id)
+      ?.location_id ?? null;
   const lotMarks: Record<string, "home" | "here" | "both"> = { [lot.location_id]: home === lot.location_id ? "both" : "here" };
   if (home && home !== lot.location_id) lotMarks[home] = "home";
   const homeName = plan.locations.find((l) => l.id === home)?.name;
@@ -143,13 +145,15 @@ export default async function LotPage({ params, searchParams }: Props) {
         </Section>
         <Section title="Location in shop">
           <MiniMap
-            aspect={plan.aspect}
-            background={plan.background}
+            aspect={plan.layout.aspect}
+            background={plan.layout.background}
             areas={plan.areas}
             marks={lotMarks}
+            href={`/floor-plan?layout=${plan.layout.id}`}
             caption={
               <>
-                This lot is in <b>{lot.locations.name}</b>.{" "}
+                This lot is in <b>{lot.locations.name}</b>
+                {plan.layouts.length > 1 ? ` (${plan.layout.name})` : ""}.{" "}
                 {homeName && home !== lot.location_id ? (
                   <span className="font-medium text-amber-700">Its home area is {homeName} (pulsing).</span>
                 ) : homeName ? (

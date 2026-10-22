@@ -28,7 +28,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
       .from("purchase_orders")
       .select(
         "id, po_number, status, order_date, expected_date, freight_cost, other_cost, standing_order_id, customized, vendors(name), standing_orders(id, name), " +
-          "purchase_order_lines(id, qty, unit_cost, qty_received_base, created_at, products(id, sku, name, base_unit, shelf_life_days, image_path, home_location_id), product_units(name, factor))",
+          "purchase_order_lines(id, qty, unit_cost, qty_received_base, created_at, products(id, sku, name, base_unit, shelf_life_days, image_path, product_homes(location_id)), product_units(name, factor))",
       )
       .eq("shipment_id", id)
       .order("po_number"),
@@ -266,7 +266,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                 </thead>
                 <tbody>
                   {pending.map((l) => {
-                    const home = l.products.home_location_id && locIds.has(l.products.home_location_id) ? l.products.home_location_id : receivingDock;
+                    const home = (l.products.product_homes ?? []).map((h: { location_id: string }) => h.location_id).find((x: string) => locIds.has(x)) ?? receivingDock;
                     return (
                       <tr key={l.id}>
                         <td className="text-xs whitespace-nowrap text-stone-500">{l.po.po_number}</td>

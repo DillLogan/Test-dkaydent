@@ -60,9 +60,21 @@ export async function createLocation(fd: FormData) {
   if (!name) fail("/inventory/locations", "Location name is required.");
   const { error } = await supabase
     .from("locations")
-    .insert({ name, kind: str(fd, "kind") ?? "cooler", temp_c: num(fd, "temp_c") });
+    .insert({ name, kind: str(fd, "kind") ?? "cooler", temp_c: num(fd, "temp_c"), layout_id: str(fd, "layout_id") });
   if (error) fail("/inventory/locations", dbMessage(error));
   revalidatePath("/inventory/locations");
+  redirect("/inventory/locations");
+}
+
+/** Move a location to another shop. It leaves the old floor plan and stops being any item's home there. */
+export async function moveLocationShop(id: string, fd: FormData) {
+  const { supabase } = await requireRole("warehouse");
+  const layoutId = str(fd, "layout_id");
+  if (!layoutId) fail("/inventory/locations", "Choose a shop.");
+  const { error } = await supabase.from("locations").update({ layout_id: layoutId }).eq("id", id);
+  if (error) fail("/inventory/locations", dbMessage(error));
+  revalidatePath("/inventory/locations");
+  revalidatePath("/floor-plan");
   redirect("/inventory/locations");
 }
 
