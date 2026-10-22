@@ -53,7 +53,8 @@ update locations set map_x = 28, map_y = 60, map_w = 22, map_h = 34, map_color =
 update locations set map_x = 56, map_y = 52, map_w = 40, map_h = 18, map_color = '#b0543a' where name = 'Front Display Cooler';
 update locations set map_x = 56, map_y = 76, map_w = 40, map_h = 18, map_color = '#5f7f3a' where name = 'Greens Rack';
 
-update products p set home_location_id = l.id from locations l
+insert into product_homes (product_id, layout_id, location_id)
+select p.id, l.layout_id, l.id from products p, locations l
  where (p.category = 'Roses' and l.name = 'Cooler 1')
     or (p.category = 'Hydrangea' and l.name = 'Cooler 2')
     or (p.category = 'Greens' and l.name = 'Greens Rack')

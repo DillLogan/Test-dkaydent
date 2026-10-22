@@ -11,18 +11,20 @@ export function MiniMap({
   areas,
   marks,
   caption,
+  href = "/floor-plan",
 }: {
   aspect: number;
   background: string | null;
   areas: MapArea[];
   marks: Record<string, MapMark>;
   caption?: React.ReactNode;
+  href?: string;
 }) {
   if (!areas.length) {
     return (
       <div className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-6 text-center text-sm text-stone-500">
         No floor plan yet.{" "}
-        <Link href="/floor-plan" className="link">
+        <Link href={href} className="link">
           Set up Location in shop
         </Link>
       </div>
@@ -32,7 +34,7 @@ export function MiniMap({
   return (
     <div className="space-y-2">
       <Link
-        href="/floor-plan"
+        href={href}
         className="lift relative block overflow-hidden rounded-lg border border-stone-200 bg-stone-100"
         style={{ aspectRatio: String(aspect) }}
         aria-label="Open the shop floor plan"
