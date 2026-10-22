@@ -13,6 +13,7 @@ import {
   invoiceSO,
   removeSOLine,
   setCreditStatus,
+  setMustCheck,
   setSOStatus,
   updateSO,
 } from "../actions";
@@ -30,6 +31,7 @@ import {
   StatusBadge,
 } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
+import { MustCheck } from "@/components/MustCheck";
 import { skipRecurringSale } from "../recurring/actions";
 
 type Props = {
@@ -204,7 +206,15 @@ export default async function SOPage({ params, searchParams }: Props) {
           </>
         }
         back={{ href: "/sales", label: "Sales orders" }}
+        corner={so.must_check ? <MustCheck /> : undefined}
       >
+        {canSell && so.status !== "cancelled" && (
+          <form action={setMustCheck.bind(null, id, !so.must_check)}>
+            <SubmitButton className={so.must_check ? "btn" : "btn btn-danger"} pendingText="…">
+              {so.must_check ? "Remove MUST CHECK" : "Mark MUST CHECK"}
+            </SubmitButton>
+          </form>
+        )}
         {canSell && isDraft && (
           <>
             {so.recurring_id ? (
