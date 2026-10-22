@@ -22,16 +22,20 @@ export function ProductUnitPicker({
   priceName,
   priceLabel,
   defaultUnit = "largest",
+  hidePrice = false,
 }: {
   products: PickerProduct[];
   priceName: string;
   priceLabel: string;
   defaultUnit?: "largest" | "smallest";
+  /** Leave out the price field (e.g. recurring orders priced per order). */
+  hidePrice?: boolean;
 }) {
   const pickUnit = (p?: PickerProduct) => {
     if (!p || p.units.length === 0) return "";
     const sorted = [...p.units].sort((a, b) => a.factor - b.factor);
-    return (defaultUnit === "largest" ? sorted[sorted.length - 1] : sorted[0]).id;
+    return (defaultUnit === "largest" ? sorted[sorted.length - 1] : sorted[0])
+      .id;
   };
 
   const [filter, setFilter] = useState("");
@@ -42,7 +46,9 @@ export function ProductUnitPicker({
 
   const visible = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    const list = f ? products.filter((p) => p.label.toLowerCase().includes(f)) : products;
+    const list = f
+      ? products.filter((p) => p.label.toLowerCase().includes(f))
+      : products;
     // keep the selected product in the list so the select stays valid
     return product && !list.includes(product) ? [product, ...list] : list;
   }, [filter, products, product]);
@@ -79,11 +85,20 @@ export function ProductUnitPicker({
             </option>
           ))}
         </select>
-        {product?.note && <span className="mt-1 block text-xs text-stone-500">{product.note}</span>}
+        {product?.note && (
+          <span className="mt-1 block text-xs text-stone-500">
+            {product.note}
+          </span>
+        )}
       </label>
       <label className="block sm:col-span-2">
         <span className="label">Unit</span>
-        <select name="unit_id" className="input" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+        <select
+          name="unit_id"
+          className="input"
+          value={unitId}
+          onChange={(e) => setUnitId(e.target.value)}
+        >
           {product?.units.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -94,26 +109,35 @@ export function ProductUnitPicker({
       </label>
       <label className="block sm:col-span-2">
         <span className="label">Qty</span>
-        <input name="qty" type="number" min="0" step="any" required className="input" />
-      </label>
-      <label className="block sm:col-span-3">
-        <span className="label">{priceLabel}</span>
         <input
-          key={`${productId}-${unitId}`}
-          name={priceName}
+          name="qty"
           type="number"
           min="0"
-          step="0.0001"
+          step="any"
           required
           className="input"
-          defaultValue={suggested !== undefined ? suggested.toFixed(2) : ""}
         />
-        {unit && unit.factor !== 1 && (
-          <span className="mt-1 block text-xs text-stone-500">
-            per {unit.name} of {unit.factor} {product?.baseUnit}
-          </span>
-        )}
       </label>
+      {!hidePrice && (
+        <label className="block sm:col-span-3">
+          <span className="label">{priceLabel}</span>
+          <input
+            key={`${productId}-${unitId}`}
+            name={priceName}
+            type="number"
+            min="0"
+            step="0.0001"
+            required
+            className="input"
+            defaultValue={suggested !== undefined ? suggested.toFixed(2) : ""}
+          />
+          {unit && unit.factor !== 1 && (
+            <span className="mt-1 block text-xs text-stone-500">
+              per {unit.name} of {unit.factor} {product?.baseUnit}
+            </span>
+          )}
+        </label>
+      )}
     </div>
   );
 }
