@@ -5,11 +5,14 @@ export function PageHeader({
   subtitle,
   back,
   children,
+  corner,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   back?: { href: string; label: string };
   children?: React.ReactNode;
+  /** Shown in the top-right corner, above the actions */
+  corner?: React.ReactNode;
 }) {
   return (
     <div className="mb-6">
@@ -19,11 +22,18 @@ export function PageHeader({
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className={corner ? "min-w-0 flex-1 basis-80" : undefined}>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {subtitle && <div className="mt-1 text-sm text-stone-500">{subtitle}</div>}
         </div>
-        {children && <div className="flex flex-wrap gap-2 print:hidden">{children}</div>}
+        {corner ? (
+          <div className="ml-auto flex flex-col items-end gap-3">
+            {corner}
+            {children && <div className="flex flex-wrap justify-end gap-2 print:hidden">{children}</div>}
+          </div>
+        ) : (
+          children && <div className="flex flex-wrap gap-2 print:hidden">{children}</div>
+        )}
       </div>
     </div>
   );

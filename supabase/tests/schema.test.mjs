@@ -464,6 +464,13 @@ await expectErr(`insert into purchase_order_lines (po_id, product_id, unit_id, q
   await q(`update locations set layout_id=$1 where id=$2`, [main.id, c2]);
   await q(`select delete_shop_layout($1, $2)`, [west, main.id]);
 }
+{
+  // MUST CHECK can be set on an order at any status, by sales
+  const anySo = (await one(`select id, status from sales_orders where status='invoiced' limit 1`));
+  await q(`update sales_orders set must_check=true where id=$1`, [anySo.id]);
+  ok((await one(`select must_check from sales_orders where id=$1`, [anySo.id])).must_check === true, "MUST CHECK set on an invoiced order");
+  await q(`update sales_orders set must_check=false where id=$1`, [anySo.id]);
+}
 const delRes = await db.query(`delete from product_units where id=$1`, [unitsRose[0].id]);
 ok(delRes.affectedRows === 0, "base unit cannot be deleted");
 await db.exec(`reset role`);

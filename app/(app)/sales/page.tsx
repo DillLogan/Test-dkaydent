@@ -37,7 +37,7 @@ export default async function SalesPage({
   let query = supabase
     .from("sales_orders")
     .select(
-      "id, so_number, status, order_date, ship_date, customers(name), sales_order_lines(qty, unit_price)",
+      "id, so_number, status, order_date, ship_date, must_check, customers(name), sales_order_lines(qty, unit_price)",
     )
     .order(status === "recurring" ? "ship_date" : "created_at", {
       ascending: status === "recurring",
@@ -161,6 +161,11 @@ export default async function SalesPage({
                     >
                       {o.so_number}
                     </Link>
+                    {o.must_check && (
+                      <span className="ml-2 rounded border border-red-600 px-1 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap text-red-600">
+                        MUST CHECK
+                      </span>
+                    )}
                   </td>
                   <td>{o.customers?.name}</td>
                   <td>

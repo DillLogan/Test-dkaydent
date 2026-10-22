@@ -32,6 +32,18 @@ export async function updateSO(id: string, fd: FormData) {
   redirect(`${path}?message=${encodeURIComponent("Saved.")}`);
 }
 
+/** Sales reps flag (or clear) an order as MUST CHECK. Works at any status. */
+export async function setMustCheck(id: string, on: boolean) {
+  const { supabase } = await requireRole("sales");
+  const path = `/sales/${id}`;
+  const { data, error } = await supabase.from("sales_orders").update({ must_check: on }).eq("id", id).select("id");
+  if (error) fail(path, dbMessage(error));
+  if (!data?.length) fail(path, "Your role doesn't allow that change.");
+  revalidatePath(path);
+  revalidatePath("/sales");
+  redirect(`${path}?message=${encodeURIComponent(on ? "Marked MUST CHECK." : "MUST CHECK removed.")}`);
+}
+
 export async function addSOLine(id: string, fd: FormData) {
   const { supabase } = await requireRole("sales");
   const path = `/sales/${id}`;
