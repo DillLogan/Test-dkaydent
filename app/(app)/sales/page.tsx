@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { date, money, sum, today } from "@/lib/format";
+import { addDays, date, money, sum, today } from "@/lib/format";
 import { createSO } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Empty, ErrorBanner, PageHeader, Section, StatusBadge, Tabs } from "@/components/ui";
+import {
+  Empty,
+  ErrorBanner,
+  PageHeader,
+  Section,
+  StatusBadge,
+  Tabs,
+} from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -15,28 +22,54 @@ const FILTERS: Record<string, string[] | null> = {
   fulfilled: ["fulfilled"],
   invoiced: ["invoiced"],
   cancelled: ["cancelled"],
+  recurring: ["draft"],
   all: null,
 };
 
-export default async function SalesPage({ searchParams }: { searchParams: SP }) {
+export default async function SalesPage({
+  searchParams,
+}: {
+  searchParams: SP;
+}) {
   const { status = "open", customer, error } = await searchParams;
   const { supabase, profile } = await getSession();
 
   let query = supabase
     .from("sales_orders")
-    .select("id, so_number, status, order_date, ship_date, customers(name), sales_order_lines(qty, unit_price)")
-    .order("created_at", { ascending: false })
+    .select(
+      "id, so_number, status, order_date, ship_date, customers(name), sales_order_lines(qty, unit_price)",
+    )
+    .order(status === "recurring" ? "ship_date" : "created_at", {
+      ascending: status === "recurring",
+    })
     .limit(200);
   const statuses = FILTERS[status] ?? null;
   if (statuses) query = query.in("status", statuses);
+  // Planned recurring drafts wait under "Recurring (planned)" until a week before they ship.
+  const soon = addDays(today(), 7);
+  if (status === "recurring") query = query.not("recurring_id", "is", null);
+  else if (status === "open" || status === "draft")
+    query = query.or(
+      `recurring_id.is.null,status.neq.draft,customized.eq.true,ship_date.lte.${soon}`,
+    );
   const [{ data: orders }, { data: customers }] = await Promise.all([
     query,
-    supabase.from("customers").select("id, name").eq("active", true).order("name"),
+    supabase
+      .from("customers")
+      .select("id, name")
+      .eq("active", true)
+      .order("name"),
   ]);
 
   return (
     <>
-      <PageHeader title="Sales orders" subtitle="Draft → confirmed → fulfilled (stock pulled) → invoiced">
+      <PageHeader
+        title="Sales orders"
+        subtitle="Draft → confirmed → fulfilled (stock pulled) → invoiced"
+      >
+        <Link href="/sales/recurring" className="btn">
+          Recurring orders
+        </Link>
         <a href="/export/sales-orders" className="btn">
           Export CSV
         </a>
@@ -47,13 +80,25 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
         <Section title="New sales order">
           {!customers?.length ? (
             <Empty>
-              Add a <Link href="/customers" className="link">customer</Link> first.
+              Add a{" "}
+              <Link href="/customers" className="link">
+                customer
+              </Link>{" "}
+              first.
             </Empty>
           ) : (
-            <form action={createSO} className="card flex flex-wrap items-end gap-3">
+            <form
+              action={createSO}
+              className="card flex flex-wrap items-end gap-3"
+            >
               <label className="min-w-56 flex-1">
                 <span className="label">Customer</span>
-                <select name="customer_id" className="input" defaultValue={customer ?? ""} required>
+                <select
+                  name="customer_id"
+                  className="input"
+                  defaultValue={customer ?? ""}
+                  required
+                >
                   <option value="" disabled>
                     Choose…
                   </option>
@@ -66,7 +111,12 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
               </label>
               <label>
                 <span className="label">Ship / pickup date</span>
-                <input name="ship_date" type="date" className="input" defaultValue={today()} />
+                <input
+                  name="ship_date"
+                  type="date"
+                  className="input"
+                  defaultValue={today()}
+                />
               </label>
               <SubmitButton>Create draft order</SubmitButton>
             </form>
@@ -79,7 +129,10 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
         items={Object.keys(FILTERS).map((k) => ({
           key: k,
           href: `/sales?status=${k}`,
-          label: k[0].toUpperCase() + k.slice(1),
+          label:
+            k === "recurring"
+              ? "Recurring (planned)"
+              : k[0].toUpperCase() + k.slice(1),
         }))}
       />
 
@@ -102,7 +155,10 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
               {orders.map((o: any) => (
                 <tr key={o.id}>
                   <td>
-                    <Link href={`/sales/${o.id}`} className="link font-medium whitespace-nowrap">
+                    <Link
+                      href={`/sales/${o.id}`}
+                      className="link font-medium whitespace-nowrap"
+                    >
                       {o.so_number}
                     </Link>
                   </td>
@@ -112,7 +168,14 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
                   </td>
                   <td>{date(o.order_date)}</td>
                   <td>{date(o.ship_date)}</td>
-                  <td className="num">{money(sum(o.sales_order_lines, (l: any) => l.qty * l.unit_price))}</td>
+                  <td className="num">
+                    {money(
+                      sum(
+                        o.sales_order_lines,
+                        (l: any) => l.qty * l.unit_price,
+                      ),
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

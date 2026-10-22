@@ -349,6 +349,37 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   await expectErr(`select import_terminal_txn($1::jsonb)`, [JSON.stringify({ txn_id: "VAL-9003", amount: 5 })], "no matching invoice", "unmatched, unitemized txn rejected");
 }
 
+// ---------- Recurring sales orders ----------
+{
+  const tierRow = await one(`select c.price_tier_id t, pt.markup_pct m from customers c left join price_tiers pt on pt.id = c.price_tier_id where c.id=$1`, [cust]);
+  const rs = (await one(`insert into recurring_sales (name, customer_id, cadence, start_date) values ('Weekly shop roses', $1, 'weekly', current_date + 2) returning id`, [cust])).id;
+  ok((await one(`select generate_recurring_sales($1) n`, [rs])).n === 0, "recurring: nothing planned without items");
+  await q(`insert into recurring_sale_lines (recurring_id, product_id, unit_id, qty) values ($1,$2,$3,4)`, [rs, rose, bunch.id]);
+  const n = (await one(`select generate_recurring_sales($1) n`, [rs])).n;
+  ok(n === 52 || n === 53, `recurring: ${n} draft sales orders planned over 12 months`);
+  ok((await one(`select generate_recurring_sales($1) n`, [rs])).n === 0, "recurring: idempotent");
+  const sos = await q(`select id, status, ship_date::text sd, (select unit_price from sales_order_lines where so_id = s.id) price from sales_orders s where recurring_id=$1 order by occurrence_date`, [rs]);
+  const expected = Number((await one(`select customer_unit_price($1,$2) p`, [cust, bunch.id])).p);
+  ok(sos[0].status === "draft" && Number(sos[0].price) === expected && expected > 0, `recurring: drafts priced at the customer's price (${expected})`);
+  // tier price changes -> untouched drafts follow, edited ones keep theirs
+  await q(`update sales_order_lines set qty = 5 where so_id=$1`, [sos[1].id]);
+  ok((await one(`select customized from sales_orders where id=$1`, [sos[1].id])).customized === true, "recurring: editing a draft marks it customized");
+  const keep = Number(sos[1].price);
+  if (tierRow.t) await q(`insert into tier_prices (tier_id, product_unit_id, price) values ($1,$2,77) on conflict do nothing`, [tierRow.t, bunch.id]);
+  await q(`update tier_prices set price = 77 where product_unit_id=$1`, [bunch.id]);
+  await q(`select generate_recurring_sales($1)`, [rs]);
+  ok(Number((await one(`select unit_price from sales_order_lines where so_id=$1`, [sos[0].id])).unit_price) === 77, "recurring: untouched drafts re-priced at the current tier price");
+  ok(Number((await one(`select unit_price from sales_order_lines where so_id=$1`, [sos[1].id])).unit_price) === keep, "recurring: edited draft keeps its price");
+  await q(`select skip_recurring_sale($1)`, [sos[2].id]);
+  ok((await one(`select status from sales_orders where id=$1`, [sos[2].id])).status === "cancelled", "recurring: skip cancels that order");
+  ok((await one(`select generate_recurring_sales($1) n`, [rs])).n === 0, "recurring: skipped date not recreated");
+  await expectErr(`delete from sales_orders where id=$1`, [sos[3].id], "Skip it instead", "recurring: planned orders can't be deleted");
+  const removed = (await one(`select set_recurring_sale_state($1,'pause') n`, [rs])).n;
+  const left = Number((await one(`select count(*) c from sales_orders where recurring_id=$1`, [rs])).c);
+  ok(removed === n - 2 && left === 2, `recurring: pause removed ${removed} untouched, kept edited + skipped`);
+  ok((await one(`select set_recurring_sale_state($1,'resume') n`, [rs])).n === removed, "recurring: resume plans them again");
+}
+
 // ---------- Floor plan, home areas, photos ----------
 const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
 await q(`select set_home_location($1, $2)`, [tulip.id, c1]);

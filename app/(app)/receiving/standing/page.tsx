@@ -10,7 +10,7 @@ import { Empty, ErrorBanner, Field, Notice, PageHeader, Section } from "@/compon
 type SP = Promise<Record<string, string | undefined>>;
 
 export default async function StandingOrdersPage({ searchParams }: { searchParams: SP }) {
-  const { error, message } = await searchParams;
+  const { error, message, vendor } = await searchParams;
   const { supabase, profile } = await getSession();
   const canBuy = can(profile, "buyer");
   const now = today();
@@ -115,7 +115,7 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
                 <input name="name" className="input" placeholder="Weekly Ecuador roses" required />
               </Field>
               <Field label="Vendor">
-                <select name="vendor_id" className="input" required defaultValue="">
+                <select name="vendor_id" className="input" required defaultValue={vendor ?? ""}>
                   <option value="" disabled>
                     Choose…
                   </option>
