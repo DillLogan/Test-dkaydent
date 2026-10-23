@@ -65,7 +65,7 @@ export default async function PullTicketPage({ params }: Props) {
 
   return (
     <>
-      <style>{`@page { size: letter; margin: 0.5in; } @media print { html, body { background: #fff !important; } .page-in { animation: none !important; transform: none !important; } }`}</style>
+      <style>{`@page { size: letter; margin: 0.5in; } @media print { html, body { background: #fff !important; } html, body, .min-h-screen { min-height: 0 !important; height: auto !important; } .page-in { animation: none !important; transform: none !important; } }`}</style>
       <div className="print:hidden">
         <PageHeader title={`Pull ticket · ${so.so_number}`} subtitle="Items grouped by section, A to Z" back={{ href: `/sales/${id}`, label: so.so_number }}>
           <PrintButton />
@@ -116,6 +116,15 @@ export default async function PullTicketPage({ params }: Props) {
             <TicketTable rows={ticket.short} short />
           </section>
         )}
+
+        <footer className="mt-6 grid break-inside-avoid grid-cols-2 gap-10 text-sm" data-testid="ticket-signatures">
+          {["Pulled by", "Packed by"].map((t) => (
+            <div key={t}>
+              <div className="h-8 border-b border-[#111111]" />
+              <div className="mt-1 text-xs font-semibold text-[#57534e]">{t}</div>
+            </div>
+          ))}
+        </footer>
       </article>
     </>
   );
@@ -127,8 +136,10 @@ function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>
       <colgroup>
         <col className="w-8" />
         <col />
-        <col className="w-36" />
-        <col className="w-44" />
+        <col className="w-32" />
+        <col className="w-40" />
+        <col className="w-[4.5rem]" />
+        <col className="w-[4.5rem]" />
       </colgroup>
       <thead>
         <tr className="border-b border-[#a8a29e] text-left text-xs text-[#57534e]">
@@ -136,6 +147,8 @@ function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>
           <th className="py-1">Item</th>
           <th className="py-1">{short ? "" : "Lot"}</th>
           <th className="py-1 text-right">{short ? "Short by" : "Pull"}</th>
+          <th className="py-1 pl-3">Pulled</th>
+          <th className="py-1 pl-3">Packed</th>
         </tr>
       </thead>
       <tbody>
@@ -153,6 +166,12 @@ function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>
               {r.expiresAt && <div className="font-sans text-[#57534e]">exp {date(r.expiresAt)}</div>}
             </td>
             <td className="py-1.5 text-right font-semibold whitespace-nowrap tabular-nums">{ticketQty(r)}</td>
+            <td className="py-1.5 pl-3 align-bottom">
+              <span className="block h-5 border-b border-[#57534e]" aria-label="Pulled" />
+            </td>
+            <td className="py-1.5 pl-3 align-bottom">
+              <span className="block h-5 border-b border-[#57534e]" aria-label="Packed" />
+            </td>
           </tr>
         ))}
       </tbody>
