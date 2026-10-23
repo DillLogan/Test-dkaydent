@@ -512,6 +512,40 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .head > .actions, .head > .mc-col { margin-left: auto; justify-content: flex-end; }
 .mc-col > .actions { justify-content: flex-end; }
 
+/* ---------- Floor plan shapes ---------- */
+.plan { overflow: visible; }
+.plan-clip { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.plan.mini { overflow: hidden; }
+.plan-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.plan-feet { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--bg); }
+.plan-feet .gmin { stroke: color-mix(in srgb, var(--faint) 22%, transparent); stroke-width: 1px; }
+.plan-feet .gmaj { stroke: color-mix(in srgb, var(--faint) 45%, transparent); stroke-width: 1px; }
+.shape { fill: var(--c); fill-opacity: .18; stroke: var(--c); stroke-width: 2px; stroke-linejoin: round; cursor: pointer; transition: fill-opacity .2s var(--ease), opacity .2s var(--ease); outline: none; }
+.plan.editing .shape { cursor: move; }
+.shape.sel { fill-opacity: .3; stroke-width: 3px; }
+.shape.here, .shape.home { fill-opacity: .36; }
+.shape.away { stroke: #d97706; fill-opacity: .34; }
+.shape.faint { opacity: .4; }
+.shape:focus-visible { stroke-dasharray: 6 3; }
+.shape.pulse { animation: shape-pulse 1.6s ease-in-out infinite; }
+@keyframes shape-pulse { 0%, 100% { stroke-opacity: 1; stroke-width: 2px; } 50% { stroke-opacity: .45; stroke-width: 5px; } }
+.shape-lbl { position: absolute; transform: translate(-50%, -50%); pointer-events: none; display: flex; flex-direction: column; align-items: center; text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.25; color: var(--fg); }
+.shape-lbl .ct { font-size: 11px; color: var(--muted); }
+.shape-lbl .tag { margin-top: 2px; }
+.shape-lbl.faint { opacity: .4; }
+.mini-lbl { font-size: 9px; font-weight: 600; }
+.h-frame { position: absolute; border: 1px dashed var(--muted); border-radius: 6px; pointer-events: none; }
+.h-stem { position: absolute; width: 1px; height: 18px; background: var(--muted); pointer-events: none; }
+.h-sc, .h-v, .h-rot, .h-add { position: absolute; transform: translate(-50%, -50%); touch-action: none; z-index: 4; }
+.h-sc { width: 11px; height: 11px; border-radius: 3px; background: var(--surface); border: 1.5px solid var(--fg); }
+.h-v { width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--fg); cursor: move; z-index: 5; }
+.h-v:hover, .h-v.on, .h-sc:hover { background: var(--brand-hover); border-color: var(--brand); }
+.h-rot { width: 15px; height: 15px; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--fg); cursor: grab; }
+.h-rot:hover { background: var(--brand-hover); }
+.h-add { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--font); color: var(--brand); background: color-mix(in srgb, var(--surface) 85%, transparent); border: 1px solid var(--brand-hover); opacity: .8; cursor: copy; }
+.h-add:hover { opacity: 1; background: var(--brand-soft); }
+@media (prefers-reduced-motion: reduce) { .shape.pulse { animation: none; } }
+
 </style>
 
 </head>
@@ -2419,6 +2453,87 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   };
 })(typeof window !== "undefined" ? window : globalThis);
 
+/* Free-form floor plan areas and floor size in feet (same rules as the full app).
+ * A placed location's map: { x, y, w, h (bounding box, % of plan), c (colour), pts: [[x, y], …] }.
+ * A layout may carry wFt / hFt, the floor's real size. */
+(function (root) {
+  "use strict";
+  const DK = root.DK;
+  const { fail, need, byId } = DK._;
+  const OPS = DK.OPS;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const r3 = (n) => Math.round(n * 1000) / 1000;
+  const S = {
+    clamp,
+    rect: (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]],
+    bbox(p) { const xs = p.map((q) => q[0]), ys = p.map((q) => q[1]); const x = Math.min(...xs), y = Math.min(...ys); return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }; },
+    centroid(p, a = 1) {
+      let A = 0, cx = 0, cy = 0;
+      for (let i = 0; i < p.length; i++) { const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length]; const f = x0 * a * y1 - x1 * a * y0; A += f; cx += (x0 * a + x1 * a) * f; cy += (y0 + y1) * f; }
+      if (Math.abs(A) < 1e-9) return [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
+      return [cx / (3 * A) / a, cy / (3 * A)];
+    },
+    clampPts: (p) => p.map(([x, y]) => [r3(clamp(x, 0, 100)), r3(clamp(y, 0, 100))]),
+    translate(p, dx, dy) { const b = S.bbox(p); const mx = clamp(dx, -b.x, 100 - (b.x + b.w)), my = clamp(dy, -b.y, 100 - (b.y + b.h)); return p.map(([x, y]) => [r3(x + mx), r3(y + my)]); },
+    fit(p, to) { const b = S.bbox(p); const sx = b.w > 1e-9 ? to.w / b.w : 1, sy = b.h > 1e-9 ? to.h / b.h : 1; return S.clampPts(p.map(([x, y]) => [to.x + (x - b.x) * sx, to.y + (y - b.y) * sy])); },
+    rotate(p, deg, a) {
+      const [cx, cy] = S.centroid(p, a), t = (deg * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t);
+      const out = p.map(([x, y]) => { const ux = (x - cx) * a, uy = y - cy; return [cx + (ux * c - uy * s) / a, cy + ux * s + uy * c]; });
+      const b = S.bbox(out); const dx = b.x < 0 ? -b.x : b.x + b.w > 100 ? 100 - (b.x + b.w) : 0, dy = b.y < 0 ? -b.y : b.y + b.h > 100 ? 100 - (b.y + b.h) : 0;
+      return S.clampPts(out.map(([x, y]) => [x + dx, y + dy]));
+    },
+    angle: (from, to, a) => (Math.atan2(to[1] - from[1], (to[0] - from[0]) * a) * 180) / Math.PI,
+    insert(p, i) { const a = p[i], b = p[(i + 1) % p.length], o = p.slice(); o.splice(i + 1, 0, [r3((a[0] + b[0]) / 2), r3((a[1] + b[1]) / 2)]); return o; },
+    remove: (p, i) => (p.length <= 3 ? p : p.filter((_, j) => j !== i)),
+    valid(p) { if (!Array.isArray(p) || p.length < 3 || p.length > 60) return false; if (!p.every((q) => Array.isArray(q) && q.length === 2 && q.every((n) => typeof n === "number" && isFinite(n) && n >= 0 && n <= 100))) return false; const b = S.bbox(p); return b.w > 0.2 && b.h > 0.2; },
+    svg: (p, a) => p.map(([x, y]) => `${r3(x * a)},${r3(y)}`).join(" "),
+    ft: (n) => { const r = Math.round(n * 2) / 2; return `${Number.isInteger(r) ? r : r.toFixed(1)} ft`; },
+  };
+  DK.shapes = S;
+  DK.areaPts = (l) => (l.map && S.valid(l.map.pts) ? l.map.pts : l.map ? S.rect(l.map.x, l.map.y, l.map.w, l.map.h) : null);
+
+  const AREA_COLORS = DK.AREA_COLORS;
+  OPS.saveArea = (s, ctx, a) => {
+    DK.ensureLayouts(s); need(ctx, "warehouse");
+    const l = byId(s.locations, a.id, "Location");
+    let pts = a.pts;
+    if (!pts && a.w !== undefined) pts = S.rect(Number(a.x) || 0, Number(a.y) || 0, clamp(Number(a.w) || 10, 1, 100), clamp(Number(a.h) || 10, 1, 100));
+    if (!pts && l.map) pts = DK.areaPts(l);
+    pts = S.clampPts(pts || []);
+    if (!S.valid(pts)) fail("That shape needs at least 3 corners on the plan");
+    const b = S.bbox(pts);
+    l.map = { x: b.x, y: b.y, w: b.w, h: b.h, pts, c: /^#[0-9a-f]{6}$/i.test(a.c || "") ? a.c : l.map?.c || AREA_COLORS[0] };
+  };
+  // the floor's real size; areas keep their size in feet when it changes
+  OPS.setFloorSize = (s, ctx, a) => {
+    DK.ensureLayouts(s); need(ctx, "warehouse");
+    const lay = byId(s.layouts, a.layoutId, "Layout");
+    const w = Number(a.wFt);
+    let h = Number(a.hFt);
+    if (lay.bg) h = Math.round((w / lay.aspect) * 10) / 10;
+    if (!(w > 0 && w <= 5000 && h > 0 && h <= 5000)) fail("Enter the floor's width and depth in feet (up to 5,000)");
+    const aspect = Math.round((w / h) * 1000) / 1000;
+    if (aspect < 0.3 || aspect > 4) fail("That floor is too long and narrow to draw. Keep width ÷ depth between 0.3 and 4");
+    if (lay.wFt && lay.hFt) {
+      const sx = lay.wFt / w, sy = lay.hFt / h;
+      for (const l of s.locations) {
+        if (DK.locLayout(s, l) !== lay.id || !l.map) continue;
+        const pts = S.clampPts(DK.areaPts(l).map(([x, y]) => [x * sx, y * sy]));
+        if (!S.valid(pts)) continue;
+        const b = S.bbox(pts);
+        Object.assign(l.map, { x: b.x, y: b.y, w: b.w, h: b.h, pts });
+      }
+    }
+    Object.assign(lay, { wFt: w, hFt: h, aspect });
+  };
+  const setPlan0 = OPS.setPlan;
+  OPS.setPlan = (s, ctx, a) => {
+    setPlan0(s, ctx, a);
+    const lay = byId(s.layouts, a.layoutId || s.layouts[0].id, "Layout");
+    if (a.aspect !== undefined && lay.wFt) lay.hFt = Math.round((lay.wFt / lay.aspect) * 10) / 10;
+  };
+})(typeof window !== "undefined" ? window : globalThis);
+
 </script>
 <script>
 /* DKaydent Wholesale demo — UI. Shared data lives in the artifact's db at demo/state. */
@@ -3926,8 +4041,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     const placed = locsIn(lay.id).filter((l) => l.map && l.active);
     if (!placed.length) return "";
     return `<button type="button" class="plan mini" style="aspect-ratio:${lay.aspect}" data-go="floorplan" data-q='${esc(JSON.stringify({ layout: lay.id }))}' aria-label="Open Location in shop: ${esc(lay.name)}">
-      ${lay.bg ? `<img class="plan-bg" src="${imgUrl(lay.bg)}" alt="">` : ""}
-      ${placed.map((l) => { const home = l.id === homeId, here = hereIds.includes(l.id); return `<span class="area ${home ? "home" : ""} ${here ? (home ? "here" : "away") : ""}" style="left:${l.map.x}%;top:${l.map.y}%;width:${l.map.w}%;height:${l.map.h}%;--c:${l.map.c}"><span>${esc(l.name)}</span></span>`; }).join("")}
+      ${lay.bg ? `<img class="plan-bg" src="${imgUrl(lay.bg)}" alt="">` : `<div class="plan-grid"></div>`}
+      <svg class="plan-svg" viewBox="0 0 ${100 * lay.aspect} 100" preserveAspectRatio="none" aria-hidden="true">${placed.map((l) => { const home = l.id === homeId, here = hereIds.includes(l.id); return `<polygon class="shape ${home ? "home pulse" : ""} ${here ? (home ? "here" : "away") : ""} ${!home && !here ? "faint" : ""}" points="${DK.shapes.svg(DK.areaPts(l), lay.aspect)}" style="--c:${l.map.c}" vector-effect="non-scaling-stroke"/>`; }).join("")}</svg>
+      ${placed.map((l) => { const [cx, cy] = DK.shapes.centroid(DK.areaPts(l), lay.aspect); return `<span class="shape-lbl mini-lbl" style="left:${cx}%;top:${cy}%">${esc(l.name)}</span>`; }).join("")}
     </button>`;
   }
   function locationInShop(p, hereIds) {
@@ -3949,6 +4065,33 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 
   // ---------- Location in shop ----------
   ui.fp = ui.fp || { sel: null, edit: false, door: null, form: null };
+  const feetOf = (lay) => (lay.wFt && lay.hFt ? { x: lay.wFt / 100, y: lay.hFt / 100 } : null);
+  const steps = (lay) => { const f = feetOf(lay); return f ? [0.5 / f.x, 0.5 / f.y] : [0.5, 0.5]; }; // ½ ft (or ½ %)
+  const sizeText = (lay, b) => { const f = feetOf(lay); return f ? `${DK.shapes.ft(b.w * f.x)} × ${DK.shapes.ft(b.h * f.y)}` : `${Math.round(b.w)}% × ${Math.round(b.h)}%`; };
+  function feetGrid(lay) {
+    const vbW = 100 * lay.aspect, per = 100 / lay.hFt, minor = Math.max(lay.wFt, lay.hFt) > 80 ? 5 : 1;
+    let out = "";
+    for (let f = minor; f < lay.wFt; f += minor) out += `<line x1="${f * per}" y1="0" x2="${f * per}" y2="100" class="${f % 10 === 0 ? "gmaj" : "gmin"}" vector-effect="non-scaling-stroke"/>`;
+    for (let f = minor; f < lay.hFt; f += minor) out += `<line x1="0" y1="${f * per}" x2="${vbW}" y2="${f * per}" class="${f % 10 === 0 ? "gmaj" : "gmin"}" vector-effect="non-scaling-stroke"/>`;
+    return `<svg class="plan-feet" viewBox="0 0 ${vbW} 100" preserveAspectRatio="none" aria-hidden="true">${out}</svg>`;
+  }
+  // handles are HTML so they stay the same size on screen; the resize frame sits a little outside the shape
+  const HANDLES = [["nw", 0, 0, "nwse"], ["n", 0.5, 0, "ns"], ["ne", 1, 0, "nesw"], ["e", 1, 0.5, "ew"], ["se", 1, 1, "nwse"], ["s", 0.5, 1, "ns"], ["sw", 0, 1, "nesw"], ["w", 0, 0.5, "ew"]];
+  function handlesHtml(lay, pts) {
+    const b = DK.shapes.bbox(pts), P = 14;
+    const fx = (t) => `calc(${b.x + b.w * t}% + ${(t - 0.5) * 2 * P}px)`, fy = (t) => `calc(${b.y + b.h * t}% + ${(t - 0.5) * 2 * P}px)`;
+    const rotBelow = b.y < 8;
+    let h = `<div class="h-frame" style="left:calc(${b.x}% - ${P}px);top:calc(${b.y}% - ${P}px);width:calc(${b.w}% + ${2 * P}px);height:calc(${b.h}% + ${2 * P}px)"></div>`;
+    h += `<div class="h-stem" style="left:${b.x + b.w / 2}%;top:${rotBelow ? `calc(${b.y + b.h}% + ${P}px)` : `calc(${b.y}% - ${P + 18}px)`}"></div>`;
+    h += `<span class="h-rot" data-h-rot title="Drag to rotate" style="left:${b.x + b.w / 2}%;top:${rotBelow ? `calc(${b.y + b.h}% + ${P + 22}px)` : `calc(${b.y}% - ${P + 22}px)`}"></span>`;
+    for (const [k, tx, ty, c] of HANDLES) h += `<span class="h-sc" data-h-scale="${k}" style="left:${fx(tx)};top:${fy(ty)};cursor:${c}-resize"></span>`;
+    pts.forEach((p, i) => {
+      const n = pts[(i + 1) % pts.length];
+      h += `<span class="h-add" data-h-add="${i}" title="Drag to add a corner here" style="left:${(p[0] + n[0]) / 2}%;top:${(p[1] + n[1]) / 2}%">+</span>`;
+    });
+    pts.forEach((p, i) => { h += `<span class="h-v ${ui.fp.vtx === i ? "on" : ""}" data-h-v="${i}" title="Drag to move this corner; double-tap to remove it" style="left:${p[0]}%;top:${p[1]}%"></span>`; });
+    return h;
+  }
   const ARROW = { entry: { top: "↓", bottom: "↑", left: "→", right: "←" }, exit: { top: "↑", bottom: "↓", left: "←", right: "→" } };
   PAGES.floorplan = () => {
     const fp = ui.fp;
@@ -3975,14 +4118,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     const q = (ui.q.q || "").toLowerCase();
     const matches = q ? S.products.filter((p) => `${p.sku} ${p.name}`.toLowerCase().includes(q)).slice(0, 8) : [];
     const lq = (extra) => esc(JSON.stringify({ layout: lay.id, ...extra }));
-    const area = (l) => {
+    const SH = DK.shapes;
+    const shapeSvg = (l) => {
+      const isHome = findHome === l.id, isHere = findHere.includes(l.id);
+      const n = Object.keys(stockAt[l.id] || {}).length;
+      return `<polygon class="shape ${fp.sel === l.id ? "sel" : ""} ${isHome ? "home pulse" : ""} ${isHere ? (isHome ? "here" : "away") : ""} ${find && !isHome && !isHere ? "faint" : ""}" data-area="${l.id}" tabindex="0" role="button"
+        aria-label="${esc(l.name)}${isHome ? ", home area" : ""}${isHere ? ", stock here" : ""}${n ? `, ${n} items` : ""}" points="${SH.svg(DK.areaPts(l), lay.aspect)}" style="--c:${l.map.c}" vector-effect="non-scaling-stroke"/>`;
+    };
+    const shapeLabel = (l) => {
+      const pts = DK.areaPts(l);
+      const [cx, cy] = SH.centroid(pts, lay.aspect);
       const n = Object.keys(stockAt[l.id] || {}).length;
       const isHome = findHome === l.id, isHere = findHere.includes(l.id);
-      return `<div class="area ${fp.sel === l.id ? "sel" : ""} ${isHome ? "home" : ""} ${isHere ? (isHome ? "here" : "away") : ""} ${isHome ? "pulse" : ""}" data-area="${l.id}" tabindex="0" role="button"
-        aria-label="${esc(l.name)}${isHome ? ", home area" : ""}${isHere ? ", stock here" : ""}" style="left:${l.map.x}%;top:${l.map.y}%;width:${l.map.w}%;height:${l.map.h}%;--c:${l.map.c}">
-        <span class="nm">${esc(l.name)}</span><span class="ct">${n ? `${n} item${n === 1 ? "" : "s"}` : "empty"}</span>
-        ${isHome ? `<span class="tag t-home">Home</span>` : ""}${isHere ? `<span class="tag ${isHome ? "t-home" : "t-away"}">${isHome ? "Stock here" : "Stock is here"}</span>` : ""}
-        ${fp.edit ? `<span class="rz" data-rz title="Drag to resize" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M13 3 3 13M13 7.5 7.5 13M13 11.5 11.5 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>` : ""}</div>`;
+      return `<div class="shape-lbl ${find && !isHome && !isHere ? "faint" : ""}" data-lbl="${l.id}" style="left:${cx}%;top:${cy}%"><b>${esc(l.name)}</b><span class="ct">${fp.edit && fp.sel === l.id ? sizeText(lay, SH.bbox(pts)) : n ? `${n} item${n === 1 ? "" : "s"}` : "empty"}</span>
+        ${isHome ? `<span class="tag t-home">Home</span>` : ""}${isHere ? `<span class="tag ${isHome ? "t-home" : "t-away"}">${isHome ? "Stock here" : "Stock is here"}</span>` : ""}</div>`;
     };
     const door = (d) => {
       const pos = d.side === "top" ? `left:${d.pos}%;top:2px;transform:translateX(-50%)` : d.side === "bottom" ? `left:${d.pos}%;bottom:2px;transform:translateX(-50%)` : d.side === "left" ? `top:${d.pos}%;left:2px;transform:translateY(-50%)` : `top:${d.pos}%;right:2px;transform:translateY(-50%)`;
@@ -3998,8 +4147,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       const belongs = S.products.filter((p) => homeIn(p, lay.id) === selL.id);
       return `<div class="card section"><div class="head"><h2 style="margin:0">${esc(selL.name)}</h2><button type="button" class="btn btn-s" data-act="fpSel" data-v="">Close</button></div>
         ${fp.edit ? `<div class="row">${DK.AREA_COLORS.map((c) => `<button type="button" class="swatch ${selL.map?.c === c ? "on" : ""}" style="--c:${c}" data-act="fpColor" data-v="${c}" aria-label="Color ${c}"></button>`).join("")}</div>
-          <p class="small" style="margin:0">Drag the area to move it, drag its bottom-right corner to resize. Arrow keys nudge it.</p>
-          <button type="button" class="btn btn-s btn-d" data-act="fpRemove">Remove from plan</button>` : ""}
+          ${(() => { const b = SH.bbox(DK.areaPts(selL)), f = feetOf(lay); return `<form class="row" data-form="fpSize" style="align-items:flex-end">
+            <label class="f"><span>Width ${f ? "(ft)" : "(%)"}</span>${inp("w", Math.round(b.w * (f ? f.x : 1) * 2) / 2, 'type="number" step="0.5" min="0.5" class="w-24"')}</label>
+            <label class="f"><span>Depth ${f ? "(ft)" : "(%)"}</span>${inp("h", Math.round(b.h * (f ? f.y : 1) * 2) / 2, 'type="number" step="0.5" min="0.5" class="w-24"')}</label>
+            <button class="btn btn-s">Set size</button></form>${f ? "" : `<p class="small" style="margin:0">Set the floor size to work in feet.</p>`}`; })()}
+          <div class="row"><span class="small">Rotate</span>${[-90, -15, 15, 90].map((d) => `<button type="button" class="btn btn-s" data-act="fpRot" data-v="${d}" aria-label="Rotate ${d}°">${d < 0 ? "↺" : "↻"} ${Math.abs(d)}°</button>`).join("")}</div>
+          <div class="row"><button type="button" class="btn btn-s" data-act="fpRect">Make rectangle</button>${fp.vtx != null && DK.areaPts(selL).length > 3 ? `<button type="button" class="btn btn-s" data-act="fpDelV">Remove corner</button>` : ""}<button type="button" class="btn btn-s btn-d" data-act="fpRemove">Remove from plan</button></div>
+          <p class="small" style="margin:0">${DK.areaPts(selL).length} corners · ${sizeText(lay, SH.bbox(DK.areaPts(selL)))}</p>` : ""}
         <span class="lbl">Stored here now</span>${items.length ? `<ul class="plain">${items.map(({ p, q: q2 }) => { const h = homeIn(p, lay.id); return `<li>${thumb(p.name, p.img, 24)} ${link("product", p.id, esc(p.name))} <span class="small">${inUnits(q2, p)}</span>${h && h !== selL.id ? ` <span class="t-warn small">· belongs in ${esc(loc(h)?.name)}</span>` : ""}</li>`; }).join("")}</ul>` : `<p class="small" style="margin:0">Nothing here.</p>`}
         <span class="lbl">Belongs here</span>${belongs.length ? `<ul class="plain">${belongs.map((p) => `<li>${thumb(p.name, p.img, 24)} ${link("product", p.id, esc(p.name))}</li>`).join("")}</ul>` : `<p class="small" style="margin:0">No items call this home.</p>`}</div>`;
     })() : "";
@@ -4020,16 +4174,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       <div class="fp-grid">
         <div>
           <div class="plan ${fp.edit ? "editing" : ""}" id="plan" style="aspect-ratio:${lay.aspect}">
-            ${lay.bg ? `<img class="plan-bg" src="${imgUrl(lay.bg)}" alt="Floor plan">` : `<div class="plan-grid"></div>`}
-            ${placed.map(area).join("")}
+            <div class="plan-clip">${lay.bg ? `<img class="plan-bg" src="${imgUrl(lay.bg)}" alt="Floor plan">` : lay.wFt && lay.hFt ? feetGrid(lay) : `<div class="plan-grid"></div>`}</div>
+            <svg class="plan-svg" id="plan-svg" viewBox="0 0 ${100 * lay.aspect} 100" preserveAspectRatio="none">${placed.map(shapeSvg).join("")}</svg>
+            ${placed.map(shapeLabel).join("")}
+            <div id="plan-h">${fp.edit && selL && selL.map ? handlesHtml(lay, DK.areaPts(selL)) : ""}</div>
             ${doors.map(door).join("")}
             ${!placed.length ? `<div class="plan-empty small">${canEdit ? "Click Edit layout, then place this shop's sections on the plan." : "No areas placed yet."}</div>` : ""}
           </div>
           <p class="small" style="margin:6px 0 0">Green pills are entries, amber pills are exits.</p>
           ${fp.edit ? `<div class="card section" style="margin-top:12px">
-            <p class="small" style="margin:0">Drag areas to move them; drag the bottom-right corner to resize; arrow keys nudge. Drag entries and exits along the walls.</p>
+            <p class="small" style="margin:0">Drag an area to move it. Select it to get handles: corners and edges resize, the round handle on top rotates, the dots are its corners (drag them, double-tap one to remove it) and the + on each edge adds a corner. Drag entries and exits along the walls.</p>
+            <form class="row" data-form="floorSize"><span class="small">Floor size</span>${inp("wFt", lay.wFt ?? "", 'type="number" min="1" max="5000" step="0.5" required placeholder="Width" class="w-24" aria-label="Floor width in feet"')}<span class="small">×</span>${inp("hFt", lay.hFt ?? "", `type="number" min="1" max="5000" step="0.5" ${lay.bg ? 'disabled placeholder="From image"' : 'required placeholder="Depth"'} class="w-24" aria-label="Floor depth in feet"`)}<span class="small">ft</span><button class="btn btn-s">${lay.wFt ? "Update" : "Set size"}</button></form>
             <div class="row">
-              <span class="small">Plan shape</span>${[["1.6", "Wide"], ["1", "Square"], ["0.7", "Tall"]].map(([v, l]) => `<button type="button" class="btn btn-s ${String(lay.aspect) === v ? "btn-p" : ""}" data-act="fpShape" data-v="${v}">${l}</button>`).join("")}
               ${assets ? `<label class="btn btn-s">${lay.bg ? "Replace" : "Upload"} floor plan image<input type="file" accept="image/*" hidden data-photo="plan"></label>` : ""}
               ${lay.bg ? `<button type="button" class="btn btn-s btn-d" data-act="removePhoto" data-kind="plan">Remove image</button>` : ""}</div>
             ${unplaced.length ? `<div class="row"><span class="small">Not on the plan:</span>${unplaced.map((l) => `<button type="button" class="btn btn-s" data-act="fpPlace" data-v="${l.id}">+ ${esc(l.name)}</button>`).join("")}</div>` : ""}
@@ -4044,10 +4200,28 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   ACTS.fpSel = (el) => { ui.fp.sel = el.dataset.v || null; ui.fp.door = null; render(); };
   ACTS.fpDoor = (el) => { ui.fp.door = el.dataset.v || null; render(); };
   ACTS.fpForm = (el) => { ui.fp.form = el.dataset.v && ui.fp.form !== el.dataset.v ? el.dataset.v : null; render(); };
-  ACTS.fpShape = (el) => commit("setPlan", { layoutId: curLayout().id, aspect: Number(el.dataset.v) });
-  ACTS.fpColor = (el) => { const l = loc(ui.fp.sel); commit("saveArea", { id: l.id, ...l.map, c: el.dataset.v }); };
+  ACTS.fpColor = (el) => { const l = loc(ui.fp.sel); commit("saveArea", { id: l.id, pts: DK.areaPts(l), c: el.dataset.v }); };
+  const saveShape = (id, pts, msg) => commit("saveArea", { id, pts: DK.shapes.clampPts(pts) }, msg ? { msg } : {});
+  ACTS.fpRot = (el) => { const l = loc(ui.fp.sel); saveShape(l.id, DK.shapes.rotate(DK.areaPts(l), Number(el.dataset.v), curLayout().aspect)); };
+  ACTS.fpRect = () => { const l = loc(ui.fp.sel), b = DK.shapes.bbox(DK.areaPts(l)); ui.fp.vtx = null; saveShape(l.id, DK.shapes.rect(b.x, b.y, b.w, b.h)); };
+  ACTS.fpDelV = () => { const l = loc(ui.fp.sel), pts = DK.areaPts(l); if (pts.length <= 3 || ui.fp.vtx == null) return; const i = ui.fp.vtx; ui.fp.vtx = null; saveShape(l.id, DK.shapes.remove(pts, i)); };
+  FORMS.fpSize = (o) => {
+    const l = loc(ui.fp.sel), lay = curLayout(), f = feetOf(lay), b = DK.shapes.bbox(DK.areaPts(l));
+    const w = Number(o.w), h = Number(o.h);
+    if (!(w > 0 && h > 0)) { ui.error = "Enter a width and depth greater than 0."; return render(); }
+    const wp = f ? w / f.x : w, hp = f ? h / f.y : h;
+    if (wp > 100.001 || hp > 100.001) { ui.error = "That's bigger than the floor."; return render(); }
+    saveShape(l.id, DK.shapes.fit(DK.areaPts(l), { x: DK.shapes.clamp(b.x, 0, 100 - wp), y: DK.shapes.clamp(b.y, 0, 100 - hp), w: wp, h: hp }));
+  };
+  FORMS.floorSize = (o) => commit("setFloorSize", { layoutId: curLayout().id, wFt: Number(o.wFt), hFt: Number(o.hFt) }, { msg: "Floor size saved" });
   ACTS.fpRemove = () => { const id = ui.fp.sel; ui.fp.sel = null; commit("removeArea", { id }, { msg: "Taken off the plan" }); };
-  ACTS.fpPlace = (el) => { ui.fp.sel = el.dataset.v; ui.fp.door = null; commit("saveArea", { id: el.dataset.v, x: 40, y: 40, w: 18, h: 18, c: DK.AREA_COLORS[S.locations.filter((l) => l.map).length % DK.AREA_COLORS.length] }, { msg: "Placed. Drag it where it goes." }); };
+  ACTS.fpPlace = (el) => {
+    const f = feetOf(curLayout()), [sx, sy] = steps(curLayout());
+    const w = f ? Math.min(60, 10 / f.x) : 20, h = f ? Math.min(60, 8 / f.y) : 16; // 10 × 8 ft when the floor size is known
+    const snap = (v, st) => Math.round(v / st) * st;
+    ui.fp.sel = el.dataset.v; ui.fp.door = null; ui.fp.vtx = null;
+    commit("saveArea", { id: el.dataset.v, pts: DK.shapes.rect(snap(50 - w / 2, sx), snap(50 - h / 2, sy), snap(w, sx), snap(h, sy)), c: DK.AREA_COLORS[S.locations.filter((l) => l.map).length % DK.AREA_COLORS.length] }, { msg: "Placed. Drag it where it goes." });
+  };
   ACTS.fpDoorRemove = () => { const id = ui.fp.door; ui.fp.door = null; commit("removeDoor", { id }, { msg: "Removed" }); };
   FORMS.addDoor = (o) => commit("addDoor", { layoutId: curLayout().id, kind: o.kind, label: o.label }, { after: (id) => { ui.fp.door = id; ui.fp.sel = null; }, msg: "Added. Drag it along the wall to where it is." });
   FORMS.saveDoor = (o) => commit("saveDoor", { id: o.id, kind: o.kind, label: o.label }, { msg: "Saved" });
@@ -4058,24 +4232,60 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     else if (f === "rename") commit("renameLayout", { id: lay.id, name: o.name }, { after: () => done(), msg: "Renamed" });
     else if (f === "delete") commit("deleteLayout", { id: lay.id, moveTo: o.moveTo }, { after: (to) => done(to), msg: "Layout deleted" });
   };
-  // drag / resize areas, slide entries and exits along the walls
-  const CORNER = 22;
-  let drag = null;
+  // move, reshape, resize and rotate areas; slide entries and exits along the walls
+  let drag = null, lastTap = null;
+  const planPt = (ev, raw) => {
+    const b = document.getElementById("plan").getBoundingClientRect();
+    const x = ((ev.clientX - b.left) / b.width) * 100, y = ((ev.clientY - b.top) / b.height) * 100;
+    return raw ? [x, y] : [DK.shapes.clamp(x, 0, 100), DK.shapes.clamp(y, 0, 100)];
+  };
+  function paintShape(id, pts) {
+    const lay = curLayout(), SH = DK.shapes;
+    const poly = document.querySelector(`#plan-svg [data-area="${id}"]`);
+    if (poly) poly.setAttribute("points", SH.svg(pts, lay.aspect));
+    const lbl = document.querySelector(`[data-lbl="${id}"]`);
+    if (lbl) { const [cx, cy] = SH.centroid(pts, lay.aspect); lbl.style.left = cx + "%"; lbl.style.top = cy + "%"; const ct = lbl.querySelector(".ct"); if (ct) ct.textContent = sizeText(lay, SH.bbox(pts)); }
+    const h = document.getElementById("plan-h");
+    if (h) h.innerHTML = handlesHtml(lay, pts);
+  }
   app.addEventListener("pointerdown", (ev) => {
-    if (ui.page !== "floorplan" || ev.button > 0) return;
+    if (ui.page !== "floorplan" || ev.button > 0 || !ui.fp.edit) return;
     const dEl = ev.target.closest("[data-door]");
-    const a = !dEl && ev.target.closest("[data-area]");
-    if (!dEl && !a) return;
-    if (!ui.fp.edit) return;
-    const plan = document.getElementById("plan").getBoundingClientRect();
     if (dEl) {
       const d = (S.doors || []).find((x) => x.id === dEl.dataset.door);
-      drag = { door: true, el: dEl, id: d.id, plan, moved: false, cur: { side: d.side, pos: d.pos } };
+      drag = { door: true, el: dEl, id: d.id, plan: document.getElementById("plan").getBoundingClientRect(), moved: false, cur: { side: d.side, pos: d.pos } };
     } else {
-      const l = loc(a.dataset.area);
-      const r = a.getBoundingClientRect();
-      const corner = !!ev.target.closest("[data-rz]") || (r.right - ev.clientX <= CORNER && r.bottom - ev.clientY <= CORNER);
-      drag = { el: a, id: l.id, start: { ...l.map }, x0: ev.clientX, y0: ev.clientY, pw: plan.width, ph: plan.height, rz: corner, moved: false, cur: { ...l.map } };
+      const SH = DK.shapes, lay = curLayout();
+      const hEl = ev.target.closest("[data-h-rot],[data-h-scale],[data-h-add],[data-h-v]");
+      const aEl = !hEl && ev.target.closest("[data-area]");
+      if (!hEl && !aEl) return;
+      const id = hEl ? ui.fp.sel : aEl.dataset.area;
+      const l = loc(id);
+      if (!l || !l.map) return;
+      const pts = DK.areaPts(l);
+      if (aEl) {
+        if (ui.fp.sel !== id) { ui.fp.vtx = null; ui.fp.sel = id; ui.fp.door = null; render(); }
+        drag = { id, mode: "move", start: pts, p0: planPt(ev), moved: false, cur: pts };
+      } else if (hEl.dataset.hRot !== undefined) drag = { id, mode: "rotate", start: pts, a0: SH.angle(SH.centroid(pts, lay.aspect), planPt(ev), lay.aspect), moved: false, cur: pts };
+      else if (hEl.dataset.hScale) drag = { id, mode: "scale", start: pts, box: SH.bbox(pts), handle: hEl.dataset.hScale, p0: planPt(ev, true), moved: false, cur: pts };
+      else if (hEl.dataset.hAdd !== undefined) {
+        const i = Number(hEl.dataset.hAdd), next = SH.insert(pts, i);
+        ui.fp.vtx = i + 1;
+        drag = { id, mode: "vertex", start: next, vi: i + 1, moved: true, cur: next };
+        paintShape(id, next);
+      } else {
+        const i = Number(hEl.dataset.hV), key = id + ":" + i;
+        if (lastTap && lastTap.key === key && ev.timeStamp - lastTap.at < 350) { // a double tap removes the corner
+          lastTap = null;
+          ev.preventDefault();
+          if (pts.length > 3) { ui.fp.vtx = null; saveShape(id, SH.remove(pts, i)); } else { ui.error = "A shape needs at least 3 corners."; render(); }
+          return;
+        }
+        lastTap = { key, at: ev.timeStamp };
+        ui.fp.vtx = i;
+        drag = { id, mode: "vertex", start: pts, vi: i, moved: false, cur: pts };
+        document.querySelectorAll(".h-v").forEach((v) => v.classList.toggle("on", v.dataset.hV === String(i)));
+      }
     }
     document.getElementById("plan").setPointerCapture(ev.pointerId);
     ev.preventDefault();
@@ -4095,13 +4305,35 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       else { st.top = pos + "%"; st[side] = "2px"; st.transform = "translateY(-50%)"; }
       return;
     }
-    const dx = ((ev.clientX - drag.x0) / drag.pw) * 100, dy = ((ev.clientY - drag.y0) / drag.ph) * 100;
-    if (Math.abs(dx) + Math.abs(dy) > 0.4) drag.moved = true;
-    const snap = (v) => Math.round(v * 2) / 2;
-    const s0 = drag.start, c = drag.cur;
-    if (drag.rz) { c.w = snap(Math.min(100 - s0.x, Math.max(3, s0.w + dx))); c.h = snap(Math.min(100 - s0.y, Math.max(3, s0.h + dy))); }
-    else { c.x = snap(Math.min(100 - s0.w, Math.max(0, s0.x + dx))); c.y = snap(Math.min(100 - s0.h, Math.max(0, s0.y + dy))); }
-    Object.assign(drag.el.style, { left: c.x + "%", top: c.y + "%", width: c.w + "%", height: c.h + "%" });
+    const SH = DK.shapes, lay = curLayout(), [sx, sy] = steps(lay);
+    const snX = (v) => Math.round(v / sx) * sx, snY = (v) => Math.round(v / sy) * sy;
+    const d = drag;
+    let pts;
+    if (d.mode === "move") {
+      const p = planPt(ev), b = SH.bbox(d.start);
+      pts = SH.translate(d.start, snX(b.x + p[0] - d.p0[0]) - b.x, snY(b.y + p[1] - d.p0[1]) - b.y);
+    } else if (d.mode === "vertex") {
+      const p = planPt(ev);
+      pts = d.start.map((q, i) => (i === d.vi ? [snX(p[0]), snY(p[1])] : q));
+    } else if (d.mode === "scale") {
+      // the handle follows the pointer; sizes snap to ½ ft steps from the edge that stays put
+      const p = planPt(ev, true), b = d.box, dx = p[0] - d.p0[0], dy = p[1] - d.p0[1];
+      let x1 = b.x, y1 = b.y, x2 = b.x + b.w, y2 = b.y + b.h;
+      if (d.handle.includes("w")) x1 = x2 - Math.max(snX(b.w - dx), sx * 2);
+      if (d.handle.includes("e")) x2 = x1 + Math.max(snX(b.w + dx), sx * 2);
+      if (d.handle.includes("n")) y1 = y2 - Math.max(snY(b.h - dy), sy * 2);
+      if (d.handle.includes("s")) y2 = y1 + Math.max(snY(b.h + dy), sy * 2);
+      x1 = Math.max(0, x1); y1 = Math.max(0, y1); x2 = Math.min(100, x2); y2 = Math.min(100, y2);
+      pts = SH.fit(d.start, { x: x1, y: y1, w: x2 - x1, h: y2 - y1 });
+    } else {
+      const p = planPt(ev);
+      let deg = SH.angle(SH.centroid(d.start, lay.aspect), p, lay.aspect) - d.a0;
+      if (!ev.shiftKey) deg = Math.round(deg / 5) * 5;
+      pts = SH.rotate(d.start, deg, lay.aspect);
+    }
+    d.moved = true;
+    d.cur = pts;
+    paintShape(d.id, pts);
   });
   app.addEventListener("pointerup", (ev) => {
     if (!drag) return;
@@ -4111,7 +4343,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     if (plan && plan.hasPointerCapture(ev.pointerId)) plan.releasePointerCapture(ev.pointerId);
     if (d.door) { ui.fp.door = d.id; ui.fp.sel = null; if (d.moved) commit("saveDoor", { id: d.id, ...d.cur }); else render(); return; }
     ui.fp.sel = d.id; ui.fp.door = null;
-    if (d.moved) commit("saveArea", { id: d.id, ...d.cur });
+    if (d.moved) saveShape(d.id, d.cur);
     else render();
   });
   app.addEventListener("click", (ev) => {
@@ -4129,13 +4361,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     const a = ev.target.closest && ev.target.closest("[data-area]");
     if (!a || ui.page !== "floorplan") return;
     if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ui.fp.sel = a.dataset.area; ui.fp.door = null; return render(); }
-    if (!ui.fp.edit || !ev.key.startsWith("Arrow")) return;
+    if (!ui.fp.edit) return;
+    const l = loc(a.dataset.area), pts = DK.areaPts(l);
+    if ((ev.key === "Delete" || ev.key === "Backspace") && ui.fp.sel === l.id && ui.fp.vtx != null) { ev.preventDefault(); return ACTS.fpDelV(); }
+    if (!ev.key.startsWith("Arrow")) return;
     ev.preventDefault();
-    const l = loc(a.dataset.area), step = ev.shiftKey ? 5 : 1;
-    const m = { ...l.map };
-    if (ev.key === "ArrowLeft") m.x -= step; if (ev.key === "ArrowRight") m.x += step; if (ev.key === "ArrowUp") m.y -= step; if (ev.key === "ArrowDown") m.y += step;
+    const [sx, sy] = steps(curLayout()), k = ev.shiftKey ? 5 : 1;
+    const dx = ev.key === "ArrowLeft" ? -sx * k : ev.key === "ArrowRight" ? sx * k : 0, dy = ev.key === "ArrowUp" ? -sy * k : ev.key === "ArrowDown" ? sy * k : 0;
     ui.fp.sel = l.id;
-    commit("saveArea", { id: l.id, ...m });
+    saveShape(l.id, DK.shapes.translate(pts, dx, dy));
   });
 
   // ---------- category rules ----------
