@@ -15,7 +15,7 @@ import {
   saveArea,
   saveDoor,
   setHomeAreaInline,
-  setPlanShape,
+  setFloorSize,
   uploadPlanBackground,
 } from "./actions";
 
@@ -64,6 +64,8 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
         layout={{ id: layoutId, name: plan.layout.name }}
         layouts={plan.layouts.map((l) => ({ id: l.id, name: l.name }))}
         aspect={plan.layout.aspect}
+        widthFt={plan.layout.widthFt}
+        heightFt={plan.layout.heightFt}
         backgroundUrl={imageUrl(plan.layout.background)}
         areas={plan.areas}
         doors={plan.doors}
@@ -75,7 +77,7 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
         actions={{
           saveArea,
           removeArea,
-          setPlanShape,
+          setFloorSize,
           uploadBackground: uploadPlanBackground,
           removeBackground: removePlanBackground,
           setHome: setHomeAreaInline,

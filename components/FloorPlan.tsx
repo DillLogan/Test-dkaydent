@@ -2,13 +2,31 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ItemThumb } from "./ItemThumb";
 import { resizeImage } from "@/lib/resizeImage";
 import { AREA_COLORS, type DoorSide, type PlanDoor } from "@/lib/plan";
+import {
+  angleOf,
+  bbox,
+  centroid,
+  clamp,
+  clampPts,
+  feetScale,
+  fitBox,
+  fmtFt,
+  insertPoint,
+  rectPoints,
+  removePoint,
+  rotate,
+  toSvg,
+  translate,
+  type Box,
+  type Pt,
+} from "@/lib/shapes";
+import type { MapArea } from "./MiniMap";
 
-type Rect = { x: number; y: number; w: number; h: number };
-export type PlanArea = Rect & { id: string; name: string; color: string };
+export type PlanArea = MapArea;
 export type PlanLocation = { id: string; name: string; kind: string; active: boolean };
 export type PlanItem = {
   id: string;
@@ -22,25 +40,33 @@ export type PlanItem = {
 };
 type Result = { error?: string } | void;
 type Created = { error?: string; id?: string };
+type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 type Drag =
-  | { kind: "area"; id: string; mode: "move" | "resize"; sx: number; sy: number; r: Rect; moved: boolean }
+  | { kind: "shape"; id: string; mode: "move"; start: Pt[]; p0: Pt; moved: boolean }
+  | { kind: "shape"; id: string; mode: "vertex"; start: Pt[]; vi: number; moved: boolean }
+  | { kind: "shape"; id: string; mode: "scale"; start: Pt[]; box: Box; handle: Handle; p0: Pt; moved: boolean }
+  | { kind: "shape"; id: string; mode: "rotate"; start: Pt[]; a0: number; moved: boolean }
   | { kind: "door"; id: string; before: PlanDoor; moved: boolean };
 
-/** Grab zone (px) at an area's bottom-right corner that resizes instead of moving. */
-const CORNER = 22;
-
-const fmt = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(n);
-const SHAPES: [string, number][] = [
-  ["Wide", 1.6],
-  ["Square", 1],
-  ["Tall", 0.7],
+const HANDLES: { h: Handle; fx: number; fy: number; cursor: string }[] = [
+  { h: "nw", fx: 0, fy: 0, cursor: "nwse-resize" },
+  { h: "n", fx: 0.5, fy: 0, cursor: "ns-resize" },
+  { h: "ne", fx: 1, fy: 0, cursor: "nesw-resize" },
+  { h: "e", fx: 1, fy: 0.5, cursor: "ew-resize" },
+  { h: "se", fx: 1, fy: 1, cursor: "nwse-resize" },
+  { h: "s", fx: 0.5, fy: 1, cursor: "ns-resize" },
+  { h: "sw", fx: 0, fy: 1, cursor: "nesw-resize" },
+  { h: "w", fx: 0, fy: 0.5, cursor: "ew-resize" },
 ];
 
+const fmt = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(n);
 export function FloorPlan(props: {
   layout: { id: string; name: string };
   layouts: { id: string; name: string }[];
   doors: PlanDoor[];
   aspect: number;
+  widthFt: number | null;
+  heightFt: number | null;
   backgroundUrl: string | null;
   areas: PlanArea[];
   locations: PlanLocation[];
@@ -49,9 +75,9 @@ export function FloorPlan(props: {
   canAssign: boolean;
   initialItem?: string | null;
   actions: {
-    saveArea: (id: string, r: Rect & { color?: string }) => Promise<Result>;
+    saveArea: (id: string, a: { points: Pt[]; color?: string }) => Promise<Result>;
     removeArea: (id: string) => Promise<Result>;
-    setPlanShape: (layoutId: string, aspect: number) => Promise<Result>;
+    setFloorSize: (layoutId: string, widthFt: number, heightFt: number) => Promise<Result & { aspect?: number }>;
     uploadBackground: (fd: FormData) => Promise<Result>;
     removeBackground: (layoutId: string) => Promise<Result>;
     setHome: (productId: string, layoutId: string, locationId: string | null) => Promise<Result>;
@@ -72,6 +98,9 @@ export function FloorPlan(props: {
   const [layoutForm, setLayoutForm] = useState<null | "new" | "rename" | "delete">(null);
   const [items, setItems] = useState<PlanItem[]>(props.items);
   const [aspect, setAspect] = useState(props.aspect);
+  const [feet, setFeet] = useState<{ w: number; h: number } | null>(props.widthFt && props.heightFt ? { w: props.widthFt, h: props.heightFt } : null);
+  const [vertex, setVertex] = useState<number | null>(null);
+  const [planPx, setPlanPx] = useState(800);
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [found, setFound] = useState<string | null>(props.initialItem ?? null);
@@ -83,8 +112,27 @@ export function FloorPlan(props: {
   const areasRef = useRef(areas);
   areasRef.current = areas;
   const bgDown = useRef(false);
+  const lastTap = useRef<{ key: string; at: number } | null>(null);
   const doorsRef = useRef(doors);
   doorsRef.current = doors;
+
+  // handle sizes stay the same on screen whatever the plan's size
+  useEffect(() => {
+    const el = planRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setPlanPx(el.getBoundingClientRect().width || 800));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const vbW = 100 * aspect;
+  const u = vbW / planPx; // plan units per screen pixel
+  const scale = feetScale(feet?.w, feet?.h);
+  // snap to ½ ft when the floor size is set, else ½ % of the plan
+  const stepX = scale ? 0.5 / scale.x : 0.5;
+  const stepY = scale ? 0.5 / scale.y : 0.5;
+  const snapX = (v: number) => Math.round(v / stepX) * stepX;
+  const snapY = (v: number) => Math.round(v / stepY) * stepY;
+  const sizeText = (b: Box) => (scale ? `${fmtFt(b.w * scale.x)} × ${fmtFt(b.h * scale.y)}` : `${Math.round(b.w)}% × ${Math.round(b.h)}%`);
 
   const locName = (id: string | null) => props.locations.find((l) => l.id === id)?.name ?? "—";
   const placedIds = new Set(areas.map((a) => a.id));
@@ -118,20 +166,27 @@ export function FloorPlan(props: {
   }
 
   // ---------- dragging ----------
-  function onPointerDown(e: React.PointerEvent, a: PlanArea, mode: "move" | "resize") {
+  const toPlanRaw = (e: { clientX: number; clientY: number }): Pt => {
+    const box = planRef.current!.getBoundingClientRect();
+    return [((e.clientX - box.left) / box.width) * 100, ((e.clientY - box.top) / box.height) * 100];
+  };
+  const toPlan = (e: { clientX: number; clientY: number }): Pt => {
+    const [x, y] = toPlanRaw(e);
+    return [clamp(x, 0, 100), clamp(y, 0, 100)];
+  };
+  function startShape(e: React.PointerEvent, d: Drag) {
     if (!editing || e.button > 0) return;
     e.preventDefault();
     e.stopPropagation();
-    // Pressing near the bottom-right corner resizes, even outside the visible grip
-    const el = e.currentTarget.closest("[data-area]") as HTMLElement | null;
-    if (mode === "move" && el) {
-      const r = el.getBoundingClientRect();
-      if (r.right - e.clientX <= CORNER && r.bottom - e.clientY <= CORNER) mode = "resize";
-    }
     planRef.current?.setPointerCapture(e.pointerId);
-    drag.current = { kind: "area", id: a.id, mode, sx: e.clientX, sy: e.clientY, r: { x: a.x, y: a.y, w: a.w, h: a.h }, moved: false };
-    setSelected(a.id);
+    drag.current = d;
+    setSelected(d.id);
     setSelectedDoor(null);
+  }
+  function onShapeDown(e: React.PointerEvent, a: PlanArea) {
+    if (!editing) return;
+    if (selected !== a.id) setVertex(null);
+    startShape(e, { kind: "shape", id: a.id, mode: "move", start: a.points, p0: toPlan(e), moved: false });
   }
   function onDoorDown(e: React.PointerEvent, d: PlanDoor) {
     e.stopPropagation();
@@ -141,6 +196,9 @@ export function FloorPlan(props: {
     e.preventDefault();
     planRef.current?.setPointerCapture(e.pointerId);
     drag.current = { kind: "door", id: d.id, before: d, moved: false };
+  }
+  function setPoints(id: string, points: Pt[]) {
+    setAreas((all) => all.map((a) => (a.id === id ? { ...a, points } : a)));
   }
   function onPointerMove(e: React.PointerEvent) {
     const d = drag.current;
@@ -163,19 +221,42 @@ export function FloorPlan(props: {
       setDoors((all) => all.map((x) => (x.id === d.id ? { ...x, side, pos } : x)));
       return;
     }
-    const dx = ((e.clientX - d.sx) / box.width) * 100;
-    const dy = ((e.clientY - d.sy) / box.height) * 100;
-    if (Math.abs(dx) + Math.abs(dy) > 0.3) d.moved = true;
-    const snap = (n: number) => Math.round(n * 2) / 2;
-    setAreas((all) =>
-      all.map((a) => {
-        if (a.id !== d.id) return a;
-        if (d.mode === "move") {
-          return { ...a, x: snap(Math.min(100 - a.w, Math.max(0, d.r.x + dx))), y: snap(Math.min(100 - a.h, Math.max(0, d.r.y + dy))) };
-        }
-        return { ...a, w: snap(Math.min(100 - d.r.x, Math.max(4, d.r.w + dx))), h: snap(Math.min(100 - d.r.y, Math.max(4, d.r.h + dy))) };
-      }),
-    );
+    const p = d.mode === "scale" ? toPlanRaw(e) : toPlan(e);
+    d.moved = true;
+    if (d.mode === "move") {
+      const b = bbox(d.start);
+      // snap the shape's top-left corner to the grid
+      const dx = snapX(b.x + p[0] - d.p0[0]) - b.x;
+      const dy = snapY(b.y + p[1] - d.p0[1]) - b.y;
+      setPoints(d.id, translate(d.start, dx, dy));
+    } else if (d.mode === "vertex") {
+      setPoints(d.id, d.start.map((q, i) => (i === d.vi ? ([snapX(p[0]), snapY(p[1])] as Pt) : q)));
+    } else if (d.mode === "scale") {
+      const b = d.box;
+      let x1 = b.x;
+      let y1 = b.y;
+      let x2 = b.x + b.w;
+      let y2 = b.y + b.h;
+      const minW = stepX * 2;
+      const minH = stepY * 2;
+      // the handle follows the pointer; sizes snap to ½ ft steps from the edge that stays put
+      const dx = p[0] - d.p0[0];
+      const dy = p[1] - d.p0[1];
+      if (d.handle.includes("w")) x1 = x2 - Math.max(snapX(b.w - dx), minW);
+      if (d.handle.includes("e")) x2 = x1 + Math.max(snapX(b.w + dx), minW);
+      if (d.handle.includes("n")) y1 = y2 - Math.max(snapY(b.h - dy), minH);
+      if (d.handle.includes("s")) y2 = y1 + Math.max(snapY(b.h + dy), minH);
+      x1 = Math.max(0, x1);
+      y1 = Math.max(0, y1);
+      x2 = Math.min(100, x2);
+      y2 = Math.min(100, y2);
+      setPoints(d.id, fitBox(d.start, { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }));
+    } else if (d.mode === "rotate") {
+      const c = centroid(d.start, aspect);
+      let deg = angleOf(c, p, aspect) - d.a0;
+      deg = e.shiftKey ? deg : Math.round(deg / 5) * 5;
+      setPoints(d.id, rotate(d.start, deg, aspect));
+    }
   }
   function onPointerUp(e: React.PointerEvent) {
     const d = drag.current;
@@ -193,43 +274,101 @@ export function FloorPlan(props: {
     }
     const a = areasRef.current.find((x) => x.id === d.id);
     if (!a) return;
-    const before = d.r;
+    saveShape(a, a.points, d.start);
+  }
+  function saveShape(a: PlanArea, points: Pt[], before: Pt[] = a.points) {
+    const pts = clampPts(points);
+    setPoints(a.id, pts);
     run(
-      () => actions.saveArea(a.id, { x: a.x, y: a.y, w: a.w, h: a.h }),
-      () => setAreas((all) => all.map((x) => (x.id === d.id ? { ...x, ...before } : x))),
+      () => actions.saveArea(a.id, { points: pts }),
+      () => setPoints(a.id, before),
     );
   }
-  function nudge(e: React.KeyboardEvent, a: PlanArea) {
+  function onShapeKey(e: React.KeyboardEvent, a: PlanArea) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setSelected(selected === a.id ? null : a.id);
+      setSelectedDoor(null);
+      return;
+    }
     if (!editing) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && vertex !== null && selected === a.id) {
+      e.preventDefault();
+      deletePoint(a, vertex);
+      return;
+    }
     const step = e.shiftKey ? 5 : 1;
-    const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [-stepX * step, 0],
+      ArrowRight: [stepX * step, 0],
+      ArrowUp: [0, -stepY * step],
+      ArrowDown: [0, stepY * step],
+    };
     const m = moves[e.key];
     if (!m) return;
     e.preventDefault();
-    const next = { ...a, x: Math.min(100 - a.w, Math.max(0, a.x + m[0])), y: Math.min(100 - a.h, Math.max(0, a.y + m[1])) };
-    setAreas((all) => all.map((x) => (x.id === a.id ? next : x)));
-    run(() => actions.saveArea(a.id, next));
+    setSelected(a.id);
+    saveShape(a, translate(a.points, m[0], m[1]));
+  }
+  function deletePoint(a: PlanArea, i: number) {
+    if (a.points.length <= 3) return setError("A shape needs at least 3 points.");
+    setVertex(null);
+    saveShape(a, removePoint(a.points, i));
   }
 
   function place(loc: PlanLocation) {
     const color = AREA_COLORS[areas.length % AREA_COLORS.length];
-    const a: PlanArea = { id: loc.id, name: loc.name, x: 40, y: 40, w: 20, h: 16, color };
+    // a 10 × 8 ft area when the floor size is known, else a fifth of the plan
+    const w = scale ? Math.min(60, 10 / scale.x) : 20;
+    const h = scale ? Math.min(60, 8 / scale.y) : 16;
+    const points = clampPts(rectPoints(snapX(50 - w / 2), snapY(50 - h / 2), snapX(w), snapY(h)));
+    const b = bbox(points);
+    const a: PlanArea = { id: loc.id, name: loc.name, x: b.x, y: b.y, w: b.w, h: b.h, color, points };
     setAreas((all) => [...all, a]);
     setSelected(loc.id);
+    setVertex(null);
     run(
-      () => actions.saveArea(loc.id, { ...a }),
+      () => actions.saveArea(loc.id, { points, color }),
       () => setAreas((all) => all.filter((x) => x.id !== loc.id)),
     );
   }
   function recolor(a: PlanArea, color: string) {
     setAreas((all) => all.map((x) => (x.id === a.id ? { ...x, color } : x)));
-    run(() => actions.saveArea(a.id, { x: a.x, y: a.y, w: a.w, h: a.h, color }));
+    run(() => actions.saveArea(a.id, { points: a.points, color }));
   }
   function unplace(a: PlanArea) {
     setAreas((all) => all.filter((x) => x.id !== a.id));
     setSelected(null);
     run(() => actions.removeArea(a.id), () => setAreas((all) => [...all, a]));
   }
+  function resizeTo(a: PlanArea, fd: FormData) {
+    const b = bbox(a.points);
+    const w = Number(fd.get("w"));
+    const h = Number(fd.get("h"));
+    if (!(w > 0 && h > 0)) return setError("Enter a width and depth greater than 0.");
+    const wp = scale ? w / scale.x : w;
+    const hp = scale ? h / scale.y : h;
+    if (wp > 100.001 || hp > 100.001) return setError("That's bigger than the floor.");
+    const x = clamp(b.x, 0, 100 - wp);
+    const y = clamp(b.y, 0, 100 - hp);
+    saveShape(a, fitBox(a.points, { x, y, w: wp, h: hp }));
+  }
+  function saveFloor(fd: FormData) {
+    const w = Number(fd.get("width_ft"));
+    const h = Number(fd.get("height_ft")) || (props.backgroundUrl ? w / aspect : 0);
+    setError(null);
+    start(async () => {
+      const r = await actions.setFloorSize(layoutId, w, h);
+      if (r && r.error) return setError(r.error);
+      router.refresh();
+    });
+  }
+  // the server re-reads shapes after a floor size change
+  useEffect(() => {
+    setAreas(props.areas);
+    setAspect(props.aspect);
+    setFeet(props.widthFt && props.heightFt ? { w: props.widthFt, h: props.heightFt } : null);
+  }, [props.areas, props.aspect, props.widthFt, props.heightFt]);
   function setHome(it: PlanItem, locId: string | null) {
     const prev = it.home;
     setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: locId } : x)));
@@ -455,24 +594,51 @@ export function FloorPlan(props: {
 
         {editing && (
           <div className="card flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-stone-500">Drag areas to move them; drag the bottom-right corner to resize; arrow keys nudge. Drag entries and exits along the walls.</span>
-            <div className="flex items-center gap-1">
-              <span className="label mb-0">Shape</span>
-              {SHAPES.map(([label, v]) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={`btn btn-sm ${Math.abs(aspect - v) < 0.01 ? "btn-primary" : ""}`}
-                  onClick={() => {
-                    const prev = aspect;
-                    setAspect(v);
-                    run(() => actions.setPlanShape(layoutId, v), () => setAspect(prev));
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <p className="w-full text-stone-500">
+              Drag an area to move it. Select it to get handles: corners and edges resize, the round handle on top rotates, the dots
+              are its corners (drag them, double-click one to remove it) and the + on each edge adds a corner. Drag entries and exits along the
+              walls.
+            </p>
+            <form
+              key={`${feet?.w}-${feet?.h}-${aspect}`}
+              className="flex flex-wrap items-center gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveFloor(new FormData(e.currentTarget));
+              }}
+            >
+              <span className="label mb-0">Floor size</span>
+              <input
+                name="width_ft"
+                type="number"
+                min="1"
+                max="5000"
+                step="0.5"
+                required
+                defaultValue={feet?.w ?? ""}
+                placeholder="Width"
+                className="input w-24 py-1 text-xs"
+                aria-label="Floor width in feet"
+              />
+              <span className="text-stone-500">×</span>
+              <input
+                name="height_ft"
+                type="number"
+                min="1"
+                max="5000"
+                step="0.5"
+                required={!props.backgroundUrl}
+                disabled={!!props.backgroundUrl}
+                defaultValue={feet?.h ?? ""}
+                placeholder={props.backgroundUrl ? "From image" : "Depth"}
+                className="input w-24 py-1 text-xs"
+                aria-label="Floor depth in feet"
+              />
+              <span className="text-stone-500">ft</span>
+              <button type="submit" className="btn btn-sm">
+                {feet ? "Update" : "Set size"}
+              </button>
+            </form>
             <label className="btn btn-sm cursor-pointer">
               {props.backgroundUrl ? "Replace floor image" : "Upload floor image"}
               <input type="file" accept="image/*" className="sr-only" onChange={(e) => onBackground(e.target.files?.[0])} />
@@ -515,10 +681,10 @@ export function FloorPlan(props: {
 
         <div
           ref={planRef}
-          className={`relative w-full touch-none overflow-hidden rounded-lg border border-stone-200 select-none ${editing ? "ring-2 ring-brand-600/40" : ""}`}
+          className={`relative w-full touch-none rounded-2xl border border-stone-200 bg-white select-none ${editing ? "ring-2 ring-brand-500/40" : ""}`}
           style={{ aspectRatio: String(aspect) }}
-          onPointerDownCapture={(e) => {
-            bgDown.current = e.target === e.currentTarget;
+          onPointerDownCapture={() => {
+            bgDown.current = false;
           }}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -531,73 +697,198 @@ export function FloorPlan(props: {
             }
           }}
         >
+          {/* floor image and grid are clipped to the plan; handles may reach past its edge */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
           {props.backgroundUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={props.backgroundUrl} alt="Shop floor" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-          ) : (
+          ) : scale ? null : (
             <div className="plan-grid pointer-events-none absolute inset-0" />
           )}
+          {scale && !props.backgroundUrl && <FeetGrid aspect={aspect} widthFt={feet!.w} heightFt={feet!.h} />}
+          </div>
+          <svg
+            viewBox={`0 0 ${vbW} 100`}
+            preserveAspectRatio="none"
+            className="absolute inset-0 h-full w-full overflow-visible"
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) {
+                bgDown.current = true;
+                setVertex(null);
+              }
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && bgDown.current) {
+                setSelected(null);
+                setSelectedDoor(null);
+              }
+            }}
+          >
+            {areas.map((a) => {
+              const mark = markFor(a);
+              const dim = item && !mark;
+              const isSel = selected === a.id;
+              const count = stockIn[a.id]?.length ?? 0;
+              return (
+                <polygon
+                  key={a.id}
+                  data-area={a.id}
+                  points={toSvg(a.points, aspect)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${a.name}${count ? `, ${count} items stored` : ""}`}
+                  aria-pressed={isSel}
+                  className={`plan-shape ${editing ? "cursor-move" : "cursor-pointer"} ${mark?.kind === "home" || mark?.kind === "home-stock" ? "shape-pulse" : ""}`}
+                  style={{
+                    fill: a.color,
+                    fillOpacity: mark ? 0.36 : isSel ? 0.28 : 0.18,
+                    stroke: mark?.kind === "away" ? "var(--color-amber-700)" : a.color,
+                    strokeWidth: isSel ? 3 : 2,
+                    opacity: dim ? 0.35 : 1,
+                  }}
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinejoin="round"
+                  onPointerDown={(e) => onShapeDown(e, a)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDoor(null);
+                    if (!editing) setSelected(isSel ? null : a.id);
+                  }}
+                  onKeyDown={(e) => onShapeKey(e, a)}
+                />
+              );
+            })}
+            {editing &&
+              area &&
+              (() => {
+                const b = bbox(area.points);
+                const r = 6 * u;
+                const hs = 9 * u;
+                // the resize frame sits a little outside the shape so its handles never cover the corner dots
+                const pad = 14 * u;
+                const f = { x: b.x * aspect - pad, y: b.y - pad, w: b.w * aspect + pad * 2, h: b.h + pad * 2 };
+                // rotate handle above the shape, or below it when the shape touches the top wall
+                const top = f.y - 18 * u > 1.5 ? f.y - 18 * u : f.y + f.h + 18 * u;
+                const edgeY = top < f.y ? f.y : f.y + f.h;
+                const cxU = (b.x + b.w / 2) * aspect;
+                return (
+                  <g data-handles={area.id}>
+                    <rect
+                      x={f.x}
+                      y={f.y}
+                      width={f.w}
+                      height={f.h}
+                      rx={4 * u}
+                      fill="none"
+                      stroke="var(--color-stone-500)"
+                      strokeDasharray="4 3"
+                      vectorEffect="non-scaling-stroke"
+                      pointerEvents="none"
+                    />
+                    <line x1={cxU} y1={edgeY} x2={cxU} y2={top} stroke="var(--color-stone-500)" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                    <circle
+                      data-rotate={area.id}
+                      cx={cxU}
+                      cy={top}
+                      r={r * 1.15}
+                      className="plan-handle cursor-grab"
+                      onPointerDown={(e) =>
+                        startShape(e, { kind: "shape", id: area.id, mode: "rotate", start: area.points, a0: angleOf(centroid(area.points, aspect), toPlan(e), aspect), moved: false })
+                      }
+                    >
+                      <title>Drag to rotate</title>
+                    </circle>
+                    {HANDLES.map((h) => (
+                      <rect
+                        key={h.h}
+                        data-scale={h.h}
+                        x={f.x + f.w * h.fx - hs / 2}
+                        y={f.y + f.h * h.fy - hs / 2}
+                        width={hs}
+                        height={hs}
+                        rx={2 * u}
+                        className="plan-handle plan-handle-square"
+                        style={{ cursor: h.cursor }}
+                        onPointerDown={(e) =>
+                          startShape(e, { kind: "shape", id: area.id, mode: "scale", start: area.points, box: b, handle: h.h, p0: toPlanRaw(e), moved: false })
+                        }
+                      />
+                    ))}
+                    {area.points.map((pt, i) => {
+                      const nx = area.points[(i + 1) % area.points.length];
+                      return (
+                        <g key={i}>
+                          <g
+                            data-add={i}
+                            className="plan-add cursor-copy"
+                            onPointerDown={(e) => {
+                              const next = insertPoint(area.points, i);
+                              setPoints(area.id, next);
+                              setVertex(i + 1);
+                              startShape(e, { kind: "shape", id: area.id, mode: "vertex", start: next, vi: i + 1, moved: true });
+                            }}
+                          >
+                            <circle cx={((pt[0] + nx[0]) / 2) * aspect} cy={(pt[1] + nx[1]) / 2} r={r * 0.9} />
+                            <path
+                              d={`M${((pt[0] + nx[0]) / 2) * aspect - r * 0.5} ${(pt[1] + nx[1]) / 2}h${r}M${((pt[0] + nx[0]) / 2) * aspect} ${(pt[1] + nx[1]) / 2 - r * 0.5}v${r}`}
+                              vectorEffect="non-scaling-stroke"
+                            />
+                            <title>Drag to add a corner here</title>
+                          </g>
+                          <circle
+                            data-vertex={i}
+                            cx={pt[0] * aspect}
+                            cy={pt[1]}
+                            r={r}
+                            className={`plan-handle cursor-move ${vertex === i ? "plan-handle-on" : ""}`}
+                            onPointerDown={(e) => {
+                              // a second tap on the same corner within ⅓ s removes it (works with mouse and touch)
+                              const key = `${area.id}:${i}`;
+                              const now = e.timeStamp;
+                              if (lastTap.current && lastTap.current.key === key && now - lastTap.current.at < 350) {
+                                lastTap.current = null;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                deletePoint(area, i);
+                                return;
+                              }
+                              lastTap.current = { key, at: now };
+                              setVertex(i);
+                              startShape(e, { kind: "shape", id: area.id, mode: "vertex", start: area.points, vi: i, moved: false });
+                            }}
+                          >
+                            <title>Drag to move this corner; double-click to remove it</title>
+                          </circle>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })()}
+          </svg>
           {areas.map((a) => {
             const mark = markFor(a);
             const count = stockIn[a.id]?.length ?? 0;
-            const dim = item && !mark;
+            const [cx, cy] = centroid(a.points, aspect);
             const isSel = selected === a.id;
             return (
               <div
                 key={a.id}
-                data-area={a.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${a.name}${count ? `, ${count} items stored` : ""}`}
-                aria-pressed={isSel}
-                className={`absolute flex flex-col overflow-hidden rounded-md border-2 p-1.5 text-left transition-[opacity,box-shadow] duration-200 ${
-                  editing ? "cursor-move" : "cursor-pointer"
-                } ${dim ? "opacity-35" : ""} ${mark?.kind === "home" || mark?.kind === "home-stock" ? "plan-pulse" : ""} ${
-                  isSel ? "ring-2 ring-offset-1 ring-stone-900/60" : ""
-                }`}
-                style={{
-                  left: `${a.x}%`,
-                  top: `${a.y}%`,
-                  width: `${a.w}%`,
-                  height: `${a.h}%`,
-                  borderColor: mark?.kind === "away" ? "var(--color-amber-700)" : a.color,
-                  background: `color-mix(in srgb, ${a.color} ${mark ? 34 : 18}%, color-mix(in srgb, var(--color-white) 70%, transparent))`,
-                }}
-                onPointerDown={(e) => onPointerDown(e, a, "move")}
-                onClick={() => {
-                  setSelectedDoor(null);
-                  if (!editing) setSelected(isSel ? null : a.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelected(isSel ? null : a.id);
-                  } else nudge(e, a);
-                }}
+                className={`pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center ${item && !mark ? "opacity-35" : ""}`}
+                style={{ left: `${cx}%`, top: `${cy}%` }}
+                aria-hidden="true"
               >
-                <span className="truncate text-xs leading-tight font-semibold text-stone-900">{a.name}</span>
-                <span className="truncate text-[11px] text-stone-700">{count ? `${count} item${count === 1 ? "" : "s"}` : "Empty"}</span>
+                <span className="text-xs leading-tight font-semibold whitespace-nowrap text-stone-900">{a.name}</span>
+                <span className="text-[11px] whitespace-nowrap text-stone-700">
+                  {editing && isSel ? sizeText(bbox(a.points)) : count ? `${count} item${count === 1 ? "" : "s"}` : "Empty"}
+                </span>
                 {mark && (
                   <span
-                    className={`mt-auto self-start rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
                       mark.kind === "away" ? "bg-amber-50 text-amber-800" : "bg-brand-50 text-brand-800"
                     }`}
                   >
                     {mark.kind === "home" ? "Home · none here" : mark.kind === "home-stock" ? `Home · ${fmt(mark.q)}` : `${fmt(mark.q)} here`}
-                  </span>
-                )}
-                {editing && (
-                  <span
-                    data-resize={a.id}
-                    className="absolute right-0 bottom-0 grid cursor-nwse-resize touch-none place-items-end"
-                    style={{ width: CORNER, height: CORNER }}
-                    onPointerDown={(e) => onPointerDown(e, a, "resize")}
-                    title="Drag to resize"
-                    aria-hidden="true"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" className="m-0.5 text-stone-900/70">
-                      <path d="M13 3 3 13M13 7.5 7.5 13M13 11.5 11.5 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                    </svg>
                   </span>
                 )}
               </div>
@@ -763,9 +1054,67 @@ export function FloorPlan(props: {
                     />
                   ))}
                 </div>
-                <button type="button" className="btn btn-sm btn-danger" onClick={() => unplace(area)}>
-                  Remove from plan
-                </button>
+                <form
+                  key={area.points.map((p) => p.join(",")).join(" ") + (scale ? "ft" : "%")}
+                  className="flex flex-wrap items-end gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    resizeTo(area, new FormData(e.currentTarget));
+                  }}
+                >
+                  <label>
+                    <span className="label">Width {scale ? "(ft)" : "(%)"}</span>
+                    <input
+                      name="w"
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      className="input w-24"
+                      defaultValue={Math.round(bbox(area.points).w * (scale ? scale.x : 1) * 2) / 2}
+                    />
+                  </label>
+                  <label>
+                    <span className="label">Depth {scale ? "(ft)" : "(%)"}</span>
+                    <input
+                      name="h"
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      className="input w-24"
+                      defaultValue={Math.round(bbox(area.points).h * (scale ? scale.y : 1) * 2) / 2}
+                    />
+                  </label>
+                  <button type="submit" className="btn btn-sm">
+                    Set size
+                  </button>
+                </form>
+                {!scale && <p className="text-xs text-stone-500">Set the floor size above to work in feet.</p>}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="label mb-0">Rotate</span>
+                  {[-90, -15, 15, 90].map((deg) => (
+                    <button key={deg} type="button" className="btn btn-sm" onClick={() => saveShape(area, rotate(area.points, deg, aspect))} aria-label={`Rotate ${deg}°`}>
+                      {deg < 0 ? "↺" : "↻"} {Math.abs(deg)}°
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" className="btn btn-sm" onClick={() => {
+                    const b = bbox(area.points);
+                    setVertex(null);
+                    saveShape(area, rectPoints(b.x, b.y, b.w, b.h));
+                  }}>
+                    Make rectangle
+                  </button>
+                  {vertex !== null && area.points.length > 3 && (
+                    <button type="button" className="btn btn-sm" onClick={() => deletePoint(area, vertex)}>
+                      Remove corner
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => unplace(area)}>
+                    Remove from plan
+                  </button>
+                </div>
+                <p className="text-xs text-stone-500">{area.points.length} corners · {sizeText(bbox(area.points))}</p>
               </div>
             )}
             <div>
@@ -868,5 +1217,26 @@ export function FloorPlan(props: {
         )}
       </aside>
     </div>
+  );
+}
+
+/** Grid in feet: a line every foot (every 5 ft on big floors), stronger every 10 ft. */
+function FeetGrid({ aspect, widthFt, heightFt }: { aspect: number; widthFt: number; heightFt: number }) {
+  const vbW = 100 * aspect;
+  const perFt = 100 / heightFt; // plan units per foot (same across and down)
+  const minor = Math.max(widthFt, heightFt) > 80 ? 5 : 1;
+  const lines: React.ReactNode[] = [];
+  for (let f = minor; f < widthFt; f += minor) {
+    const x = f * perFt;
+    lines.push(<line key={`x${f}`} x1={x} y1={0} x2={x} y2={100} className={f % 10 === 0 ? "grid-major" : "grid-minor"} vectorEffect="non-scaling-stroke" />);
+  }
+  for (let f = minor; f < heightFt; f += minor) {
+    const y = f * perFt;
+    lines.push(<line key={`y${f}`} x1={0} y1={y} x2={vbW} y2={y} className={f % 10 === 0 ? "grid-major" : "grid-minor"} vectorEffect="non-scaling-stroke" />);
+  }
+  return (
+    <svg viewBox={`0 0 ${vbW} 100`} preserveAspectRatio="none" className="plan-feet pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+      {lines}
+    </svg>
   );
 }
