@@ -405,6 +405,11 @@ await expectErr(`select delete_shop_layout($1, $1)`, [north], "Choose another la
 await q(`select delete_shop_layout($1, $2)`, [north, main.id]);
 const movedLoc = await one(`select layout_id, map_x from locations where id=$1`, [nloc]);
 ok(movedLoc.layout_id === main.id && movedLoc.map_x === null, "deleted layout's sections move unplaced");
+await q(`update locations set map_shape='[[10,10],[30,10],[30,20],[20,20],[20,30],[10,30]]'::jsonb, map_x=10, map_y=10, map_w=20, map_h=20 where name='Cooler 2'`);
+ok((await one(`select jsonb_array_length(map_shape) n from locations where name='Cooler 2'`)).n === 6, "areas can be any shape (L-shaped cooler)");
+await expectErr(`update locations set map_shape='[[1,1],[2,2]]'::jsonb where name='Cooler 2'`, [], "check", "a shape needs at least 3 corners");
+await q(`update shop_layouts set width_ft=40, height_ft=25 where id=$1`, [main.id]);
+await expectErr(`update shop_layouts set width_ft=-3 where id=$1`, [main.id], "check", "floor size must be positive");
 ok(Number((await one(`select count(*) c from product_homes where product_id=$1`, [tulip.id])).c) === 1, "homes in a deleted shop are cleared");
 ok(Number((await one(`select count(*) c from plan_doors`)).c) === 0, "its entries/exits are removed");
 await expectErr(`select delete_shop_layout($1, null)`, [main.id], "Keep at least one", "the last layout can't be deleted");

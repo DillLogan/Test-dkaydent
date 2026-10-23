@@ -407,3 +407,69 @@ html.theme-anim *::after {
     color: hsl(var(--h) 45% 82%);
   }
 }
+
+/* ---------- Floor plan shapes ---------- */
+.plan-shape {
+  transition:
+    fill-opacity 200ms var(--ease-out),
+    opacity 200ms var(--ease-out),
+    stroke-width 150ms var(--ease-out);
+}
+.plan-shape:focus-visible {
+  outline: none;
+  stroke-dasharray: 6 3;
+}
+.plan-handle {
+  fill: var(--color-white);
+  stroke: var(--color-stone-700);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  touch-action: none;
+}
+.plan-handle:hover,
+.plan-handle-on {
+  fill: var(--color-brand-500);
+  stroke: var(--color-brand-700);
+}
+.plan-add circle {
+  fill: color-mix(in srgb, var(--color-white) 85%, transparent);
+  stroke: var(--color-brand-600);
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.75;
+  transition: opacity 150ms var(--ease-out);
+}
+.plan-add path {
+  pointer-events: none;
+  stroke: var(--color-brand-700);
+  stroke-width: 1.5px;
+}
+.plan-add:hover circle {
+  opacity: 1;
+  fill: var(--color-brand-50);
+}
+.plan-feet {
+  background: var(--color-stone-50);
+}
+.plan-feet .grid-minor {
+  stroke: color-mix(in srgb, var(--color-stone-400) 22%, transparent);
+  stroke-width: 1px;
+}
+.plan-feet .grid-major {
+  stroke: color-mix(in srgb, var(--color-stone-400) 45%, transparent);
+  stroke-width: 1px;
+}
+@keyframes shape-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+    stroke-width: 2px;
+  }
+  50% {
+    stroke-opacity: 0.45;
+    stroke-width: 5px;
+  }
+}
+.shape-pulse {
+  animation: shape-pulse 1.6s ease-in-out infinite;
+}
