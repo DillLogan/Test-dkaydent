@@ -6,6 +6,7 @@ import { loadCatalog, toPicker } from "@/lib/catalog";
 import { date, dateTime, money, pct, qty, sum } from "@/lib/format";
 import {
   addSOLine,
+  completeSO,
   createReturn,
   deleteSO,
   fulfillSO,
@@ -44,7 +45,7 @@ export default async function SOPage({ params, searchParams }: Props) {
   const { error, message, charge } = await searchParams;
   const { supabase, profile } = await getSession();
 
-  const [{ data: so }, { data: lines }, { data: invoice }] = await Promise.all([
+  const [{ data: so }, { data: lines }, { data: invoice }, { data: shops }] = await Promise.all([
     supabase
       .from("sales_orders")
       .select(
@@ -65,6 +66,7 @@ export default async function SOPage({ params, searchParams }: Props) {
       .eq("so_id", id)
       .neq("status", "void")
       .maybeSingle(),
+    supabase.from("shop_layouts").select("id, name").order("created_at").order("id"),
   ]);
   if (!so) notFound();
   const { data: returns } = await supabase
@@ -77,8 +79,11 @@ export default async function SOPage({ params, searchParams }: Props) {
 
   const canSell = can(profile, "sales");
   const canFulfill = can(profile, "sales", "warehouse");
+  const canComplete = can(profile, "orders_manager");
+  const canInvoice = can(profile, "sales", "orders_manager");
   const isDraft = so.status === "draft";
-  const showCost = so.status === "fulfilled" || so.status === "invoiced";
+  const pulledOrLater = ["fulfilled", "completed", "invoiced"].includes(so.status);
+  const showCost = pulledOrLater;
   const tier = so.customers?.price_tiers;
 
   const catalog = await loadCatalog(supabase);
@@ -118,8 +123,7 @@ export default async function SOPage({ params, searchParams }: Props) {
         rl.so_line_id,
         (returnedBase.get(rl.so_line_id) ?? 0) + Number(rl.qty_base),
       );
-  const canReturn =
-    (so.status === "fulfilled" || so.status === "invoiced") && canFulfill;
+  const canReturn = pulledOrLater && canFulfill;
 
   // Hand-pick: available lots per line, oldest first
   let pickLines: PickLine[] = [];
@@ -239,7 +243,7 @@ export default async function SOPage({ params, searchParams }: Props) {
               </form>
             )}
             <form action={setSOStatus.bind(null, id, "confirmed")}>
-              <SubmitButton pendingText="…">Confirm order</SubmitButton>
+              <SubmitButton pendingText="…">Send to pull</SubmitButton>
             </form>
           </>
         )}
@@ -266,10 +270,10 @@ export default async function SOPage({ params, searchParams }: Props) {
             {canFulfill && (
               <form action={fulfillSO.bind(null, id)}>
                 <SubmitButton
-                  pendingText="Pulling stock…"
-                  confirm="Pull stock for this order now? Oldest lots are used first."
+                  pendingText="Marking pulled…"
+                  confirm="Mark this order pulled? Stock comes out of the oldest lots first."
                 >
-                  Fulfill oldest-first
+                  Mark pulled
                 </SubmitButton>
               </form>
             )}
@@ -280,6 +284,18 @@ export default async function SOPage({ params, searchParams }: Props) {
             Print pull ticket
           </Link>
         )}
+        {so.status === "fulfilled" && canComplete && (
+          <form action={completeSO.bind(null, id, false)}>
+            <SubmitButton pendingText="…">Mark completed</SubmitButton>
+          </form>
+        )}
+        {so.status === "completed" && canComplete && (
+          <form action={completeSO.bind(null, id, true)}>
+            <SubmitButton className="btn" pendingText="…">
+              Send back to Pulled
+            </SubmitButton>
+          </form>
+        )}
         {invoice && (
           <Link href={`/invoices/${invoice.id}`} className="btn btn-primary">
             View {invoice.invoice_number}
@@ -288,6 +304,7 @@ export default async function SOPage({ params, searchParams }: Props) {
       </PageHeader>
       <ErrorBanner error={error} />
       <Notice message={message} />
+      <OrderSteps status={so.status} />
       {anyShort && so.status !== "cancelled" && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Some lines need more than is on hand. Fulfillment will be blocked
@@ -427,7 +444,7 @@ export default async function SOPage({ params, searchParams }: Props) {
         <Section title="Or choose lots">
           <details className="group">
             <summary className="btn mb-3 cursor-pointer list-none">
-              Hand-pick lots / scan to pick
+              Mark pulled from chosen lots / scan to pick
             </summary>
             <PickForm
               lines={pickLines}
@@ -615,7 +632,13 @@ export default async function SOPage({ params, searchParams }: Props) {
         </Section>
       )}
 
-      {so.status === "fulfilled" && canSell && (
+      {so.status === "fulfilled" && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm text-amber-900">
+          Pulled. Waiting for the orders manager to check it and mark it completed before it can be invoiced.
+        </div>
+      )}
+
+      {so.status === "completed" && canInvoice && (
         <Section title="Invoice">
           <form
             action={invoiceSO.bind(null, id)}
@@ -651,7 +674,7 @@ export default async function SOPage({ params, searchParams }: Props) {
           title="Payments (take more on the invoice)"
         />
       ) : (
-        ["draft", "confirmed", "fulfilled"].includes(so.status) &&
+        ["draft", "confirmed", "fulfilled", "completed"].includes(so.status) &&
         rows.length > 0 && (
           <PaymentsPanel
             supabase={supabase}
@@ -688,6 +711,26 @@ export default async function SOPage({ params, searchParams }: Props) {
                 defaultValue={so.notes ?? ""}
               />
             </Field>
+            <Field label="Deliver to" className={(shops?.length ?? 0) > 1 ? "sm:col-span-3" : "sm:col-span-4"}>
+              <input
+                name="delivery_address"
+                className="input"
+                defaultValue={so.delivery_address ?? ""}
+                placeholder="Street, city, state ZIP"
+                autoComplete="street-address"
+              />
+            </Field>
+            {(shops?.length ?? 0) > 1 && (
+              <Field label="Ships from">
+                <select name="layout_id" className="input" defaultValue={so.layout_id ?? ""}>
+                  {shops!.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             {canSell && !["invoiced", "cancelled"].includes(so.status) && (
               <div className="sm:col-span-4">
                 <SubmitButton>Save details</SubmitButton>
@@ -697,5 +740,34 @@ export default async function SOPage({ params, searchParams }: Props) {
         </form>
       </Section>
     </>
+  );
+}
+
+const STEPS: { key: string; label: string; who: string }[] = [
+  { key: "draft", label: "Draft", who: "Sales rep" },
+  { key: "confirmed", label: "Ready to pull", who: "Pick ticket printed" },
+  { key: "fulfilled", label: "Pulled", who: "Ticket turned in" },
+  { key: "completed", label: "Completed", who: "Orders manager" },
+  { key: "invoiced", label: "Invoiced", who: "Invoice printed" },
+];
+
+function OrderSteps({ status }: { status: string }) {
+  if (status === "cancelled") return null;
+  const at = STEPS.findIndex((s) => s.key === status);
+  return (
+    <ol className="mb-6 grid grid-cols-5 gap-1 text-center text-[11px] sm:text-xs" aria-label="Order steps" data-testid="order-steps">
+      {STEPS.map((s, i) => (
+        <li
+          key={s.key}
+          aria-current={i === at ? "step" : undefined}
+          className={`rounded-xl px-1 py-2 ${
+            i === at ? "bg-brand-600 text-white" : i < at ? "bg-brand-50 text-brand-800" : "bg-stone-100 text-stone-500"
+          }`}
+        >
+          <div className="font-semibold">{s.label}</div>
+          <div className={`hidden sm:block ${i === at ? "text-white/80" : ""}`}>{s.who}</div>
+        </li>
+      ))}
+    </ol>
   );
 }

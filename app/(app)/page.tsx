@@ -74,7 +74,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           href={lateShipments.length ? "/receiving?view=list&status=late" : "/receiving"}
           tone={lateShipments.length ? "bad" : undefined}
         />
-        <Stat label="Orders to fulfill" value={toFulfill.count ?? 0} hint="confirmed, not pulled" href="/sales?status=confirmed" />
+        <Stat label="Ready to pull" value={toFulfill.count ?? 0} hint="pick tickets out, not pulled yet" href="/sales?status=confirmed" />
         <Stat label="Revenue, 30 days" value={money(revenue)} hint={`Gross margin ${pct(revenue ? margin / revenue : null)}`} href="/reports" />
         <Stat label="Gross profit, 30 days" value={money(margin)} href="/reports" />
         <Stat label="Open invoices" value={money(sum(invRows, (i) => i.total))} hint={`${invRows.length} unpaid`} href="/invoices?status=open" />

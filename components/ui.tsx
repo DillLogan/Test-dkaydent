@@ -61,7 +61,8 @@ const STATUS_STYLES: Record<string, string> = {
   partially_received: "bg-amber-50 text-amber-800",
   received: "bg-brand-50 text-brand-700",
   confirmed: "bg-blue-50 text-blue-700",
-  fulfilled: "bg-brand-50 text-brand-700",
+  fulfilled: "bg-amber-50 text-amber-800",
+  completed: "bg-brand-50 text-brand-700",
   invoiced: "bg-violet-50 text-violet-700",
   open: "bg-amber-50 text-amber-800",
   overdue: "bg-red-50 text-red-700",
@@ -76,6 +77,13 @@ const STATUS_STYLES: Record<string, string> = {
   arrived: "bg-amber-50 text-amber-800",
 };
 
+/** Order steps use the shop's own words. */
+export const STATUS_LABELS: Record<string, string> = {
+  confirmed: "Ready to pull",
+  fulfilled: "Pulled",
+  completed: "Completed",
+};
+
 export function StatusBadge({ status }: { status: string }) {
   return (
     <span
@@ -83,7 +91,7 @@ export function StatusBadge({ status }: { status: string }) {
         STATUS_STYLES[status] ?? "bg-stone-100 text-stone-700"
       }`}
     >
-      {status.replace(/_/g, " ")}
+      {STATUS_LABELS[status] ?? status.replace(/_/g, " ")}
     </span>
   );
 }

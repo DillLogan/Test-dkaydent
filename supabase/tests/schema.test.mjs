@@ -120,12 +120,20 @@ await expectErr(`select fulfill_sales_order($1)`, [so2], "Not enough stock", "sh
 const after = (await one(`select qty_on_hand_base q from v_product_stock where product_id=$1`, [rose])).q;
 ok(Number(before) === Number(after), "no partial pull on failure");
 
-// invoice
+// orders manager completes, then invoice
+await expectErr(`select create_invoice($1, 7)`, [so.id], "Only completed", "pulled order must be completed before invoicing");
+await expectErr(`update sales_orders set status='completed' where id=$1`, [so.id], "cannot be changed", "can't complete by direct update");
+await q(`select complete_sales_order($1)`, [so.id]);
+ok((await one(`select status, completed_at is not null c from sales_orders where id=$1`, [so.id])).c, "order completed with timestamp");
+await q(`select complete_sales_order($1, true)`, [so.id]);
+ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "fulfilled", "completed order can be sent back to pulled");
+await q(`select complete_sales_order($1)`, [so.id]);
+await expectErr(`select complete_sales_order($1)`, [so.id], "Only pulled", "can't complete twice");
 const inv = (await one(`select create_invoice($1, 7) id`, [so.id])).id;
 const i = await one(`select invoice_number, subtotal, tax, total, due_at - issued_at as days from invoices where id=$1`, [inv]);
 ok(i.invoice_number === "INV-1001" && Number(i.total) === 214 && Number(i.tax) === 14 && i.days === 30, "invoice totals + terms");
 ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "invoiced", "SO invoiced");
-await expectErr(`select create_invoice($1, 0)`, [so.id], "Only fulfilled", "no double invoice");
+await expectErr(`select create_invoice($1, 0)`, [so.id], "Only completed", "no double invoice");
 
 // ---------- Returns & credits ----------
 // so: 10 bunch (250 stems) @ $20/bunch, all from $0.50 lots, invoiced at 7%
@@ -156,7 +164,7 @@ ok(true, "credit can be marked applied");
 // ---------- Invoice void & re-invoice ----------
 await expectErr(`update invoices set status='void' where id=$1`, [inv], "Use Void invoice", "can't void by direct update");
 await q(`select void_invoice($1)`, [inv]);
-ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "fulfilled", "void sends order back to fulfilled");
+ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "completed", "void sends order back to completed");
 const inv2 = (await one(`select create_invoice($1, 0) id`, [so.id])).id;
 ok((await one(`select invoice_number from invoices where id=$1`, [inv2])).invoice_number === "INV-1002", "order can be re-invoiced after void");
 await expectErr(`update invoices set status='open' where id=$1`, [inv], "cannot be reopened", "void invoice stays void");
@@ -296,6 +304,7 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   ok((await one(`select kind from payments where id=$1`, [dep])).kind === "deposit", "payment before invoicing is a deposit");
   await expectErr(`select record_payment($1,'cash',151)`, [so], "more than the $150.00 still due", "can't take more than is due");
   await q(`select fulfill_sales_order($1)`, [so]);
+  await q(`select complete_sales_order($1)`, [so]);
   const inv = (await one(`select create_invoice($1, 7) id`, [so])).id;
   const b1 = await one(`select total, paid, balance from v_invoice_balance where invoice_id=$1`, [inv]);
   ok(money2(b1.total) === 214 && money2(b1.paid) === 50 && money2(b1.balance) === 164, "deposit counts toward the invoice (214 - 50 = 164)");
@@ -541,4 +550,38 @@ await db.exec(`reset role`);
 const aging = await q(`select * from v_lot_aging`);
 ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 
+{
+  // Order steps: orders manager role, delivery address defaults, routing tables
+  const om = "00000000-0000-0000-0000-0000000000a1";
+  const wh = "00000000-0000-0000-0000-0000000000a2";
+  await q(`insert into auth.users values ($1,'om@x.com','{}'), ($2,'wh@x.com','{}')`, [om, wh]);
+  await q(`update profiles set role='orders_manager', active=true where id=$1`, [om]);
+  await q(`update profiles set role='warehouse', active=true where id=$1`, [wh]);
+  const cust = (await one(`insert into customers (name, address, delivery_address) values ('Petal Shop','1 Main St, Town','9 Dock Rd, Town') returning id`)).id;
+  const so3 = (await one(`insert into sales_orders (customer_id) values ($1) returning id, delivery_address, layout_id`, [cust]));
+  ok(so3.delivery_address === "9 Dock Rd, Town" && so3.layout_id === main.id, "new order takes the customer's delivery address and first shop");
+  const cust2 = (await one(`insert into customers (name, address) values ('Bloom Co','5 Elm St') returning id`)).id;
+  ok((await one(`insert into sales_orders (customer_id) values ($1) returning delivery_address d`, [cust2])).d === "5 Elm St", "no delivery address falls back to main address");
+  await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so3.id, rose, bunch.id]);
+  await q(`update sales_orders set status='confirmed' where id=$1`, [so3.id]);
+  await q(`select fulfill_sales_order($1)`, [so3.id]);
+  await as(wh);
+  await expectErr(`select complete_sales_order($1)`, [so3.id], "Only the orders manager", "warehouse can't complete orders");
+  await as(om);
+  await q(`select complete_sales_order($1)`, [so3.id]);
+  const inv3 = (await one(`select create_invoice($1, 0) id`, [so3.id])).id;
+  ok(!!inv3, "orders manager completes and invoices");
+  await q(`select save_geocodes($1::jsonb)`, [JSON.stringify([{ address: "  9 Dock  Rd, Town ", lat: 40.1, lng: -75.2, formatted: "9 Dock Rd" }])]);
+  ok(Number((await one(`select lat from geocodes where address = geo_key('9 dock rd, town')`)).lat) === 40.1, "geocodes saved under a normalized address");
+  await db.exec(`set role authenticated`);
+  await q(`insert into route_sheets (route_date, layout_id, stops, mode) values (current_date, $1, $2, 'optimized')`, [main.id, [so3.id]]);
+  ok((await one(`select stops from route_sheets where layout_id=$1`, [main.id])).stops.length === 1, "orders manager saves a route sheet");
+  const upd = await db.query(`update app_settings set google_maps_key='abcdefghijklmnop'`);
+  ok(upd.affectedRows === 0, "only admin can set the Maps key");
+  await db.exec(`reset role`);
+  await as(admin);
+  await db.exec(`set role authenticated`);
+  ok((await db.query(`update app_settings set google_maps_key='abcdefghijklmnop'`)).affectedRows === 1, "admin sets the Maps key");
+  await db.exec(`reset role`);
+}
 console.log(`\n${pass} checks passed`);
