@@ -41,6 +41,10 @@ export default async function TutorialsPage() {
                         </Link>
                       </>
                     )}
+                    {!t.noImages && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/help/${t.id}-${i + 1}.jpg`} alt={`Screenshot for step ${i + 1}: the highlighted box and arrow show what to use`} loading="lazy" className="mt-2 w-full max-w-2xl rounded-lg border border-stone-200" />
+                    )}
                   </div>
                 </li>
               ))}

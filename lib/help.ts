@@ -7,6 +7,8 @@ export type Tutorial = {
   who: string;
   steps: { text: string; href?: string; linkLabel?: string }[];
   tip?: string;
+  /** True when no screenshots exist for this tutorial (they are public/help/<id>-<step>.jpg). */
+  noImages?: boolean;
 };
 
 export const TUTORIALS: Tutorial[] = [
@@ -135,6 +137,7 @@ export const TUTORIALS: Tutorial[] = [
   },
   {
     id: "web-store",
+    noImages: true,
     title: "Connect the web store",
     summary: "Bring website stock counts and orders into the app.",
     who: "Admin",
@@ -161,6 +164,7 @@ export const TUTORIALS: Tutorial[] = [
   },
   {
     id: "users",
+    noImages: true,
     title: "Add people and set their role",
     summary: "Who can do what.",
     who: "Admin",
