@@ -585,6 +585,78 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .pt-sign .pt-sline { height: 36px; border-bottom: 1px solid #111; }
 .pt-sign span { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; color: #57534e; }
 
+/* ---- order steps ---- */
+.steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 0 0 18px; padding: 0; text-align: center; font-size: 11px; }
+.steps li { border-radius: 12px; padding: 8px 4px; background: var(--surface-2, #f1f3ef); color: var(--muted, #6b7a6d); display: grid; gap: 1px; }
+.steps li.done { background: var(--brand-soft); color: var(--brand-ink); }
+.steps li.now { background: var(--brand); color: #fff; }
+.steps li b { font-size: 12px; }
+.steps li span { display: none; opacity: .85; }
+@media (min-width: 640px) { .steps li span { display: block; } .steps { font-size: 12px; } }
+.grid3 { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+
+/* ---- messages ---- */
+.nav-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.chat { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 16px; height: calc(100dvh - 8.5rem); min-height: 28rem; }
+.chat-list, .chat-main { background: var(--surface, #fff); border: 1px solid var(--line, #e2e6df); border-radius: 18px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.chat-list { padding: 12px; overflow-y: auto; }
+.chat-list h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted, #6b7a6d); margin: 14px 12px 4px; }
+.chat-list ul { list-style: none; margin: 0; padding: 0; }
+.chat-list li > button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; border: 0; background: none; padding: 8px 12px; border-radius: 12px; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.chat-list li > button:hover { background: var(--brand-soft); }
+.chat-list li > button[aria-current] { background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.faint { color: var(--muted, #6b7a6d); }
+.chat-main > header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line, #e2e6df); min-width: 0; }
+.chat-main > header h2 { margin: 0; font-size: 17px; }
+.chat-back { display: none; }
+.chat-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.chat-day { text-align: center; font-size: 12px; color: var(--muted, #6b7a6d); margin: 10px 0; }
+.chat-msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 85%; margin-top: 4px; }
+.chat-msg.mine { align-self: flex-end; align-items: flex-end; }
+.chat-who { font-size: 12px; color: var(--muted, #6b7a6d); padding: 0 4px 2px; }
+.chat-bubble { background: var(--surface-2, #eef1ec); border-radius: 16px; padding: 8px 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.chat-msg.mine .chat-bubble { background: var(--brand); color: #fff; }
+.chat-bubble img { display: block; max-height: 200px; max-width: 100%; border-radius: 12px; margin-top: 4px; }
+.chat-react { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.rx { border: 1px solid var(--line, #e2e6df); background: var(--surface, #fff); border-radius: 999px; padding: 1px 8px; font-size: 12px; cursor: pointer; color: inherit; }
+.rx.on { border-color: var(--brand); background: var(--brand-soft); }
+.rx.add { opacity: .55; }
+.chat-msg:hover .rx.add, .rx.add:focus { opacity: 1; }
+.rx-pick { display: flex; flex-wrap: wrap; gap: 2px; max-width: 280px; margin-top: 4px; padding: 6px; background: var(--surface, #fff); border: 1px solid var(--line, #e2e6df); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.rx-pick button { border: 0; background: none; font-size: 18px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+.rx-pick button:hover { background: var(--brand-soft); }
+.chat-compose { display: flex; gap: 8px; align-items: flex-end; padding: 12px; border-top: 1px solid var(--line, #e2e6df); }
+.chat-compose textarea { flex: 1; min-width: 0; resize: none; max-height: 8rem; }
+.chat-gif { display: grid; gap: 8px; margin: 0 12px 8px; padding: 12px; border: 1px solid var(--line, #e2e6df); border-radius: 14px; }
+.chat-people { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 2px; }
+.chat-people button { display: flex; width: 100%; justify-content: space-between; border: 0; background: none; padding: 10px 8px; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.chat-people button:hover { background: var(--brand-soft); }
+@media (max-width: 760px) {
+  .chat { grid-template-columns: minmax(0, 1fr); }
+  .chat .chat-main { display: none; }
+  .chat.thread-open .chat-list { display: none; }
+  .chat.thread-open .chat-main { display: flex; }
+  .chat-back { display: inline-flex; }
+}
+
+/* ---- tutorials and knowledge base ---- */
+.help-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 22px; }
+.help-chips a { border: 1px solid var(--line, #e2e6df); background: var(--surface, #fff); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: inherit; text-decoration: none; }
+.help-card { margin-bottom: 20px; scroll-margin-top: 80px; }
+.help-card h2 { margin: 0 0 4px; font-size: 20px; }
+.help-steps { list-style: none; counter-reset: s; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+.help-steps li { display: flex; gap: 12px; font-size: 14px; counter-increment: s; }
+.help-steps .n { display: none; }
+.help-steps li::before { content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.help-tip { margin: 14px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--brand-soft); color: var(--brand-ink); font-size: 14px; }
+.help-list { display: grid; gap: 8px; }
+.help-art summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 600; }
+.help-art summary::-webkit-details-marker { display: none; }
+.help-art ul { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.help-art[hidden] { display: none; }
+.pill { font-size: 12px; font-weight: 400; background: var(--surface-2, #eef1ec); border-radius: 999px; padding: 1px 8px; color: var(--muted, #6b7a6d); }
+
 </style>
 
 </head>
@@ -600,12 +672,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 (function (root) {
   "use strict";
 
-  const ROLES = { admin: "Admin", buyer: "Buyer", warehouse: "Warehouse", sales: "Sales" };
+  const ROLES = { admin: "Admin", buyer: "Buyer", warehouse: "Warehouse", sales: "Sales", orders_manager: "Orders manager" };
   const ROLE_HELP = {
     admin: "Everything, including resetting the demo",
     buyer: "Products, vendors, purchase orders, receiving",
     warehouse: "Locations, receiving, moves, shrink, counts, fulfillment",
     sales: "Customers, pricing, sales orders, fulfillment, invoices, returns",
+    orders_manager: "Checks pulled orders, marks them completed, invoices",
   };
   const can = (role, ...rs) => role === "admin" || rs.includes(role);
 
@@ -763,6 +836,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       email: a.email || null,
       phone: a.phone || null,
       address: a.address || null,
+      deliveryAddress: a.deliveryAddress || null,
       terms,
       resale: a.resale || null,
       notes: a.notes || null,
@@ -969,6 +1043,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       notes: null,
       fulfilledAt: null,
       createdAt: ctx.now,
+      deliveryAddress: (s.customers.find((c) => c.id === a.customerId) || {}).deliveryAddress || (s.customers.find((c) => c.id === a.customerId) || {}).address || null,
+      layoutId: (s.layouts && s.layouts[0] && s.layouts[0].id) || null,
       lines: [],
     };
     s.sos.push(so);
@@ -980,6 +1056,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     if (["invoiced", "cancelled"].includes(so.status)) fail("This order is closed");
     so.ship = a.ship || null;
     so.notes = a.notes || null;
+    if (a.deliveryAddress !== undefined) so.deliveryAddress = a.deliveryAddress || null;
+    if (a.layoutId) so.layoutId = a.layoutId;
   }
   function addSOLine(s, ctx, a) {
     need(ctx, "sales");
@@ -1008,7 +1086,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     } else if (a.status === "draft") {
       if (so.status !== "confirmed") fail("Only confirmed orders can go back to draft");
     } else if (a.status === "cancelled") {
-      if (!["draft", "confirmed"].includes(so.status)) fail("Fulfilled orders can't be cancelled. Record a return instead.");
+      if (!["draft", "confirmed"].includes(so.status)) fail("Orders that are already pulled can't be cancelled. Record a return instead.");
     } else fail("Unknown status");
     so.status = a.status;
   }
@@ -1027,7 +1105,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   function fulfill(s, ctx, a) {
     need(ctx, "sales", "warehouse");
     const so = byId(s.sos, a.id, "Sales order");
-    if (so.status !== "confirmed") fail("Only confirmed orders can be fulfilled");
+    if (so.status !== "confirmed") fail("Only orders that are ready to pull can be marked pulled");
     if (!so.lines.length) fail("Order has no lines");
     const picks = (a.picks || []).filter((p) => Number(p.qtyBase) > 0);
     for (const line of so.lines) {
@@ -1070,10 +1148,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   function activeInvoice(s, soId) {
     return s.invoices.find((i) => i.soId === soId && i.status !== "void") || null;
   }
-  function invoice(s, ctx, a) {
-    need(ctx, "sales");
+  function completeSO(s, ctx, a) {
+    need(ctx, "orders_manager");
     const so = byId(s.sos, a.id, "Sales order");
-    if (so.status !== "fulfilled") fail("Only fulfilled orders can be invoiced");
+    if (a.undo) {
+      if (so.status !== "completed") fail("Only completed orders can be sent back");
+      so.status = "fulfilled";
+      so.completedAt = null;
+    } else {
+      if (so.status !== "fulfilled") fail("Only pulled orders can be completed");
+      so.status = "completed";
+      so.completedAt = ctx.now;
+    }
+  }
+  function invoice(s, ctx, a) {
+    need(ctx, "sales", "orders_manager");
+    const so = byId(s.sos, a.id, "Sales order");
+    if (so.status !== "completed") fail("Only completed orders can be invoiced. The orders manager marks an order completed once its pull ticket is turned in.");
     const c = byId(s.customers, so.customerId, "Customer");
     const rate = Number(a.taxRate || 0);
     if (!(rate >= 0)) fail("Tax rate can't be negative");
@@ -1099,12 +1190,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     return inv.id;
   }
   function voidInvoice(s, ctx, a) {
-    need(ctx, "sales");
+    need(ctx, "sales", "orders_manager");
     const inv = byId(s.invoices, a.id, "Invoice");
     if (inv.status !== "open") fail("Only open (unpaid) invoices can be voided");
     inv.status = "void";
     const so = s.sos.find((x) => x.id === inv.soId);
-    if (so && so.status === "invoiced") so.status = "fulfilled";
+    if (so && so.status === "invoiced") so.status = "completed";
   }
   function setInvoicePaid(s, ctx, a) {
     need(ctx, "sales");
@@ -1122,7 +1213,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   function createReturn(s, ctx, a) {
     need(ctx, "sales", "warehouse");
     const so = byId(s.sos, a.soId, "Sales order");
-    if (!["fulfilled", "invoiced"].includes(so.status)) fail("Only fulfilled or invoiced orders can take returns");
+    if (!["fulfilled", "completed", "invoiced"].includes(so.status)) fail("Only pulled, completed or invoiced orders can take returns");
     const inv = activeInvoice(s, so.id);
     const rate = inv ? inv.taxRate : 0;
     const ret = {
@@ -1350,7 +1441,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     saveVendor, saveCustomer, saveTier, createLocation, toggleLocation,
     createPO, updatePO, addPOLine, removePOLine, setPOStatus, deletePO, receivePO, closePO,
     transfer, shrink, adjust,
-    createSO, updateSO, addSOLine, removeSOLine, setSOStatus, deleteSO, fulfill, invoice, voidInvoice, setInvoicePaid,
+    createSO, updateSO, addSOLine, removeSOLine, setSOStatus, deleteSO, fulfill, completeSO, invoice, voidInvoice, setInvoicePaid,
     createReturn, setCredit, importRows,
   };
 
@@ -1545,7 +1636,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
         }
         exec("setSOStatus", { id: soId, status: "confirmed" }, "sales", d, 11);
         exec("fulfill", { id: soId }, "warehouse", d, 13, ri(0, 50));
-        const invId = exec("invoice", { id: soId, taxRate: c.resale ? 0 : 6 }, "sales", d, 16);
+        exec("completeSO", { id: soId }, "orders_manager", d, 15, ri(0, 40));
+        const invId = exec("invoice", { id: soId, taxRate: c.resale ? 0 : 6 }, "orders_manager", d, 16);
         const inv = s.invoices.find((x) => x.id === invId);
         // older invoices mostly paid; a few left overdue
         if (d < -10 && rnd() < 0.8) exec("setInvoicePaid", { id: invId, paid: true }, "sales", Math.min(-1, d + ri(5, 12)), 10);
@@ -1597,10 +1689,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
         if (qty < 1) continue;
         exec("addSOLine", { soId, productId: p.id, unitId: u.id, qty, price: suggestedPrice(s, c.id, p, u) ?? 1 }, "sales", 0, hour, 5);
       }
-      if (status === "confirmed") exec("setSOStatus", { id: soId, status: "confirmed" }, "sales", 0, hour, 10);
+      if (status === "confirmed" || status === "fulfilled") exec("setSOStatus", { id: soId, status: "confirmed" }, "sales", 0, hour, 10);
+      if (status === "fulfilled") exec("fulfill", { id: soId }, "warehouse", 0, hour + 1, 5);
     };
     queue("Evergreen Events", [["RO-PLA-50", "bunch", 8], ["GY-XLN-80", "bunch", 6], ["EU-SED-BN", "bunch", 5]], "confirmed", 8);
-    queue("Willow Lane Weddings", [["RO-PKM-50", "bunch", 4], ["SR-MAJ-40", "bunch", 3], ["HG-VAS-C08", "case", 1]], "confirmed", 9);
+    queue("Willow Lane Weddings", [["RO-PKM-50", "bunch", 4], ["SR-MAJ-40", "bunch", 3], ["HG-VAS-C08", "case", 1]], "fulfilled", 9);
     queue("Bloom & Vine Florist", [["RO-FRE-60", "bunch", 4], ["RU-ITL-BN", "bunch", 3]], "draft", 10);
 
     for (const h of root.DK.hooks.afterSample) h(s, exec, at);
@@ -2117,6 +2210,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   }
   function completeCounter(s, ctx, so, taxRate) {
     if (so.status === "confirmed") DK._.fulfill(s, { ...ctx, role: "admin" }, { id: so.id });
+    if (so.status === "fulfilled") { so.status = "completed"; so.completedAt = ctx.now; } // handed over on the spot
     let inv = DK.activeInvoice(s, so.id);
     if (!inv) {
       const id = OPS.invoice(s, { ...ctx, role: "admin" }, { id: so.id, taxRate });
@@ -2573,6 +2667,114 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   };
 })(typeof window !== "undefined" ? window : globalThis);
 
+/* DKaydent Wholesale demo — engine part 3: Messenger.
+ * People in the demo are the five roles ("Viewing as" is who you are). Mirrors the chat tables in the real app. */
+(function (root) {
+  "use strict";
+  const DK = root.DK;
+  const { uid, fail } = DK._;
+  const OPS = DK.OPS;
+
+  DK.PEOPLE = {
+    admin: "Dana Reyes",
+    buyer: "Ben Ortiz",
+    warehouse: "Wes Carter",
+    sales: "Sam Lopez",
+    orders_manager: "Olivia Park",
+  };
+  DK.TEAM_CHANNELS = [
+    { id: "team-everyone", name: "Everyone", role: null },
+    { id: "team-sales", name: "Sales", role: "sales" },
+    { id: "team-warehouse", name: "Warehouse", role: "warehouse" },
+    { id: "team-buyers", name: "Buyers", role: "buyer" },
+  ];
+  const MAX_MESSAGES = 220;
+
+  const chat = (s) => (s.chat ||= { channels: [], messages: [], reactions: {} });
+  /** Channels this role can see: team channels by role, plus its own chats and groups. */
+  DK.chatChannelsFor = (s, role) => {
+    const c = s.chat || { channels: [] };
+    const team = DK.TEAM_CHANNELS.filter((t) => !t.role || role === "admin" || t.role === role).map((t) => ({ id: t.id, kind: "team", name: t.name, members: [] }));
+    return [...team, ...c.channels.filter((ch) => ch.members.includes(role))];
+  };
+  const canSee = (s, role, id) => DK.chatChannelsFor(s, role).some((c) => c.id === id);
+
+  OPS.chatSend = (s, ctx, a) => {
+    const body = String(a.body || "").trim().slice(0, 1000);
+    const gif = a.gif ? String(a.gif).trim() : null;
+    if (!body && !gif) fail("Type a message first");
+    if (gif && !/^https:\/\/\S{4,500}$/.test(gif)) fail("A GIF link must start with https://");
+    if (!canSee(s, ctx.role, a.ch)) fail("You can't post in that chat");
+    const c = chat(s);
+    c.messages.push({ id: uid("m"), ch: a.ch, by: ctx.role, at: ctx.now, body, gif });
+    if (c.messages.length > MAX_MESSAGES) {
+      const drop = c.messages.splice(0, c.messages.length - MAX_MESSAGES);
+      for (const m of drop) delete c.reactions[m.id];
+    }
+  };
+  OPS.chatReact = (s, ctx, a) => {
+    const c = chat(s);
+    const m = c.messages.find((x) => x.id === a.id);
+    if (!m || !canSee(s, ctx.role, m.ch)) fail("That message isn't available");
+    const emoji = String(a.emoji || "").slice(0, 8);
+    if (!emoji) fail("Pick a reaction");
+    const list = (c.reactions[m.id] ||= []);
+    const i = list.findIndex((r) => r[0] === ctx.role && r[1] === emoji);
+    if (i >= 0) list.splice(i, 1);
+    else list.push([ctx.role, emoji]);
+    if (!list.length) delete c.reactions[m.id];
+  };
+  OPS.chatOpenDm = (s, ctx, a) => {
+    if (!DK.PEOPLE[a.with] || a.with === ctx.role) fail("Pick someone else to message");
+    const id = "dm-" + [ctx.role, a.with].sort().join("-");
+    const c = chat(s);
+    if (!c.channels.some((x) => x.id === id)) c.channels.push({ id, kind: "dm", name: null, members: [ctx.role, a.with], creator: ctx.role });
+    return id;
+  };
+  OPS.chatGroup = (s, ctx, a) => {
+    const name = String(a.name || "").trim().slice(0, 60);
+    if (!name) fail("Name the group");
+    const members = [...new Set([ctx.role, ...(a.members || [])])].filter((r) => DK.PEOPLE[r]);
+    if (members.length < 3) fail("A group needs at least two other people");
+    const c = chat(s);
+    const id = uid("g");
+    c.channels.push({ id, kind: "group", name, members, creator: ctx.role });
+    return id;
+  };
+  OPS.chatLeave = (s, ctx, a) => {
+    const c = chat(s);
+    const ch = c.channels.find((x) => x.id === a.ch && x.kind === "group");
+    if (!ch) fail("You can only leave a group");
+    ch.members = ch.members.filter((r) => r !== ctx.role);
+    if (ch.members.length < 2) {
+      c.channels = c.channels.filter((x) => x.id !== ch.id);
+      c.messages = c.messages.filter((m) => m.ch !== ch.id);
+    }
+  };
+
+  // A little history so the Messages page isn't empty
+  DK.hooks.afterSample.push((s, exec, at) => {
+    const c = chat(s);
+    const dm = "dm-sales-warehouse";
+    c.channels.push({ id: dm, kind: "dm", name: null, members: ["sales", "warehouse"], creator: "sales" });
+    c.channels.push({ id: "g-friday", kind: "group", name: "Friday deliveries", members: ["admin", "sales", "warehouse", "orders_manager"], creator: "admin" });
+    const add = (ch, by, d, h, mi, body, gif) => {
+      const m = { id: uid("m"), ch, by, at: at(d, h, mi), body, gif: gif || null };
+      c.messages.push(m);
+      return m.id;
+    };
+    add("team-everyone", "admin", -1, 8, 5, "Morning all. Big wedding week, so please check the MUST CHECK orders twice.");
+    const m2 = add("team-everyone", "warehouse", -1, 8, 20, "Cooler 2 is cleared out for the roses coming in Thursday.");
+    c.reactions[m2] = [["admin", "👍"], ["buyer", "👍"], ["sales", "🎉"]];
+    add("team-sales", "sales", -1, 9, 10, "Willow Lane wants to move their order to Friday. I'll update the ship date.");
+    add("team-warehouse", "warehouse", 0, 7, 40, "Pull tickets are printing with the new Pulled / Packed lines. Please sign both at the bottom.");
+    add("team-buyers", "buyer", 0, 7, 55, "Two grower boxes shorted on the last PO, closing it short and reordering.");
+    add(dm, "sales", 0, 8, 2, "Can you pull Evergreen Events first? Their truck leaves at noon.");
+    add(dm, "warehouse", 0, 8, 6, "On it. Pulled ticket goes to Olivia when done.");
+    add("g-friday", "orders_manager", 0, 8, 30, "Friday route: the completed orders are ready for invoices as soon as tickets come back.");
+  });
+})(typeof window !== "undefined" ? window : globalThis);
+
 </script>
 <script>
 /* DKaydent Wholesale demo — UI. Shared data lives in the artifact's db at demo/state. */
@@ -2660,7 +2862,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     fulfilled: "b-green", invoiced: "b-violet", open: "b-amber", overdue: "b-red", paid: "b-green", void: "",
     cancelled: "", applied: "b-green", refunded: "b-blue", inactive: "",
   };
-  const badge = (s) => `<span class="badge ${STATUS[s] || ""}">${esc(String(s).replace(/_/g, " "))}</span>`;
+  const STATUS_LABEL = { confirmed: "ready to pull", fulfilled: "pulled" };
+  const badge = (s) => `<span class="badge ${STATUS[s] || ""}">${esc(STATUS_LABEL[s] || String(s).replace(/_/g, " "))}</span>`;
   const expiry = (d) => {
     if (d === null || d === undefined) return `<span class="t-faint">—</span>`;
     if (d < 0) return `<span class="t-bad">Expired ${-d}d ago</span>`;
@@ -2806,6 +3009,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     document.querySelector(".busy-bar")?.remove();
     if (ui.busy) renderBusy();
     const section = SECTION[ui.page] || ui.page;
+    ui.chatUnread = typeof chatUnreadTotal === "function" ? chatUnreadTotal() : 0;
     const status =
       mode === "live" ? `<span class="chip chip-live" title="Everyone with the link sees the same data">Shared · live</span>` :
       mode === "readonly" ? `<span class="chip chip-local">View only</span>` :
@@ -2824,7 +3028,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       <div class="shell ${ui.navDrawer ? "nav-open" : ""}">
         <nav class="side" id="side" aria-label="Main">
           ${NAV.map(([title, items]) => {
-            const links = items.map(([k, label]) => `<button type="button" data-go="${k}" ${k === section ? 'aria-current="page"' : ""}>${label}</button>`).join("");
+            const links = items.map(([k, label]) => `<button type="button" data-go="${k}" ${k === section ? 'aria-current="page"' : ""}>${label}${k === "messages" && ui.chatUnread ? ` <span class="nav-badge" aria-label="${ui.chatUnread} unread">${ui.chatUnread}</span>` : ""}</button>`).join("");
             if (!title) return links;
             const open = items.some(([k]) => k === section) || ui.navOpen.has(title);
             const id = "grp-" + title.replace(/\W+/g, "");
@@ -2910,7 +3114,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
         ${stat("Inventory value", money(sum(lots, (l) => l.qty * l.cost)), `${lots.length} lots on hand`, ["inventory"])}
         ${stat("Expiring ≤ 3 days", expiring.length, "lots to move or dump", ["inventory", { view: "lots", sort: "expiry" }], expiring.length ? "warn" : "")}
         ${stat("Open purchase orders", dueIn.length, "awaiting receipt", ["purchasing", { status: "open" }])}
-        ${stat("Orders to fulfill", toFill.length, "confirmed, not pulled", ["sales", { status: "confirmed" }])}
+        ${stat("Ready to pull", toFill.length, "pick tickets out, not pulled yet", ["sales", { status: "confirmed" }])}
         ${stat("Net revenue, 30 days", money(rev), `Gross margin ${pct(rev ? (rev - cogs) / rev : null)}`, ["reports"])}
         ${stat("Gross profit, 30 days", money(rev - cogs), "", ["reports"])}
         ${stat("Open invoices", money(sum(open, (i) => i.total)), `${open.length} unpaid`, ["invoices", { status: "open" }])}
@@ -3076,7 +3280,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     ${field("Business name", inp("name", c?.name, "required"), "c8")}
     ${field("Price tier", sel("tierId", [["", "None"], ...S.tiers.map((t) => [t.id, t.name])], c?.tierId), "c4")}
     ${field("Contact", inp("contact", c?.contact), "c4")}${field("Email", inp("email", c?.email, 'type="email"'), "c4")}${field("Phone", inp("phone", c?.phone), "c4")}
-    ${field("Address", `<textarea name="address" rows="2">${esc(c?.address || "")}</textarea>`, "")}
+    ${field("Location address", `<textarea name="address" rows="2">${esc(c?.address || "")}</textarea>`, "c6")}${field("Delivery address (if different)", `<textarea name="deliveryAddress" rows="2" placeholder="Leave blank to deliver to the location address">${esc(c?.deliveryAddress || "")}</textarea>`, "c6")}
     ${field("Payment terms (days)", inp("terms", c?.terms ?? 30, 'type="number" min="0"'), "c4")}${field("Resale certificate #", inp("resale", c?.resale), "c8")}
     ${field("Notes", `<textarea name="notes" rows="2">${esc(c?.notes || "")}</textarea>`, "")}`;
   PAGES.customers = () => {
@@ -3391,23 +3595,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   };
 
   // ----- sales -----
-  const SO_FILTERS = { open: ["draft", "confirmed"], draft: ["draft"], confirmed: ["confirmed"], fulfilled: ["fulfilled"], invoiced: ["invoiced"], cancelled: ["cancelled"], all: null };
+  const SO_FILTERS = { open: ["draft", "confirmed", "fulfilled", "completed"], draft: ["draft"], confirmed: ["confirmed"], fulfilled: ["fulfilled"], completed: ["completed"], invoiced: ["invoiced"], cancelled: ["cancelled"], all: null };
   PAGES.sales = () => {
     const f = ui.q.status && ui.q.status in SO_FILTERS ? ui.q.status : "open";
     const list = S.sos.filter((s) => !SO_FILTERS[f] || SO_FILTERS[f].includes(s.status)).slice().reverse();
-    return `${head("Sales orders", "Draft → confirmed → fulfilled (stock pulled) → invoiced", `<button type="button" class="btn" data-go="recurring">Recurring orders</button><button type="button" class="btn" data-act="export" data-v="sales-orders">Export CSV</button>`)}
+    return `${head("Sales orders", "Draft → Ready to pull → Pulled → Completed → Invoiced", `<button type="button" class="btn" data-go="recurring">Recurring orders</button><button type="button" class="btn" data-act="export" data-v="sales-orders">Export CSV</button>`)}
       ${can("sales") ? section("New sales order", `<form class="card row" data-form="createSO">
         <label class="f" style="flex:1;min-width:220px"><span>Customer</span>${sel("customerId", [["", "Choose…"], ...S.customers.filter((c) => c.active).map((c) => [c.id, c.name])], ui.q.customer || "", "required")}</label>
         <label class="f"><span>Ship / pickup</span>${inp("ship", DK.addDays(today(), 1), 'type="date"')}</label><button class="btn btn-p" ${dis("sales")}>Create draft order</button></form>`) : ""}
-      ${tabs(Object.keys(SO_FILTERS).map((k) => [k, k[0].toUpperCase() + k.slice(1)]), f, "soTab")}
+      ${tabs(Object.keys(SO_FILTERS).map((k) => [k, STATUS_LABEL[k] ? STATUS_LABEL[k][0].toUpperCase() + STATUS_LABEL[k].slice(1) : k[0].toUpperCase() + k.slice(1)]), f, "soTab")}
       ${list.length ? table(["Order", "Customer", "Status", "Ordered", "Ships", ">Total"], list.map((o) => `<tr><td>${link("so", o.id, `<b>${esc(o.number)}</b>`, "nowrap")}${o.mustCheck ? ` <span class="mc-tag">MUST CHECK</span>` : ""}</td><td>${esc(cust(o.customerId)?.name)}</td><td>${badge(o.status)}</td><td>${fdate(o.orderDate)}</td><td>${fdate(o.ship)}</td><td class="n">${money(soTotal(o))}</td></tr>`)) : empty("No orders here.")}`;
+  };
+  const ORDER_STEPS = [["draft", "Draft", "Sales rep"], ["confirmed", "Ready to pull", "Pick ticket printed"], ["fulfilled", "Pulled", "Ticket turned in"], ["completed", "Completed", "Orders manager"], ["invoiced", "Invoiced", "Invoice printed"]];
+  const orderSteps = (status) => {
+    if (status === "cancelled") return "";
+    const at = ORDER_STEPS.findIndex((x) => x[0] === status);
+    return `<ol class="steps" aria-label="Order steps" data-testid="order-steps">${ORDER_STEPS.map(([, l, who], i) => `<li ${i === at ? 'aria-current="step"' : ""} class="${i === at ? "now" : i < at ? "done" : ""}"><b>${l}</b><span>${who}</span></li>`).join("")}</ol>`;
   };
   PAGES.so = () => {
     const so = S.sos.find((x) => x.id === ui.id);
     if (!so) return empty("That order no longer exists.");
     const c = cust(so.customerId), t = tier(c?.tierId);
     const inv = DK.activeInvoice(S, so.id);
-    const showCost = ["fulfilled", "invoiced"].includes(so.status);
+    const showCost = ["fulfilled", "completed", "invoiced"].includes(so.status);
     const isDraft = so.status === "draft";
     const st = DK.stockByProduct(S);
     const needBy = {};
@@ -3416,17 +3626,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     const rets = S.returns.filter((r) => r.soId === so.id);
     const revenue = soTotal(so), cost = sum(so.lines, (l) => l.cost);
     const acts = [];
-    if (can("sales") && isDraft) acts.push(so.recurringId ? `<button type="button" class="btn btn-d" data-act="skipRec" data-id="${so.recurringId}" data-v="${so.occurrence}" ${dis("sales")}>Skip this order</button>` : `<button type="button" class="btn btn-d" data-act="deleteSO" ${dis("sales")}>Delete draft</button>`, `<button type="button" class="btn btn-p" data-act="soStatus" data-v="confirmed" ${dis("sales")}>Confirm order</button>`);
+    if (can("sales") && isDraft) acts.push(so.recurringId ? `<button type="button" class="btn btn-d" data-act="skipRec" data-id="${so.recurringId}" data-v="${so.occurrence}" ${dis("sales")}>Skip this order</button>` : `<button type="button" class="btn btn-d" data-act="deleteSO" ${dis("sales")}>Delete draft</button>`, `<button type="button" class="btn btn-p" data-act="soStatus" data-v="confirmed" ${dis("sales")}>Send to pull</button>`);
     if (so.status === "confirmed") {
       if (can("sales")) acts.push(`<button type="button" class="btn" data-act="soStatus" data-v="draft" ${dis("sales")}>Back to draft</button>`, `<button type="button" class="btn btn-d" data-act="soCancel" ${dis("sales")}>Cancel</button>`);
-      if (can("sales", "warehouse")) acts.push(`<button type="button" class="btn btn-p" data-act="fulfill" ${dis("sales", "warehouse")}>Fulfill oldest-first</button>`);
+      if (can("sales", "warehouse")) acts.push(`<button type="button" class="btn btn-p" data-act="fulfill" ${dis("sales", "warehouse")}>Mark pulled</button>`);
     }
+    if (so.status === "fulfilled" && can("orders_manager")) acts.push(`<button type="button" class="btn btn-p" data-act="completeSO" data-v="1" ${dis("orders_manager")}>Mark completed</button>`);
+    if (so.status === "completed" && can("orders_manager")) acts.push(`<button type="button" class="btn" data-act="completeSO" data-v="0" ${dis("orders_manager")}>Send back to Pulled</button>`);
     if (isDraft || so.status === "confirmed") acts.push(`<button type="button" class="btn" data-go="pullTicket" data-id="${so.id}">Print pull ticket</button>`);
     if (can("sales") && so.status !== "cancelled") acts.unshift(`<button type="button" class="btn ${so.mustCheck ? "" : "btn-d"}" data-act="mustCheck" ${dis("sales")}>${so.mustCheck ? "Remove MUST CHECK" : "Mark MUST CHECK"}</button>`);
     if (inv) acts.push(`<button type="button" class="btn btn-p" data-go="invoice" data-id="${inv.id}">View ${esc(inv.number)}</button>`);
     const picker = isDraft && can("sales") ? linePicker("addSOLine", "price", "Price per unit", "smallest", (p, u) => DK.suggestedPrice(S, so.customerId, p, u)) : "";
     return `${head(`${esc(so.number)} ${badge(so.status)}`, `${link("customer", so.customerId, esc(c?.name))}${t ? " · " + esc(t.name) : ""} · ordered ${fdate(so.orderDate)}${so.ship ? " · ships " + fdate(so.ship) : ""}${so.recurringId ? ` · ↻ ${link("recurringOne", so.recurringId, esc((S.recurring || []).find((r) => r.id === so.recurringId)?.name || "Recurring order"))}` : ""}`, so.mustCheck ? `<div class="mc-col">${mustCheckBox()}<div class="actions">${acts.join("")}</div></div>` : acts.join(""), ["sales", "Sales orders"])}
-      ${short ? `<div class="banner banner-warn">Some lines need more than is on hand. Fulfillment will be blocked until stock is received.</div>` : ""}
+      ${orderSteps(so.status)}
+      ${short ? `<div class="banner banner-warn">Some lines need more than is on hand. Marking pulled will be blocked until stock is received.</div>` : ""}
       ${section("Lines", so.lines.length ? table(["Product", ">Qty", ">Price", ">Extended", ...(showCost ? [">FIFO cost", ">Margin"] : [">On hand"]), ...(isDraft && can("sales") ? [""] : [])], so.lines.map((l) => {
         const p = P(l.productId), u = unitOf(p, l.unitId), ext = l.qty * l.price;
         return `<tr><td>${esc(p.name)}<div class="small code">${esc(p.sku)}</div></td><td class="n">${qty(l.qty)} ${esc(u.name)}${u.factor !== 1 ? `<div class="small">${qty(l.qty * u.factor)} ${esc(p.baseUnit)}</div>` : ""}</td><td class="n">${money(l.price)}</td><td class="n">${money(ext)}</td>
@@ -3436,11 +3649,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       }), `<tfoot><tr><td colspan="3" class="n"><b>Subtotal</b></td><td class="n"><b>${money(revenue)}</b></td>${showCost ? `<td class="n">${money(cost)}</td><td class="n"><b>${money(revenue - cost)}</b><div class="small">${pct(revenue ? (revenue - cost) / revenue : null)}</div></td>` : "<td></td>"}${isDraft && can("sales") ? "<td></td>" : ""}</tr></tfoot>`) : empty("No lines yet."))}
       ${picker ? section("Add line", `<form class="card section" data-form="addSOLine">${picker}<p class="note" style="margin:0">Suggested price uses the ${esc(t?.name || "default")} tier price, or average landed cost + ${t ? t.markup : 35}% markup.</p><div class="actions"><button class="btn btn-p">Add line</button></div></form>`) : ""}
       ${so.status === "confirmed" && can("sales", "warehouse") ? pickSection(so) : ""}
-      ${(["fulfilled", "invoiced"].includes(so.status) || rets.length) ? returnsSection(so, rets, inv) : ""}
-      ${so.status === "fulfilled" && can("sales") ? section("Invoice", `<form class="card row" data-form="invoice"><label class="f"><span>Sales tax %</span>${inp("taxRate", c?.resale ? 0 : 6, 'type="number" min="0" step="0.001" class="w-24"')}</label><p class="note" style="margin:0 0 8px">${c?.resale ? "Customer has a resale certificate on file." : "Leave at 0 for resale-exempt customers."}</p><button class="btn btn-p" ${dis("sales")}>Create invoice</button></form>`) : ""}
-      ${inv ? payPanel(so, inv.total, "invoice", false, "Payments (take more on the invoice)") : ["draft", "confirmed", "fulfilled"].includes(so.status) && so.lines.length ? payPanel(so, DK.round2(soTotal(so)), "deposit", true, "Deposit (optional)") : ""}
+      ${(["fulfilled", "completed", "invoiced"].includes(so.status) || rets.length) ? returnsSection(so, rets, inv) : ""}
+      ${so.status === "fulfilled" ? `<div class="banner banner-warn">Pulled. Waiting for the orders manager to check it and mark it completed before it can be invoiced.</div>` : ""}
+      ${so.status === "completed" && can("sales", "orders_manager") ? section("Invoice", `<form class="card row" data-form="invoice"><label class="f"><span>Sales tax %</span>${inp("taxRate", c?.resale ? 0 : 6, 'type="number" min="0" step="0.001" class="w-24"')}</label><p class="note" style="margin:0 0 8px">${c?.resale ? "Customer has a resale certificate on file." : "Leave at 0 for resale-exempt customers."}</p><button class="btn btn-p" ${dis("sales", "orders_manager")}>Create invoice</button></form>`) : ""}
+      ${inv ? payPanel(so, inv.total, "invoice", false, "Payments (take more on the invoice)") : ["draft", "confirmed", "fulfilled", "completed"].includes(so.status) && so.lines.length ? payPanel(so, DK.round2(soTotal(so)), "deposit", true, "Deposit (optional)") : ""}
       ${section("Details", `<form class="card form" data-form="updateSO"><fieldset class="form" style="border:0;padding:0;margin:0;grid-column:span 12" ${["invoiced", "cancelled"].includes(so.status) ? "disabled" : dis("sales")}>
         ${field("Ship / pickup date", inp("ship", so.ship, 'type="date"'), "c3")}${field("Notes", inp("notes", so.notes), "c8")}
+        ${field("Deliver to", inp("deliveryAddress", so.deliveryAddress, 'placeholder="Street, city, state ZIP"'), DK.layoutsOf(S).length > 1 ? "c8" : "")}${DK.layoutsOf(S).length > 1 ? field("Ships from", sel("layoutId", DK.layoutsOf(S).map((l) => [l.id, l.name]), so.layoutId || DK.layoutsOf(S)[0].id), "c4") : ""}
         ${can("sales") && !["invoiced", "cancelled"].includes(so.status) ? `<div class="actions"><button class="btn btn-p">Save details</button></div>` : ""}</fieldset></form>`)}`;
   };
   function suggestPicks(so) {
@@ -3484,7 +3699,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   function returnsSection(so, rets, inv) {
     const returned = {};
     for (const r of rets) for (const rl of r.lines) returned[rl.soLineId] = (returned[rl.soLineId] || 0) + rl.qtyBase;
-    const canRet = ["fulfilled", "invoiced"].includes(so.status) && can("sales", "warehouse");
+    const canRet = ["fulfilled", "completed", "invoiced"].includes(so.status) && can("sales", "warehouse");
     return section("Returns & credits", `
       ${rets.length ? table(["Return", "When", "Items", "Reason", ">Credit", "Credit status"], rets.map((r) => `<tr><td class="nowrap"><b>${esc(r.number)}</b></td><td class="nowrap">${fdt(r.at)}</td>
         <td>${r.lines.map((rl) => { const p = P(rl.productId), sl = so.lines.find((x) => x.id === rl.soLineId); return `<div>${qty(rl.qty)} ${esc(unitOf(p, sl?.unitId)?.name || p.baseUnit)} ${esc(p.name)} <span class="${rl.restock ? "t-good" : "t-bad"}">(${rl.restock ? "restocked" : "written off"})</span></div>`; }).join("")}</td>
@@ -3508,7 +3723,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       ${list.length ? table(["Invoice", "Customer", "Order", "Status", "Issued", "Due", ">Total"], list.map((i) => {
         const so = S.sos.find((x) => x.id === i.soId);
         return `<tr><td>${link("invoice", i.id, `<b>${esc(i.number)}</b>`, "nowrap")}</td><td>${esc(cust(i.customerId)?.name)}</td><td>${so ? link("so", so.id, esc(so.number), "nowrap") : "—"}</td><td>${badge(invStatus(i))}</td><td>${fdate(i.issued)}</td><td class="${invStatus(i) === "overdue" ? "t-bad" : ""}">${fdate(i.due)}</td><td class="n">${money(i.total)}</td></tr>`;
-      })) : empty("No invoices here. Invoices are created from fulfilled sales orders.")}`;
+      })) : empty("No invoices here. Invoices are created from completed sales orders.")}`;
   };
   PAGES.invoice = () => {
     const i = S.invoices.find((x) => x.id === ui.id);
@@ -3517,13 +3732,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     const rets = S.returns.filter((r) => r.soId === i.soId);
     const acts = [];
     const paidAmt = DK.soPaid(S, i.soId);
-    if (can("sales") && i.status === "open") acts.push(`<button type="button" class="btn btn-d" data-act="voidInvoice" ${dis("sales")}>Void</button>`, ...(paidAmt ? [] : [`<button type="button" class="btn btn-p" data-act="paid" data-v="1" ${dis("sales")}>Mark paid</button>`]));
-    if (can("sales") && i.status === "paid" && !paidAmt) acts.push(`<button type="button" class="btn" data-act="paid" data-v="0" ${dis("sales")}>Mark unpaid</button>`);
+    if (can("sales", "orders_manager") && i.status === "open") acts.push(`<button type="button" class="btn btn-d" data-act="voidInvoice" ${dis("sales", "orders_manager")}>Void</button>`, ...(paidAmt ? [] : [`<button type="button" class="btn btn-p" data-act="paid" data-v="1" ${dis("sales", "orders_manager")}>Mark paid</button>`]));
+    if (can("sales", "orders_manager") && i.status === "paid" && !paidAmt) acts.push(`<button type="button" class="btn" data-act="paid" data-v="0" ${dis("sales", "orders_manager")}>Mark unpaid</button>`);
     return `${head(esc(i.number), `${badge(invStatus(i))}`, acts.join(""), ["invoices", "Invoices"])}
       <article class="card" style="max-width:760px;width:100%;margin:0 auto;padding:28px;display:grid;gap:22px">
         <div class="head"><div><div class="small" style="letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-weight:600">DKaydent</div><div style="font-size:20px;font-weight:650">Wholesale</div></div>
           <div style="text-align:right"><div style="font-size:22px;font-weight:650">Invoice</div><div class="code">${esc(i.number)}</div></div></div>
-        <div class="grid2" style="gap:16px"><div><div class="lbl">Bill to</div><b>${esc(c?.name)}</b>${c?.contact ? `<div>${esc(c.contact)}</div>` : ""}${c?.email ? `<div class="small">${esc(c.email)}</div>` : ""}${c?.resale ? `<div class="small">Resale cert #${esc(c.resale)}</div>` : ""}</div>
+        <div class="grid3" style="gap:16px" data-testid="invoice-addresses"><div><div class="lbl">Bill to · location</div><b>${esc(c?.name)}</b>${c?.contact ? `<div>${esc(c.contact)}</div>` : ""}${c?.address ? `<div class="small" style="white-space:pre-line">${esc(c.address)}</div>` : ""}${c?.email ? `<div class="small">${esc(c.email)}</div>` : ""}${c?.resale ? `<div class="small">Resale cert #${esc(c.resale)}</div>` : ""}</div>
+          <div><div class="lbl">Deliver to</div><div class="small" style="white-space:pre-line" data-testid="invoice-delivery">${esc(so?.deliveryAddress || c?.deliveryAddress || c?.address || "Pickup")}</div>${DK.layoutsOf(S).length ? `<div class="lbl" style="margin-top:8px">Ships from</div><b class="small">${esc(DK.layoutOf(S, so?.layoutId)?.name || "")}</b>` : ""}</div>
           <div class="small" style="display:grid;grid-template-columns:auto auto;gap:2px 16px;justify-content:end"><span>Issued</span><span>${fdate(i.issued)}</span><span>Due</span><span class="${invStatus(i) === "overdue" ? "t-bad" : ""}">${fdate(i.due)}</span><span>Terms</span><span>Net ${c?.terms}</span><span>Order</span><span>${so ? link("so", so.id, esc(so.number)) : "—"}</span>${i.paidAt ? `<span>Paid</span><span>${fdate(i.paidAt)}</span>` : ""}</div></div>
         ${table(["Item", ">Qty", ">Price", ">Amount"], (so?.lines || []).map((l) => { const p = P(l.productId); return `<tr><td>${esc(p.name)}<div class="small code">${esc(p.sku)}</div></td><td class="n">${qty(l.qty)} ${esc(unitOf(p, l.unitId)?.name)}</td><td class="n">${money(l.price)}</td><td class="n">${money(l.qty * l.price)}</td></tr>`; }))}
         <div style="margin-left:auto;width:min(100%,280px);display:grid;gap:4px"><div class="head"><span class="small">Subtotal</span><span class="n">${money(i.subtotal)}</span></div><div class="head"><span class="small">Tax (${i.taxRate}%)</span><span class="n">${money(i.tax)}</span></div><div class="head" style="border-top:1px solid var(--line);padding-top:6px;font-weight:650"><span>${paidAmt ? "Total" : "Total due"}</span><span class="n">${money(i.total)}</span></div>
@@ -3535,7 +3751,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   PAGES.returns = () => {
     const f = ["open", "applied", "refunded", "all"].includes(ui.q.status) ? ui.q.status : "open";
     const list = S.returns.filter((r) => f === "all" || r.credit === f).slice().reverse();
-    return `${head("Returns & credits", `${list.length} shown · ${money(sum(list, (r) => r.total))} in credits. Record a return from a fulfilled or invoiced sales order.`, `<button type="button" class="btn" data-act="export" data-v="returns">Export CSV</button>`)}
+    return `${head("Returns & credits", `${list.length} shown · ${money(sum(list, (r) => r.total))} in credits. Record a return from a pulled, completed or invoiced sales order.`, `<button type="button" class="btn" data-act="export" data-v="returns">Export CSV</button>`)}
       ${tabs(["open", "applied", "refunded", "all"].map((k) => [k, k[0].toUpperCase() + k.slice(1)]), f, "retTab")}
       ${list.length ? table(["Return", "Customer", "Order", "When", "Items", ">Credit", "Status"], list.map((r) => {
         const so = S.sos.find((x) => x.id === r.soId);
@@ -3625,6 +3841,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
             <div class="mini" aria-hidden="true">${mini}</div>
             <span class="head" style="align-items:center"><span><b>${l}</b><div class="small">${h}</div></span><span class="dot"></span></span>
           </button>`).join("")}</div>`)}
+      ${section("Help", `<div class="card row" style="justify-content:space-between"><p class="sub" style="margin:0">Step-by-step tutorials for the main jobs, and a searchable knowledge base.</p><span class="actions"><button type="button" class="btn" data-go="tutorials">Tutorials</button><button type="button" class="btn" data-go="kb">Knowledge base</button></span></div>`)}
       ${section("Printing", printSettingsView())}
       ${section("Role", `<p class="sub" style="margin:0">You're viewing as <b>${DK.ROLES[ui.role]}</b>: ${esc(DK.ROLE_HELP[ui.role])}. Change it with <b>Viewing as</b> at the top.</p>`)}`;
   };
@@ -3809,19 +4026,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     deletePO: () => ask("Delete this draft PO?", "The draft and its lines will be removed.", "Delete draft", () => commit("deletePO", { id: ui.id }, { after: () => go("purchasing"), msg: "Draft deleted" })),
     closePO: () => ask("Close this PO short?", "Remaining quantities won't be received. Use this when the vendor shorted the shipment.", "Close short", () => commit("closePO", { id: ui.id }, { msg: "PO closed" }), false),
     removeSOLine: (el) => commit("removeSOLine", { soId: ui.id, lineId: el.dataset.v }),
-    soStatus: (el) => commit("setSOStatus", { id: ui.id, status: el.dataset.v }, { msg: el.dataset.v === "confirmed" ? "Order confirmed" : "Back to draft" }),
+    soStatus: (el) => commit("setSOStatus", { id: ui.id, status: el.dataset.v }, { msg: el.dataset.v === "confirmed" ? "Sent to pull. The order is ready to pull." : "Back to draft" }),
+    completeSO: (el) => commit("completeSO", { id: ui.id, undo: el.dataset.v === "0" }, { msg: el.dataset.v === "0" ? "Sent back to Pulled" : "Completed. Ready to invoice." }),
     soCancel: () => ask("Cancel this order?", "No stock has been pulled for it yet.", "Cancel order", () => commit("setSOStatus", { id: ui.id, status: "cancelled" }, { msg: "Order cancelled" })),
     deleteSO: () => ask("Delete this draft order?", "The draft and its lines will be removed.", "Delete draft", () => commit("deleteSO", { id: ui.id }, { after: () => go("sales"), msg: "Draft deleted" })),
-    fulfill: () => ask("Pull stock for this order now?", "Oldest lots are used first. This records the exact cost of every unit.", "Fulfill oldest-first", () => commit("fulfill", { id: ui.id }, { msg: "Stock pulled (oldest lots first). Ready to invoice." }), false),
+    fulfill: () => ask("Mark this order pulled?", "Stock comes out of the oldest lots first. This records the exact cost of every unit.", "Mark pulled", () => commit("fulfill", { id: ui.id }, { msg: "Marked pulled (oldest lots first). The orders manager can now complete it." }), false),
     openPicks: () => { ui.picks.open = true; render(); setTimeout(() => document.getElementById("pick-scan")?.focus(), 0); },
     resetPicks: () => { ui.picks = null; render(); ui.picks.open = true; render(); },
     pickScan: () => pickScan(document.getElementById("pick-scan")?.value || ""),
     fulfillPicked: () => {
       const picks = Object.entries(ui.picks.q).filter(([, v]) => v > 0).map(([k, v]) => { const [lineId, lotId] = k.split(":"); return { lineId, lotId, qtyBase: v }; });
-      if (!picks.length) { ui.error = "Enter quantities to pick, or use Fulfill oldest-first."; return render(); }
-      commit("fulfill", { id: ui.id, picks }, { msg: "Stock pulled from the lots you picked. Ready to invoice." });
+      if (!picks.length) { ui.error = "Enter quantities to pick, or use Mark pulled."; return render(); }
+      commit("fulfill", { id: ui.id, picks }, { msg: "Marked pulled from the lots you picked. The orders manager can now complete it." });
     },
-    voidInvoice: () => { const inv = S.invoices.find((x) => x.id === ui.id); ask("Void this invoice?", "The order goes back to fulfilled so you can correct it and invoice again. Stock isn't touched; use a return for that.", "Void invoice", () => commit("voidInvoice", { id: ui.id }, { after: () => go("so", inv.soId), msg: "Invoice voided" })); },
+    voidInvoice: () => { const inv = S.invoices.find((x) => x.id === ui.id); ask("Void this invoice?", "The order goes back to Completed so you can correct it and invoice again. Stock isn't touched; use a return for that.", "Void invoice", () => commit("voidInvoice", { id: ui.id }, { after: () => go("so", inv.soId), msg: "Invoice voided" })); },
     paid: (el) => commit("setInvoicePaid", { id: ui.id, paid: el.dataset.v === "1" }, { msg: el.dataset.v === "1" ? "Marked paid" : "Marked unpaid" }),
     credit: (el) => commit("setCredit", { id: el.dataset.id, credit: el.dataset.v }, { msg: `Credit marked ${el.dataset.v}` }),
     export: (el) => download(el.dataset.v),
@@ -3973,13 +4191,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
     // menu groups (each a dropdown; the group holding the current page opens by itself)
     NAV.splice(0, NAV.length,
       ["", [["dashboard", "Dashboard"]]],
+      ["", [["messages", "Messages"]]],
       ["Buying", [["purchasing", "Purchasing"], ["receiving", "Receiving"], ["vendors", "Vendors"]]],
       ["Stock", [["inventory", "Inventory"], ["floorplan", "Location in shop"], ["products", "Products"], ["locations", "Locations"], ["scan", "Scan"]]],
       ["Selling", [["counter", "Counter sale"], ["sales", "Sales orders"], ["customers", "Customers"], ["invoices", "Invoices"], ["returns", "Returns & credits"], ["payments", "Payments"]]],
       ["Reports & data", [["reports", "Reports"], ["import", "Import & export"]]],
-      ["", [["settings", "Settings"]]],
+      ["Settings", [["settings", "Settings"], ["tutorials", "Tutorials"], ["kb", "Knowledge base"]]],
     );
-    for (const k of ["receiving", "floorplan", "counter", "payments"]) HASHABLE.add(k);
+    for (const k of ["receiving", "floorplan", "counter", "payments", "messages", "tutorials", "kb"]) HASHABLE.add(k);
     Object.assign(SECTION, { recurring: "sales", recurringOne: "sales", pullTicket: "sales", shipment: "receiving", standing: "receiving", standingOne: "receiving", categories: "products", terminals: "payments" });
   }
 
@@ -4897,7 +5116,7 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
     return p ? { productId: p.id, unitId: p.units[0].id, src: "matched" } : null;
   }
   function syncPlan() {
-    const refs = new Set([...S.invoices.filter((i) => i.status === "open").map((i) => i.number), ...S.sos.filter((s) => ["draft", "confirmed", "fulfilled"].includes(s.status)).map((s) => s.number)]);
+    const refs = new Set([...S.invoices.filter((i) => i.status === "open").map((i) => i.number), ...S.sos.filter((s) => ["draft", "confirmed", "fulfilled", "completed"].includes(s.status)).map((s) => s.number)]);
     return ui.sync.txns.map((t) => {
       if (t.skip) return { t, kind: "skip", why: t.skip };
       if (S.payments.some((p) => p.txn === t.txn)) return { t, kind: "skip", why: "Already synced" };
@@ -5137,6 +5356,128 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
         <footer class="pt-sign" data-testid="ticket-signatures">${["Pulled by", "Packed by"].map((x) => `<div><div class="pt-sline"></div><span>${x}</span></div>`).join("")}</footer>
       </article></div>`;
   };
+
+
+  // =====================================================================
+  // Part 3: Messages, Tutorials, Knowledge base
+  // =====================================================================
+  const HELP = {"tutorials":[{"id":"order-flow","title":"From order to invoice (the full order flow)","summary":"How an order moves from the sales rep to the pick ticket, the warehouse, the orders manager and the invoice.","who":"Sales rep, warehouse, orders manager","steps":[{"text":"Sales rep: open Sales orders, choose the customer and create the order. Add each product, unit and price.","href":"/sales","linkLabel":"Sales orders"},{"text":"Sales rep: set the ship date and check the Deliver to address (it comes from the customer; change it on the order if this delivery goes elsewhere)."},{"text":"Sales rep: if the order needs extra care, tap Mark MUST CHECK. A red MUST CHECK box with a signature line prints in the corner of the pick ticket."},{"text":"Sales rep: tap Send to pull. The order is now Ready to pull."},{"text":"Tap Print pull ticket. It lists items by section of the shop, A to Z, with blank Pulled and Packed lines and Pulled by / Packed by signature lines."},{"text":"Warehouse: pull the items, fill in the ticket and sign it, then hand the ticket back to the orders manager."},{"text":"Anyone in sales or warehouse: open the order and tap Mark pulled. Stock comes out of the oldest lots first. To choose exact lots instead, use Mark pulled from chosen lots (or scan to pick)."},{"text":"Orders manager: check the returned ticket against the order, then tap Mark completed. Made a mistake? Send back to Pulled."},{"text":"Orders manager or sales: on a Completed order, set the sales tax % (leave 0 for resale-exempt customers) and tap Create invoice."},{"text":"Print the invoice. It shows the billing location address, the delivery address and which shop it ships from.","href":"/invoices","linkLabel":"Invoices"}],"tip":"The bar at the top of every order shows where it is: Draft, Ready to pull, Pulled, Completed, Invoiced."},{"id":"pull-ticket","title":"Print and use a pull ticket","summary":"Get a one-page ticket the warehouse can walk the shop with.","who":"Sales rep, warehouse","steps":[{"text":"Open the order (it must be Draft or Ready to pull) and tap Print pull ticket.","href":"/sales","linkLabel":"Sales orders"},{"text":"Check the header: customer, ship date, number of lines. MUST CHECK shows in red at the top right if it was set."},{"text":"Tap Print / PDF. Letter size, black and white."},{"text":"Lines are grouped by the section of the shop where the stock is, and A to Z inside each section. Each line names the lot to pull from."},{"text":"Anything short on stock appears under Not in stock with how much is missing."},{"text":"Tick the box and fill in Pulled and Packed for each line, then sign Pulled by and Packed by at the bottom."}],"tip":"If you own more than one shop, the ticket groups by shop first, then section."},{"id":"receive","title":"Receive a purchase order","summary":"Bring stock in, split into lots, and print labels.","who":"Buyer, warehouse","steps":[{"text":"Buyer: create a purchase order for the vendor, add lines and mark it Ordered.","href":"/purchasing","linkLabel":"Purchasing"},{"text":"When the truck arrives, open Receiving and choose the order.","href":"/receiving","linkLabel":"Receiving"},{"text":"Enter what actually arrived for each line and the location it goes to (and an expiry date where it applies)."},{"text":"Save. Each delivery becomes a lot with its own code, cost and received date."},{"text":"Open Lot labels from the order to print a label for each lot.","href":"/labels","linkLabel":"Labels"},{"text":"If the order is only partly delivered it stays open. Close the order when nothing more is coming."}]},{"id":"labels","title":"Print lot and product labels","summary":"Labels for a roll printer or an ordinary printer.","who":"Warehouse, buyer","steps":[{"text":"Open Labels, or tap Print label on a product or Lot labels on a purchase order.","href":"/labels","linkLabel":"Labels"},{"text":"Choose lots or products and the number of labels for each."},{"text":"In Settings → Printing, choose Label printer (thermal or roll) or Regular printer (plain paper). This is saved on that computer only.","href":"/settings","linkLabel":"Settings"},{"text":"Tap Print. Each label has a scannable barcode for the lot."}]},{"id":"floor-plan","title":"Draw your shop in Location in shop","summary":"Shape sections to match the real floor, set the size in feet, and mark doors.","who":"Warehouse, admin","steps":[{"text":"Open Location in shop. If you own several shops, use the shop menu to pick one or add another.","href":"/floor-plan","linkLabel":"Location in shop"},{"text":"Enter the real width of the floor in feet. The grid and the sizes shown update to match."},{"text":"Tap a section to select it. Drag it to move. Drag a corner dot to reshape it, tap a + to add a corner, double-tap a corner to remove it."},{"text":"Drag the handles on the outer frame to resize and the round handle to rotate."},{"text":"Add an Entry or Exit and name it if you have more than one."},{"text":"Pick a product and tap a section to set where it lives (its home). Stock that is somewhere else shows differently so you can tell."}]},{"id":"counter","title":"Ring up a counter sale","summary":"A walk-in sale that is paid for on the spot.","who":"Sales","steps":[{"text":"Open Counter sale. Walk-in is the default customer.","href":"/counter","linkLabel":"Counter sale"},{"text":"Scan or search for products and set quantities."},{"text":"Choose how the customer pays: cash, card or check. For a card terminal, send the amount to the terminal."},{"text":"Finish the sale. Stock is pulled, the order is completed and an invoice is created and marked paid in one step."}]},{"id":"returns","title":"Record a return and give a credit","summary":"Put resellable items back in stock, write off damaged ones, and credit the customer.","who":"Sales, warehouse","steps":[{"text":"Open the order the goods came from (it must be Pulled, Completed or Invoiced)."},{"text":"Under Returns & credits, tap Record a return."},{"text":"Enter the quantity for each line. Leave Restock ticked for items that can be resold; untick for damaged items (they are written off as shrink)."},{"text":"Add a reason and save. The credit uses the price on the order plus the invoice's tax."},{"text":"Mark the credit Applied (used on a later invoice) or Refunded (money returned).","href":"/returns","linkLabel":"Returns & credits"}]},{"id":"payments","title":"Take a deposit or payment","summary":"Record money against an order or invoice.","who":"Sales","steps":[{"text":"Open the order or the invoice and find the Payments panel."},{"text":"Before an order is invoiced, a payment is a deposit. After, it counts toward the invoice."},{"text":"Pick the method, enter the amount (and tip if any) and save."},{"text":"When payments cover the invoice total it is marked paid automatically. A mistaken payment can be voided, which reopens the invoice.","href":"/payments","linkLabel":"Payments"}]},{"id":"recurring","title":"Set up a recurring order","summary":"Orders that repeat each week for a customer.","who":"Sales","steps":[{"text":"Open the customer and tap Recurring order next to New sales order.","href":"/customers","linkLabel":"Customers"},{"text":"Name it, choose the days it repeats and add the products."},{"text":"Planned orders appear under Sales orders → Recurring (planned) and move to your list a week before they ship."},{"text":"Edit any one planned order without changing the rest, or skip it. Pause or end the whole series from the recurring order page."}]},{"id":"web-store","title":"Connect the web store","summary":"Bring website stock counts and orders into the app.","who":"Admin","steps":[{"text":"Open Settings → Web store.","href":"/settings/web-store","linkLabel":"Web store"},{"text":"Copy the webhook address and secret into your ordering website's settings."},{"text":"Use Sync now to bring in current stock counts. Live webhooks keep it up to date after that."},{"text":"Each web order becomes a Ready to pull sales order, once. The website stays the source of truth for stock numbers."}]},{"id":"messenger","title":"Use Messages","summary":"Chat with your team, start a group, react and send GIFs.","who":"Everyone","steps":[{"text":"Open Messages. Team channels (Everyone, plus the one for your role) are on the left.","href":"/messages","linkLabel":"Messages"},{"text":"Tap New chat → One person to message someone directly, or Group to name a group and tick who is in it (at least two others)."},{"text":"Type and press Enter to send. Shift+Enter starts a new line."},{"text":"Tap ☺ + under a message to react. Tap a reaction to add or remove yours."},{"text":"Tap GIF to search GIFs. If it asks for a link, an admin hasn't added a GIPHY key yet; paste a GIF link instead."},{"text":"A number beside a chat (and beside Messages in the menu) shows what you haven't read."}]},{"id":"users","title":"Add people and set their role","summary":"Who can do what.","who":"Admin","steps":[{"text":"Ask the person to sign up on the login page. New people start inactive."},{"text":"Open Settings → Users & roles.","href":"/admin/users","linkLabel":"Users & roles"},{"text":"Choose their role and turn them active. Admin: everything. Buyer: products, vendors, purchasing, receiving. Warehouse: locations, stock, pulling. Sales: customers, orders, invoices. Orders manager: completes pulled orders, invoices."}],"tip":"The first person to sign up becomes the admin."}],"articles":[{"id":"order-statuses","category":"Orders","title":"What each order status means","body":["Draft: the sales rep is still building the order. It can be edited or deleted.","Ready to pull: the order was sent to the warehouse and the pick ticket can be printed. Lines are locked.","Pulled: the items were taken from stock (oldest lots first, or lots you chose). Stock counts drop at this point.","Completed: the orders manager checked the returned pick ticket. Only completed orders can be invoiced.","Invoiced: an invoice exists. If the invoice is voided, the order goes back to Completed.","Cancelled: the order was cancelled before it was pulled. Orders with payments recorded can't be cancelled until the payments are voided."]},{"id":"roles","category":"Orders","title":"Who can do what","body":["Admin can do everything, including adding users and the web store connection.","Sales can create and edit orders, set MUST CHECK, send orders to pull, invoice, take payments and manage customers.","Warehouse can mark orders pulled, record returns, move and count stock, and edit the shop floor plan.","Buyer manages products, vendors, purchase orders and receiving.","Orders manager marks pulled orders Completed (or sends them back), creates and voids invoices.","Everyone signed in and active can read orders, stock and use Messages."]},{"id":"must-check","category":"Orders","title":"MUST CHECK","body":["Sales reps can flag any order MUST CHECK with a button at the top of the order, at any status.","The red MUST CHECK box shows on the order and prints in the top right of the pull ticket with a line underneath for a signature.","Remove it with the same button once the check is done."]},{"id":"delivery-address","category":"Orders","title":"Delivery address vs location address","body":["A customer has a location address (where the business is) and an optional delivery address.","A new order copies the delivery address, or the location address if there is no delivery address. You can change it on that one order under Details → Deliver to.","Invoices show both: Bill to · location, and Deliver to. They also show which shop the order ships from (set Ships from on the order if you have more than one shop)."]},{"id":"pull-order","category":"Stock","title":"How stock is chosen when an order is pulled","body":["Mark pulled takes stock from the oldest lots first (by received date), so older flowers go first.","Mark pulled from chosen lots lets you pick exact lots or scan them. The quantities must add up to the line.","If there isn't enough stock, the order is blocked and nothing is taken. The pick ticket lists what is short."]},{"id":"lots","category":"Stock","title":"Lots, units and costs","body":["Every delivery creates a lot with a code, received date, expiry date, location and cost.","Products have a base unit (usually the stem) and other units such as bunch or box, each with a conversion. Stock is always counted in the base unit.","Cost uses FIFO: an order's cost is the cost of the lots it was pulled from. Margin on an order is price minus that cost.","Landed cost includes freight shared across the lines of a purchase order."]},{"id":"shrink","category":"Stock","title":"Shrink, adjustments and counts","body":["Shrink is stock that is lost, damaged or thrown out. Record it with a reason so reports show where losses come from.","An adjustment corrects a lot's quantity after a count.","Resellable returns go back into the lots they came from. Returned items marked not resellable are written off as shrink automatically."]},{"id":"floor-plan-faq","category":"Stock","title":"Shop floor plan basics","body":["Each shop has its own layout and its own sections. Sections can be any shape.","Sizes are in feet, based on the floor width you enter. The grid shows foot squares.","A product's home is the section where it belongs. Stock sitting somewhere else is shown so you can find and move it.","The pull ticket groups lines by the section the stock is in right now.","Moving a section to another shop clears its old shape and the product homes that pointed to it."]},{"id":"labels-faq","category":"Stock","title":"Label printing","body":["Choose Label printer for a roll or thermal printer, or Regular printer for plain paper, in Settings → Printing.","That choice is saved on the computer you are using, so each workstation can use its own printer.","If labels print with extra blank pages, check the printer's paper size is set to the label size in your print dialog."]},{"id":"invoices-faq","category":"Money","title":"Invoices, tax and terms","body":["Terms come from the customer (Net 30 by default) and set the due date.","Sales tax is typed when you create the invoice. Leave 0 for resale-exempt customers; the resale certificate number is kept on the customer and printed on the invoice.","Void an open invoice to correct the order; it goes back to Completed so you can invoice again. Paid invoices, or invoices with payments, can't be voided until the payments are voided."]},{"id":"payments-faq","category":"Money","title":"Deposits, partial payments and terminals","body":["Money taken before invoicing is a deposit and is applied to the invoice when it is created.","Partial payments keep the invoice open and show the balance.","Card payments can be sent to a payment terminal. If a payment is declined it stays on record as declined and does not count.","Voiding a payment reopens a paid invoice."]},{"id":"returns-faq","category":"Money","title":"Returns and credits","body":["You can only return what was sold, and not more than what is still returnable on the line.","The credit is at the price on the order plus the invoice's tax rate.","A credit starts Open. Mark it Applied when it is used on a later invoice, or Refunded when money is returned."]},{"id":"recurring-faq","category":"Orders","title":"Recurring orders","body":["A recurring order creates planned draft orders on the days you choose.","Planned orders stay under Recurring (planned) until a week before they ship, then join the normal list.","Editing a planned order marks it as edited, and it is left alone if you later change the series.","Skipping a planned order cancels just that one."]},{"id":"web-store-faq","category":"Web store","title":"How the web store connection behaves","body":["The website is the source of truth for stock numbers. Counts come in as the supply figure; what you pull in the app is subtracted from them.","Each web order creates one Ready to pull order, even if the website sends it twice.","A cancelled web order cancels the matching order only if it hasn't been pulled yet.","Use Sync now any time, and check the log on the Web store page if a number looks wrong."]},{"id":"messages-faq","category":"Messages","title":"Messages: channels, privacy and GIFs","body":["Team channels are shared: Everyone, Sales, Warehouse and Buyers. You only see the channels for your role (admins see all).","Direct chats and groups are private to the people in them. Admins can't read them.","Messages are kept; there is no edit or delete yet.","GIF search needs a GIPHY key (GIPHY_API_KEY in the app's settings on your host). Without it you can paste a GIF link.","Messages arrive live. If your host doesn't support live updates, the page refreshes every 5 seconds."]},{"id":"appearance","category":"Settings","title":"Appearance and printing settings","body":["Settings → Appearance sets the colour palette and light, dark or follow-my-device. It is saved on that device.","Invoices, labels and pull tickets always print in black and white whatever palette is chosen.","Printing settings (label or regular printer) are saved per computer."]},{"id":"phone","category":"Settings","title":"Using the app on a phone","body":["Tap the menu button at the top left to open the slide-in menu. Groups (Buying, Stock, Selling, Reports & data, Settings) fold open and closed, and the app remembers which are open.","Floor plans, labels and pull tickets work on a phone, but print from a computer when you can.","Messages opens on the chat list on a phone. Tap a chat to open it and the arrow to go back."]},{"id":"import-export","category":"Settings","title":"Import and export data","body":["Reports & data → Import data brings in products, vendors and customers from CSV files. A preview shows problems before anything is saved.","Export CSV buttons on lists download what you are looking at."]}],"cats":["Orders","Stock","Money","Web store","Messages","Settings"]};
+  // The demo has no web store or user admin screens, so those guides are left out here.
+  const HELP_SKIP = new Set(["web-store", "users", "web-store-faq"]);
+  const HELP_GO = { "/sales": "sales", "/invoices": "invoices", "/purchasing": "purchasing", "/receiving": "receiving", "/labels": "labels", "/settings": "settings", "/floor-plan": "floorplan", "/counter": "counter", "/returns": "returns", "/payments": "payments", "/customers": "customers", "/messages": "messages" };
+
+  const chatState = () => (ui.chat ||= { active: "team-everyone", thread: false, newOpen: false, mode: "dm", picker: null, gif: false });
+  const readKey = () => "dk-chat-read-" + ui.role;
+  const readMap = () => { try { return JSON.parse(store.get(readKey(), "{}")); } catch { return {}; } };
+  const markRead = (id) => { const m = readMap(); m[id] = new Date().toISOString(); store.set(readKey(), JSON.stringify(m)); };
+  const chatsFor = () => DK.chatChannelsFor(S, ui.role);
+  const chatMsgs = (id) => ((S.chat && S.chat.messages) || []).filter((m) => m.ch === id);
+  const unreadIn = (id) => { const r = readMap()[id] || ""; return chatMsgs(id).filter((m) => m.by !== ui.role && m.at > r).length; };
+  function chatUnreadTotal() { return mode === "loading" || mode === "empty" ? 0 : chatsFor().reduce((n, c) => n + unreadIn(c.id), 0); }
+  const personName = (r) => DK.PEOPLE[r] || "Someone";
+  const chanLabel = (c) => (c.kind === "dm" ? personName(c.members.find((m) => m !== ui.role) || "") : c.name);
+  const EMOJI = ["👍", "❤️", "😂", "🎉", "👀", "✅", "🔥", "🙏", "😮", "😢", "💐", "🌹", "🚚", "❗", "👏", "💯"];
+  const tFmt = (d) => new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const dFmt = (d) => new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+  PAGES.messages = () => {
+    const st = chatState();
+    const chans = chatsFor();
+    if (!chans.some((c) => c.id === st.active)) st.active = chans[0].id;
+    const cur = chans.find((c) => c.id === st.active);
+    markRead(cur.id);
+    const msgs = chatMsgs(cur.id).slice(-150);
+    const rx = (S.chat && S.chat.reactions) || {};
+    const row = (c, pre) => { const n = c.id === cur.id ? 0 : unreadIn(c.id); return `<li><button type="button" data-act="chatPick" data-v="${esc(c.id)}" ${c.id === cur.id ? 'aria-current="true"' : ""} data-channel="${esc(chanLabel(c))}"><span class="trunc"><span class="faint">${pre}</span> ${esc(chanLabel(c))}</span>${n ? `<span class="nav-badge" aria-label="${n} unread">${n}</span>` : ""}</button></li>`; };
+    let lastDay = "", prev = null;
+    const thread = msgs.map((m) => {
+      const day = dFmt(m.at), showDay = day !== lastDay; lastDay = day;
+      const mine = m.by === ui.role, showName = !prev || prev.by !== m.by || showDay; prev = m;
+      const counts = {};
+      for (const [who, e] of rx[m.id] || []) { (counts[e] ||= { n: 0, mine: false, who: [] }); counts[e].n++; counts[e].who.push(personName(who)); if (who === ui.role) counts[e].mine = true; }
+      return `${showDay ? `<div class="chat-day">${day}</div>` : ""}<div class="chat-msg ${mine ? "mine" : ""}">
+        ${showName ? `<div class="chat-who"><b>${mine ? "You" : esc(personName(m.by))}</b> · ${tFmt(m.at)}</div>` : ""}
+        <div class="chat-bubble" data-msg="${esc(m.body || "gif")}">${esc(m.body)}${m.gif ? `<img src="${esc(m.gif)}" alt="GIF" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:' (GIF couldn\u2019t load)'}))">` : ""}</div>
+        <div class="chat-react">${Object.entries(counts).map(([e, c]) => `<button type="button" class="rx ${c.mine ? "on" : ""}" aria-pressed="${c.mine}" title="${esc(c.who.join(", "))}" data-act="chatReact" data-id="${m.id}" data-v="${e}">${e} ${c.n}</button>`).join("")}
+          <button type="button" class="rx add" data-act="chatPicker" data-v="${m.id}" aria-label="Add reaction" aria-expanded="${st.picker === m.id}">☺ +</button></div>
+        ${st.picker === m.id ? `<div class="rx-pick" role="group" aria-label="Reactions">${EMOJI.map((e) => `<button type="button" data-act="chatReact" data-id="${m.id}" data-v="${e}" aria-label="React ${e}">${e}</button>`).join("")}</div>` : ""}
+      </div>`;
+    }).join("");
+    const others = Object.keys(DK.PEOPLE).filter((r) => r !== ui.role);
+    const dialog = st.newOpen ? `<div class="modal-bg" data-act="chatNewClose"><div class="modal" role="dialog" aria-modal="true" aria-label="New chat" data-stop>
+        <div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="${st.mode === "dm"}" data-act="chatMode" data-v="dm">One person</button><button type="button" role="tab" aria-selected="${st.mode === "group"}" data-act="chatMode" data-v="group">Group</button></div>
+        ${st.mode === "dm" ? `<ul class="chat-people">${others.map((r) => `<li><button type="button" data-act="chatDm" data-v="${r}"><span>${esc(personName(r))}</span><span class="faint">${esc(DK.ROLES[r])}</span></button></li>`).join("")}</ul>`
+          : `<form data-form="chatGroupMake" class="form" style="gap:10px"><label class="f c12"><span>Group name</span><input name="name" maxlength="60" required aria-label="Group name"></label>
+            <div class="chat-people">${others.map((r) => `<label class="check"><input type="checkbox" name="m_${r}"> ${esc(personName(r))} <span class="faint">${esc(DK.ROLES[r])}</span></label>`).join("")}</div>
+            <div class="actions"><button class="btn btn-p">Create group</button></div></form>`}
+        <div class="actions"><button type="button" class="btn" data-act="chatNewClose">Close</button></div></div></div>` : "";
+    setTimeout(() => { const el = document.querySelector(".chat-scroll"); if (el) el.scrollTop = el.scrollHeight; }, 0);
+    return `<div class="chat ${st.thread ? "thread-open" : ""}" data-testid="messenger">
+      <aside class="chat-list" aria-label="Chats"><div class="head" style="align-items:center"><h1 style="font-size:20px;margin:0">Messages</h1><button type="button" class="btn btn-s btn-p" data-act="chatNew">New chat</button></div>
+        <h2>Teams</h2><ul>${chans.filter((c) => c.kind === "team").map((c) => row(c, "#")).join("")}</ul>
+        <h2>Direct</h2><ul>${chans.filter((c) => c.kind === "dm").map((c) => row(c, "@")).join("") || `<li class="small faint" style="padding:0 12px">Start one with New chat.</li>`}</ul>
+        <h2>Groups</h2><ul>${chans.filter((c) => c.kind === "group").map((c) => row(c, "👥")).join("")}</ul></aside>
+      <section class="chat-main" aria-label="Conversation">
+        <header><button type="button" class="btn btn-s chat-back" data-act="chatBack" aria-label="Back to chats">←</button><h2>${cur.kind === "team" ? "# " : cur.kind === "dm" ? "@ " : ""}${esc(chanLabel(cur))}</h2>${cur.kind === "group" ? `<span class="small faint trunc">${esc(cur.members.map(personName).join(", "))}</span><button type="button" class="btn btn-s" data-act="chatLeave">Leave</button>` : ""}</header>
+        <div class="chat-scroll" aria-live="polite">${thread || `<p class="small faint" style="text-align:center;margin:32px 0">No messages yet. Say hello.</p>`}</div>
+        ${ui.error ? `<div class="banner banner-bad" role="alert" data-error>${esc(ui.error)}</div>` : ""}
+        ${st.gif ? `<form class="chat-gif" data-form="chatGif" role="dialog" aria-label="Choose a GIF"><span class="small faint">GIF search needs a GIPHY key on a real install. In this demo, paste a link to a GIF.</span><div class="row"><input name="gif" placeholder="https://media.giphy.com/…/giphy.gif" aria-label="GIF link" style="flex:1"><button class="btn btn-p">Send GIF</button><button type="button" class="btn" data-act="chatGifToggle">✕</button></div></form>` : ""}
+        <form class="chat-compose" data-form="chatSend"><button type="button" class="btn" data-act="chatGifToggle" aria-expanded="${st.gif}" aria-label="Add a GIF">GIF</button><textarea name="body" rows="1" maxlength="1000" placeholder="Message ${cur.kind === "team" ? "#" : ""}${esc(chanLabel(cur))}" aria-label="Message"></textarea><button class="btn btn-p">Send</button></form>
+      </section>${dialog}</div>`;
+  };
+  app.addEventListener("keydown", (ev) => {
+    const t = ev.target;
+    if (t.matches && t.matches(".chat-compose textarea") && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); t.form.requestSubmit(); }
+  });
+  Object.assign(ACTS, {
+    chatPick: (el) => { const st = chatState(); st.active = el.dataset.v; st.thread = true; st.picker = null; st.gif = false; ui.error = null; render(); },
+    chatBack: () => { chatState().thread = false; render(); },
+    chatNew: () => { chatState().newOpen = true; render(); },
+    chatNewClose: () => { chatState().newOpen = false; render(); },
+    chatMode: (el) => { chatState().mode = el.dataset.v; render(); },
+    chatDm: (el) => commit("chatOpenDm", { with: el.dataset.v }, { after: (id) => { const st = chatState(); st.active = id; st.thread = true; st.newOpen = false; } }),
+    chatPicker: (el) => { const st = chatState(); st.picker = st.picker === el.dataset.v ? null : el.dataset.v; render(); },
+    chatReact: (el) => { chatState().picker = null; commit("chatReact", { id: el.dataset.id, emoji: el.dataset.v }); },
+    chatGifToggle: () => { const st = chatState(); st.gif = !st.gif; render(); },
+    chatLeave: () => ask("Leave this group?", "You won't see its messages any more.", "Leave", () => commit("chatLeave", { ch: chatState().active }, { after: () => { const st = chatState(); st.active = "team-everyone"; st.thread = false; } })),
+  });
+  Object.assign(FORMS, {
+    chatSend: (o) => { if (!String(o.body || "").trim()) return; commit("chatSend", { ch: chatState().active, body: o.body }); },
+    chatGif: (o) => { chatState().gif = false; commit("chatSend", { ch: chatState().active, body: "", gif: o.gif }); },
+    chatGroupMake: (o) => commit("chatGroup", { name: o.name, members: Object.keys(DK.PEOPLE).filter((r) => o["m_" + r]) }, { after: (id) => { const st = chatState(); st.active = id; st.thread = true; st.newOpen = false; } }),
+  });
+
+  const helpLink = (href, label) => (HELP_GO[href] ? ` <button type="button" class="lnk nowrap" data-go="${HELP_GO[href]}">${esc(label || "Open")} →</button>` : "");
+  PAGES.tutorials = () => {
+    const list = HELP.tutorials.filter((t) => !HELP_SKIP.has(t.id));
+    return `${head("Tutorials", "Step-by-step guides for the main jobs", `<button type="button" class="btn" data-go="kb">Knowledge base</button>`, ["settings", "Settings"])}
+      <div class="banner banner-demo"><span>In this demo, use <b>Viewing as</b> at the top to switch between the roles in each guide (sales rep, warehouse, orders manager).</span></div>
+      <nav class="help-chips" aria-label="Tutorials">${list.map((t) => `<a href="#t-${t.id}" data-chip="${t.id}">${esc(t.title.replace(/ \(.*\)/, ""))}</a>`).join("")}</nav>
+      ${list.map((t) => `<article class="card help-card" id="t-${t.id}" data-tutorial="${t.id}"><h2>${esc(t.title)}</h2><p class="sub">${esc(t.summary)}</p><p class="small faint">For: ${esc(t.who)}</p>
+        <ol class="help-steps">${t.steps.map((s) => `<li><span class="n">•</span><div>${esc(s.text)}${s.href ? helpLink(s.href, s.linkLabel) : ""}</div></li>`).join("")}</ol>${t.tip ? `<p class="help-tip">Tip: ${esc(t.tip)}</p>` : ""}</article>`).join("")}`;
+  };
+  PAGES.kb = () => {
+    const arts = HELP.articles.filter((a) => !HELP_SKIP.has(a.id));
+    const cats = HELP.cats.filter((c) => arts.some((a) => a.category === c));
+    return `${head("Knowledge base", "How things work and why", `<button type="button" class="btn" data-go="tutorials">Tutorials</button>`, ["settings", "Settings"])}
+      <div class="row" style="margin-bottom:12px"><input type="search" data-kbsearch placeholder="Search the knowledge base" aria-label="Search the knowledge base" style="flex:1;min-width:220px;max-width:420px">
+        <div class="tabs" role="group" aria-label="Category">${["All", ...cats].map((c) => `<button type="button" data-act="kbCat" data-v="${c}" aria-pressed="${c === "All"}">${c}</button>`).join("")}</div></div>
+      <p class="small faint" data-kbcount aria-live="polite">${arts.length} articles</p>
+      <div class="help-list">${arts.map((a) => `<details class="card help-art" id="a-${a.id}" data-article="${a.id}" data-cat="${esc(a.category)}" data-hay="${esc((a.title + " " + a.body.join(" ")).toLowerCase())}"><summary><span>${esc(a.title)}</span><span class="pill">${esc(a.category)}</span></summary><ul>${a.body.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>`).join("")}</div>`;
+  };
+  function kbFilter() {
+    const q = (document.querySelector("[data-kbsearch]")?.value || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const cat = document.querySelector("[data-act=kbCat][aria-pressed=true]")?.dataset.v || "All";
+    let n = 0;
+    document.querySelectorAll("[data-article]").forEach((d) => {
+      const show = (cat === "All" || d.dataset.cat === cat) && q.every((w) => d.dataset.hay.includes(w));
+      d.hidden = !show; if (show) n++;
+      if (show && q.length && n <= 3) d.open = true;
+    });
+    const c = document.querySelector("[data-kbcount]"); if (c) c.textContent = n + (n === 1 ? " article" : " articles");
+  }
+  ACTS.kbCat = (el) => { document.querySelectorAll("[data-act=kbCat]").forEach((b) => b.setAttribute("aria-pressed", String(b === el))); kbFilter(); };
+  app.addEventListener("input", (ev) => { if (ev.target.matches && ev.target.matches("[data-kbsearch]")) kbFilter(); });
 
 
   function afterRender() {
