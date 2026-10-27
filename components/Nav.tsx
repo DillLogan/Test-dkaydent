@@ -1,9 +1,11 @@
 import { signOut } from "@/app/login/actions";
 import { can, ROLES, type Profile } from "@/lib/roles";
 import { NavShell, type NavGroup } from "./NavLinks";
+import { createClient } from "@/lib/supabase/server";
 
 const GROUPS: NavGroup[] = [
   { title: "", links: [{ href: "/", label: "Dashboard" }] },
+  { title: "", links: [{ href: "/messages", label: "Messages" }] },
   {
     title: "Buying",
     links: [
@@ -43,7 +45,15 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-export function Nav({ profile }: { profile: Profile }) {
+export async function Nav({ profile }: { profile: Profile }) {
+  let unread = 0;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.rpc("chat_unread");
+    unread = (data ?? []).reduce((n: number, r: { unread: number }) => n + Number(r.unread), 0);
+  } catch {
+    /* the badge is optional */
+  }
   const settings: NavGroup = can(profile)
     ? {
         title: "Settings",
@@ -57,7 +67,7 @@ export function Nav({ profile }: { profile: Profile }) {
     : { title: "", links: [{ href: "/settings", label: "Settings" }] };
   return (
     <NavShell
-      groups={[...GROUPS, settings]}
+      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l)) }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}

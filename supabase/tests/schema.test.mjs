@@ -584,4 +584,51 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await db.query(`update app_settings set google_maps_key='abcdefghijklmnop'`)).affectedRows === 1, "admin sets the Maps key");
   await db.exec(`reset role`);
 }
+{
+  // Messenger
+  const u1 = "00000000-0000-0000-0000-0000000000b1", u2 = "00000000-0000-0000-0000-0000000000b2", u3 = "00000000-0000-0000-0000-0000000000b3";
+  await q(`insert into auth.users values ($1,'m1@x.com','{"full_name":"Ann"}'), ($2,'m2@x.com','{"full_name":"Bo"}'), ($3,'m3@x.com','{"full_name":"Cy"}')`, [u1, u2, u3]);
+  await q(`update profiles set active=true, role='sales' where id=$1`, [u1]);
+  await q(`update profiles set active=true, role='warehouse' where id=$1`, [u2]);
+  await q(`update profiles set active=true, role='sales' where id=$1`, [u3]);
+  await db.exec(`set role authenticated`);
+  await as(u1);
+  const chans = await q(`select name from chat_channels where kind='team' order by name`);
+  ok(chans.map(c => c.name).join(",") === "Everyone,Sales", "sales rep sees Everyone and Sales channels only");
+  const everyone = (await one(`select id from chat_channels where name='Everyone'`)).id;
+  const sales2 = (await one(`select id from chat_channels where name='Sales'`)).id;
+  const m1 = (await one(`insert into chat_messages (channel_id, body) values ($1,'Hi team') returning id`, [everyone])).id;
+  await expectErr(`insert into chat_messages (channel_id, body) values ((select id from chat_channels where name='Warehouse'), 'x')`, [], "row-level security", "can't post in a channel you can't see");
+  await expectErr(`insert into chat_messages (channel_id, body, sender_id) values ($1,'spoof',$2)`, [everyone, u2], "row-level security", "can't send as someone else");
+  await expectErr(`insert into chat_messages (channel_id, body) values ($1,'  ')`, [everyone], "check", "empty message rejected");
+  await expectErr(`insert into chat_messages (channel_id, gif_url) values ($1,'http://x.com/a.gif')`, [everyone], "check", "GIF links must be https");
+  await q(`insert into chat_messages (channel_id, gif_url) values ($1,'https://media.giphy.com/media/abc/giphy.gif')`, [everyone]);
+  await q(`select chat_react($1,'👍')`, [m1]);
+  await q(`select chat_react($1,'👍')`, [m1]);
+  ok(Number((await one(`select count(*) c from chat_reactions where message_id=$1`, [m1])).c) === 0, "reacting twice removes the reaction");
+  await q(`select chat_react($1,'🎉')`, [m1]);
+  // DM
+  const dm = (await one(`select chat_open_dm($1) id`, [u2])).id;
+  ok((await one(`select chat_open_dm($1) id`, [u2])).id === dm, "1-on-1 chat is reused");
+  await as(u2);
+  ok((await one(`select chat_open_dm($1) id`, [u1])).id === dm, "same chat from the other side");
+  await q(`insert into chat_messages (channel_id, body) values ($1,'Pull SO-1005?')`, [dm]);
+  await as(u1);
+  ok(Number((await one(`select unread from chat_unread() where channel_id=$1`, [dm])).unread) === 1, "DM shows 1 unread");
+  await q(`select chat_mark_read($1)`, [dm]);
+  ok(Number((await one(`select unread from chat_unread() where channel_id=$1`, [dm])).unread) === 0, "mark read clears unread");
+  await as(u3);
+  ok(Number((await one(`select count(*) c from chat_messages where channel_id=$1`, [dm])).c) === 0, "outsiders can't read a DM");
+  await expectErr(`insert into chat_messages (channel_id, body) values ($1,'sneak')`, [dm], "row-level security", "outsiders can't post in a DM");
+  // Group
+  await as(u1);
+  await expectErr(`select chat_create_group('Solo', $1::uuid[])`, [[u2]], "at least two", "group needs 3 people");
+  const grp = (await one(`select chat_create_group('Friday run', $1::uuid[]) id`, [[u2, u3]])).id;
+  await as(u3);
+  ok(Number((await one(`select count(*) c from chat_channels where id=$1`, [grp])).c) === 1, "group members see the group");
+  await expectErr(`select chat_add_people($1, $2::uuid[])`, [grp, [u2]], "Only the person who made", "only the creator adds people");
+  await q(`select chat_leave($1)`, [grp]);
+  ok(Number((await one(`select count(*) c from chat_channels where id=$1`, [grp])).c) === 0, "leaving a group hides it");
+  await db.exec(`reset role`);
+}
 console.log(`\n${pass} checks passed`);
