@@ -657,6 +657,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .help-art[hidden] { display: none; }
 .pill { font-size: 12px; font-weight: 400; background: var(--surface-2, #eef1ec); border-radius: 999px; padding: 1px 8px; color: var(--muted, #6b7a6d); }
 
+.help-shot { display: block; width: 100%; max-width: 640px; margin-top: 8px; border: 1px solid var(--line, #e2e6df); border-radius: 12px; height: auto; }
+
 </style>
 
 </head>
@@ -5454,7 +5456,7 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
       <div class="banner banner-demo"><span>In this demo, use <b>Viewing as</b> at the top to switch between the roles in each guide (sales rep, warehouse, orders manager).</span></div>
       <nav class="help-chips" aria-label="Tutorials">${list.map((t) => `<a href="#t-${t.id}" data-chip="${t.id}">${esc(t.title.replace(/ \(.*\)/, ""))}</a>`).join("")}</nav>
       ${list.map((t) => `<article class="card help-card" id="t-${t.id}" data-tutorial="${t.id}"><h2>${esc(t.title)}</h2><p class="sub">${esc(t.summary)}</p><p class="small faint">For: ${esc(t.who)}</p>
-        <ol class="help-steps">${t.steps.map((s) => `<li><span class="n">•</span><div>${esc(s.text)}${s.href ? helpLink(s.href, s.linkLabel) : ""}</div></li>`).join("")}</ol>${t.tip ? `<p class="help-tip">Tip: ${esc(t.tip)}</p>` : ""}</article>`).join("")}`;
+        <ol class="help-steps">${t.steps.map((s, i) => `<li><span class="n">•</span><div>${esc(s.text)}${s.href ? helpLink(s.href, s.linkLabel) : ""}${t.noImages ? "" : `<img class="help-shot" src="help/${t.id}-${i + 1}.jpg" alt="Screenshot for step ${i + 1}: the highlighted box and arrow show what to use" loading="lazy">`}</div></li>`).join("")}</ol>${t.tip ? `<p class="help-tip">Tip: ${esc(t.tip)}</p>` : ""}</article>`).join("")}`;
   };
   PAGES.kb = () => {
     const arts = HELP.articles.filter((a) => !HELP_SKIP.has(a.id));
