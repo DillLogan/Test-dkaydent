@@ -25,7 +25,12 @@ export async function updateSO(id: string, fd: FormData) {
   const path = `/sales/${id}`;
   const { error } = await supabase
     .from("sales_orders")
-    .update({ ship_date: str(fd, "ship_date"), notes: str(fd, "notes") })
+    .update({
+      ship_date: str(fd, "ship_date"),
+      notes: str(fd, "notes"),
+      delivery_address: str(fd, "delivery_address"),
+      ...(fd.has("layout_id") ? { layout_id: str(fd, "layout_id") } : {}),
+    })
     .eq("id", id);
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
@@ -102,11 +107,23 @@ export async function fulfillSO(id: string) {
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   revalidatePath("/inventory");
-  redirect(`${path}?message=${encodeURIComponent("Stock pulled (oldest lots first). Ready to invoice.")}`);
+  redirect(`${path}?message=${encodeURIComponent("Marked pulled (oldest lots first). The orders manager can now complete it.")}`);
+}
+
+/** Orders manager: the pull ticket is back, the order is checked and done. */
+export async function completeSO(id: string, undo: boolean) {
+  const { supabase } = await requireRole("orders_manager");
+  const path = `/sales/${id}`;
+  const { error } = await supabase.rpc("complete_sales_order", { p_so_id: id, p_undo: undo });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  revalidatePath("/sales");
+  revalidatePath("/routing");
+  redirect(`${path}?message=${encodeURIComponent(undo ? "Sent back to Pulled." : "Completed. Ready to invoice.")}`);
 }
 
 export async function invoiceSO(id: string, fd: FormData) {
-  const { supabase } = await requireRole("sales");
+  const { supabase } = await requireRole("sales", "orders_manager");
   const path = `/sales/${id}`;
   const { data, error } = await supabase.rpc("create_invoice", { p_so_id: id, p_tax_rate: num(fd, "tax_rate") ?? 0 });
   if (error) fail(path, dbMessage(error));
@@ -128,7 +145,7 @@ export async function setInvoiceStatus(id: string, status: "paid" | "open") {
 }
 
 export async function voidInvoice(id: string, soId: string) {
-  const { supabase } = await requireRole("sales");
+  const { supabase } = await requireRole("sales", "orders_manager");
   const { error } = await supabase.rpc("void_invoice", { p_invoice_id: id });
   if (error) fail(`/invoices/${id}`, dbMessage(error));
   revalidatePath("/invoices");
@@ -151,7 +168,7 @@ export async function fulfillSOPicked(id: string, fd: FormData) {
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   revalidatePath("/inventory");
-  redirect(`${path}?message=${encodeURIComponent("Stock pulled from the lots you picked. Ready to invoice.")}`);
+  redirect(`${path}?message=${encodeURIComponent("Marked pulled from the lots you picked. The orders manager can now complete it.")}`);
 }
 
 export async function createReturn(id: string, lineIds: string[], fd: FormData) {

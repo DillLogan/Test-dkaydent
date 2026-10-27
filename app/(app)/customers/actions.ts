@@ -12,6 +12,7 @@ function customerFields(fd: FormData) {
     email: str(fd, "email"),
     phone: str(fd, "phone"),
     address: str(fd, "address"),
+    delivery_address: str(fd, "delivery_address"),
     price_tier_id: str(fd, "price_tier_id"),
     payment_terms_days: int(fd, "payment_terms_days") ?? 30,
     resale_certificate: str(fd, "resale_certificate"),

@@ -31,6 +31,7 @@ const GROUPS: NavGroup[] = [
       { href: "/invoices", label: "Invoices" },
       { href: "/returns", label: "Returns & credits" },
       { href: "/payments", label: "Payments" },
+      { href: "/routing", label: "Routing" },
     ],
   },
   {
@@ -50,6 +51,7 @@ export function Nav({ profile }: { profile: Profile }) {
           { href: "/settings", label: "Settings" },
           { href: "/admin/users", label: "Users & roles" },
           { href: "/settings/web-store", label: "Web store" },
+          { href: "/settings/routing", label: "Maps & routing" },
         ],
       }
     : { title: "", links: [{ href: "/settings", label: "Settings" }] };

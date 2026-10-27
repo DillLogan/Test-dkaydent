@@ -18,7 +18,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
 
   const { data: inv } = await supabase
     .from("invoices")
-    .select("*, customers(*), sales_orders(id, so_number, ship_date, notes)")
+    .select("*, customers(*), sales_orders(id, so_number, ship_date, notes, delivery_address, shop_layouts(name, address))")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -35,7 +35,8 @@ export default async function InvoicePage({ params, searchParams }: Props) {
     .order("created_at");
   const { data: paidRows } = await supabase.from("payments").select("amount").eq("so_id", inv.so_id).eq("status", "completed");
   const paid = (paidRows ?? []).reduce((t, p) => t + Number(p.amount), 0);
-  const canEdit = can(profile, "sales");
+  const canEdit = can(profile, "sales", "orders_manager");
+  const so = inv.sales_orders as unknown as { delivery_address: string | null; shop_layouts: { name: string; address: string | null } | null } | null;
   const overdue = inv.status === "open" && inv.due_at < today();
   const c = inv.customers;
 
@@ -48,7 +49,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
             <form action={voidInvoice.bind(null, id, inv.so_id)}>
               <SubmitButton
                 className="btn btn-danger"
-                confirm="Void this invoice? The order goes back to fulfilled so you can correct it and invoice again."
+                confirm="Void this invoice? The order goes back to Completed so you can correct it and invoice again."
                 pendingText="…"
               >
                 Void
@@ -87,14 +88,27 @@ export default async function InvoicePage({ params, searchParams }: Props) {
           </div>
         </header>
 
-        <div className="mb-8 grid gap-6 sm:grid-cols-2">
+        <div className="mb-8 grid gap-6 sm:grid-cols-3" data-testid="invoice-addresses">
           <div>
-            <div className="label">Bill to</div>
+            <div className="label">Bill to · location</div>
             <div className="font-medium">{c?.name}</div>
             {c?.contact_name && <div>{c.contact_name}</div>}
             {c?.address && <div className="whitespace-pre-line text-sm">{c.address}</div>}
             {c?.email && <div className="text-sm">{c.email}</div>}
             {c?.resale_certificate && <div className="mt-1 text-xs text-stone-500">Resale cert #{c.resale_certificate}</div>}
+          </div>
+          <div>
+            <div className="label">Deliver to</div>
+            <div className="whitespace-pre-line text-sm" data-testid="invoice-delivery">
+              {so?.delivery_address || c?.delivery_address || c?.address || "Pickup"}
+            </div>
+            {so?.shop_layouts && (
+              <>
+                <div className="label mt-3">Ships from</div>
+                <div className="text-sm font-medium">{so.shop_layouts.name}</div>
+                {so.shop_layouts.address && <div className="whitespace-pre-line text-sm">{so.shop_layouts.address}</div>}
+              </>
+            )}
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:text-right">
             <dt className="text-stone-500">Issued</dt>

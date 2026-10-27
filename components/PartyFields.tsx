@@ -64,8 +64,11 @@ export function CustomerFields({ customer, tiers }: { customer: R; tiers: { id: 
       <Field label="Phone" className="sm:col-span-2">
         <input name="phone" className="input" defaultValue={v("phone")} />
       </Field>
-      <Field label="Address" className="sm:col-span-6">
+      <Field label="Location address" className="sm:col-span-3">
         <textarea name="address" rows={2} className="input" defaultValue={v("address")} />
+      </Field>
+      <Field label="Delivery address (if different)" className="sm:col-span-3">
+        <textarea name="delivery_address" rows={2} className="input" defaultValue={v("delivery_address")} placeholder="Leave blank to deliver to the location address" />
       </Field>
       <Field label="Payment terms (days)" className="sm:col-span-2">
         <input name="payment_terms_days" type="number" min="0" className="input" defaultValue={v("payment_terms_days") || 30} />

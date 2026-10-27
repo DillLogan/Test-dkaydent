@@ -1,4 +1,4 @@
-export type Role = "admin" | "buyer" | "warehouse" | "sales";
+export type Role = "admin" | "buyer" | "warehouse" | "sales" | "orders_manager";
 
 export type Profile = {
   id: string;
@@ -13,6 +13,7 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "buyer", label: "Buyer", description: "Products, vendors, purchase orders, receiving" },
   { value: "warehouse", label: "Warehouse", description: "Locations, receiving, transfers, shrink, counts, fulfillment" },
   { value: "sales", label: "Sales", description: "Customers, pricing, sales orders, invoices" },
+  { value: "orders_manager", label: "Orders manager", description: "Checks pulled orders, marks them completed, invoices, builds delivery routes" },
 ];
 
 /** Admin always passes. With no roles listed, only admin passes. */

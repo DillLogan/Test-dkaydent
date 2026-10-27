@@ -9,6 +9,7 @@ import {
   ErrorBanner,
   PageHeader,
   Section,
+  STATUS_LABELS,
   StatusBadge,
   Tabs,
 } from "@/components/ui";
@@ -16,10 +17,11 @@ import {
 type SP = Promise<Record<string, string | undefined>>;
 
 const FILTERS: Record<string, string[] | null> = {
-  open: ["draft", "confirmed"],
+  open: ["draft", "confirmed", "fulfilled", "completed"],
   draft: ["draft"],
   confirmed: ["confirmed"],
   fulfilled: ["fulfilled"],
+  completed: ["completed"],
   invoiced: ["invoiced"],
   cancelled: ["cancelled"],
   recurring: ["draft"],
@@ -65,7 +67,7 @@ export default async function SalesPage({
     <>
       <PageHeader
         title="Sales orders"
-        subtitle="Draft → confirmed → fulfilled (stock pulled) → invoiced"
+        subtitle="Draft → Ready to pull → Pulled → Completed → Invoiced"
       >
         <Link href="/sales/recurring" className="btn">
           Recurring orders
@@ -132,7 +134,7 @@ export default async function SalesPage({
           label:
             k === "recurring"
               ? "Recurring (planned)"
-              : k[0].toUpperCase() + k.slice(1),
+              : STATUS_LABELS[k] ?? k[0].toUpperCase() + k.slice(1),
         }))}
       />
 

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { bool, dbMessage, fail, str } from "@/lib/forms";
 
-const VALID = ["admin", "buyer", "warehouse", "sales"];
+const VALID = ["admin", "buyer", "warehouse", "sales", "orders_manager"];
 
 export async function updateUser(userId: string, fd: FormData) {
   const { supabase, user } = await requireRole();

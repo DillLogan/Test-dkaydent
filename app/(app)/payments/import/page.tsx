@@ -17,7 +17,7 @@ export default async function TerminalSyncPage({ searchParams }: { searchParams:
     loadCatalog(supabase),
     supabase.from("terminal_item_map").select("item_key, product_id, unit_id"),
     supabase.from("invoices").select("invoice_number").eq("status", "open"),
-    supabase.from("sales_orders").select("so_number").in("status", ["draft", "confirmed", "fulfilled"]),
+    supabase.from("sales_orders").select("so_number").in("status", ["draft", "confirmed", "fulfilled", "completed"]),
     supabase.from("payments").select("external_txn_id").not("external_txn_id", "is", null).limit(10000),
   ]);
   return (

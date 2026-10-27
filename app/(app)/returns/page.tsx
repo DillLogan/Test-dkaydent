@@ -26,7 +26,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: SP }
     <>
       <PageHeader
         title="Returns & credits"
-        subtitle={`${returns?.length ?? 0} shown · ${money(sum(returns, (r) => r.total))} in credits. Record a return from a fulfilled or invoiced sales order.`}
+        subtitle={`${returns?.length ?? 0} shown · ${money(sum(returns, (r) => r.total))} in credits. Record a return from a pulled, completed or invoiced sales order.`}
       >
         <a href="/export/returns" className="btn">
           Export CSV

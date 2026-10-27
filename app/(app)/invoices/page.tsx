@@ -39,7 +39,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: SP 
         }))}
       />
       {!invoices?.length ? (
-        <Empty>No invoices here. Invoices are created from fulfilled sales orders.</Empty>
+        <Empty>No invoices here. Invoices are created from completed sales orders.</Empty>
       ) : (
         <div className="table-wrap">
           <table className="table">
