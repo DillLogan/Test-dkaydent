@@ -61,10 +61,19 @@ export async function Nav({ profile }: { profile: Profile }) {
           { href: "/settings", label: "Settings" },
           { href: "/admin/users", label: "Users & roles" },
           { href: "/settings/web-store", label: "Web store" },
+          { href: "/settings/tutorials", label: "Tutorials" },
+          { href: "/settings/knowledge-base", label: "Knowledge base" },
           { href: "/settings/routing", label: "Maps & routing" },
         ],
       }
-    : { title: "", links: [{ href: "/settings", label: "Settings" }] };
+    : {
+        title: "Settings",
+        links: [
+          { href: "/settings", label: "Settings" },
+          { href: "/settings/tutorials", label: "Tutorials" },
+          { href: "/settings/knowledge-base", label: "Knowledge base" },
+        ],
+      };
   return (
     <NavShell
       groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l)) }))}

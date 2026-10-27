@@ -17,6 +17,19 @@ export default async function SettingsPage() {
         </p>
         <ThemePicker />
       </Section>
+      <Section title="Help">
+        <div className="card flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-stone-500">Step-by-step tutorials for the main jobs, and a searchable knowledge base.</p>
+          <div className="flex gap-2">
+            <Link href="/settings/tutorials" className="btn">
+              Tutorials
+            </Link>
+            <Link href="/settings/knowledge-base" className="btn">
+              Knowledge base
+            </Link>
+          </div>
+        </div>
+      </Section>
       {can(profile) && (
         <Section title="Web store">
           <div className="card flex flex-wrap items-center justify-between gap-3">
