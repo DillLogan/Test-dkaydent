@@ -43,6 +43,13 @@ export function KnowledgeBase({ articles, categories }: { articles: Article[]; c
                 <li key={i}>{b}</li>
               ))}
             </ul>
+            {a.images?.map((cap, i) => (
+              <figure key={i} className="mt-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/help/kb-${a.id}-${i + 1}.jpg`} alt={cap} loading="lazy" className="w-full max-w-2xl rounded-lg border border-stone-200" />
+                <figcaption className="mt-1 text-xs text-stone-500">{cap}</figcaption>
+              </figure>
+            ))}
           </details>
         ))}
         {!shown.length && <p className="card text-sm text-stone-500">Nothing matches. Try fewer words.</p>}
