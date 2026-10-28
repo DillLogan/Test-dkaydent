@@ -502,3 +502,9 @@ html.theme-anim *::after {
     background-color: transparent;
   }
 }
+
+/* Knowledge base: the list fades out, then fades in and down when a category changes */
+.kb-out { opacity: 0; transition: opacity 0.16s ease; }
+.kb-in { animation: kb-in 0.32s ease both; }
+@keyframes kb-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .kb-in { animation: none; } }
