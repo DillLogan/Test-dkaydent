@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PAPERS, readPrintSettings, type PrintSettings } from "@/lib/printSettings";
 import { LabelSizeFields, ModeSwitch } from "./PrintSettingsForm";
 
-export type PrintLabel = { key: string; code: string; title: string; sku: string; lines: string[]; svg: string | null };
+export type PrintLabel = { key: string; code: string; title: string; sku: string; lines: string[]; svg: string | null; short?: string };
 
 const MARGIN = 0.25; // regular-printer page margin, inches
 
@@ -13,7 +13,7 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
   const base = Math.min(h, w * 0.55);
   const pad = Math.max(0.04, Math.min(0.12, h * 0.06));
   const tall = h >= 1.6;
-  const lines = h < 1.05 ? [] : tall ? l.lines : l.lines.slice(0, h < 1.4 ? 1 : 2);
+  const lines = h < 1.05 ? [] : tall ? l.lines : h < 1.4 && l.short ? [l.short] : l.lines.slice(0, h < 1.4 ? 1 : 2);
   const barH = Math.min(tall ? h * 0.3 : h * (lines.length ? 0.34 : 0.42), 1.4);
   return (
     <div
@@ -58,7 +58,7 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
   );
 }
 
-export function LabelPrintView({ labels, initialCopies }: { labels: PrintLabel[]; initialCopies: number }) {
+export function LabelPrintView({ labels, initialCopies, hideCopies }: { labels: PrintLabel[]; initialCopies: number; hideCopies?: boolean }) {
   const [s, setS] = useState<PrintSettings | null>(null);
   const [copies, setCopies] = useState(initialCopies);
   useEffect(() => setS(readPrintSettings()), []);
@@ -90,7 +90,7 @@ export function LabelPrintView({ labels, initialCopies }: { labels: PrintLabel[]
               </select>
             </label>
           )}
-          <label className="block">
+          {!hideCopies && (<label className="block">
             <span className="label">Copies each</span>
             <select className="input w-24" value={copies} onChange={(e) => setCopies(Number(e.target.value))} aria-label="Copies each">
               {[1, 2, 3, 4, 5, 6, 8, 10, 12, 20, 25, 50].map((n) => (
@@ -99,7 +99,7 @@ export function LabelPrintView({ labels, initialCopies }: { labels: PrintLabel[]
                 </option>
               ))}
             </select>
-          </label>
+          </label>)}
           <button type="button" className="btn btn-primary" onClick={() => window.print()} disabled={!all.length || (s.mode === "regular" && !fitsPaper)}>
             Print {all.length} label{all.length === 1 ? "" : "s"}
           </button>

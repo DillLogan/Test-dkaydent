@@ -9,10 +9,13 @@ import {
   completeSO,
   createReturn,
   deleteSO,
+  fixReturned,
   fulfillSO,
   fulfillSOPicked,
   invoiceSO,
   removeSOLine,
+  returnToSales,
+  setLabelCount,
   setCreditStatus,
   setMustCheck,
   setSOStatus,
@@ -289,6 +292,14 @@ export default async function SOPage({ params, searchParams }: Props) {
             <SubmitButton pendingText="…">Mark completed</SubmitButton>
           </form>
         )}
+        {so.status === "fulfilled" && canComplete && (
+          <form action={returnToSales.bind(null, id)} className="flex gap-2" data-testid="return-to-sales">
+            <input name="note" className="input w-64" placeholder="What does sales need to fix?" required />
+            <SubmitButton className="btn" pendingText="…">
+              Send back to sales
+            </SubmitButton>
+          </form>
+        )}
         {so.status === "completed" && canComplete && (
           <form action={completeSO.bind(null, id, true)}>
             <SubmitButton className="btn" pendingText="…">
@@ -305,6 +316,53 @@ export default async function SOPage({ params, searchParams }: Props) {
       <ErrorBanner error={error} />
       <Notice message={message} />
       <OrderSteps status={so.status} />
+      {so.status === "returned" && (
+        <Section title="Sent back to sales">
+          <div className="card space-y-3" data-testid="returned-panel">
+            <p className="text-sm">
+              <b>Delivery/Order Management says:</b> {so.returned_note}
+            </p>
+            {canSell ? (
+              <form action={fixReturned.bind(null, id)} className="space-y-3">
+                <p className="text-xs text-stone-500">
+                  Change a quantity to what was really pulled. It can only go down, and the difference goes back on the shelf. Set a line to 0 to take it off.
+                </p>
+                {rows.map((r) => (
+                  <label key={r.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span>
+                      {r.products.name} <span className="text-stone-500">({r.product_units.name})</span>
+                    </span>
+                    <input name={`qty_${r.id}`} type="number" min="0" max={Number(r.qty)} step="any" defaultValue={Number(r.qty)} className="input w-28" aria-label={`Quantity of ${r.products.name}`} />
+                  </label>
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  <button name="intent" value="save" className="btn">
+                    Save changes
+                  </button>
+                  <button name="intent" value="send" className="btn btn-primary">
+                    Save and send to Delivery/Order Management
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-sm text-stone-500">Waiting for sales to fix it and send it back.</p>
+            )}
+          </div>
+        </Section>
+      )}
+      {["confirmed", "fulfilled", "returned", "completed"].includes(so.status) && can(profile, "sales", "warehouse", "orders_manager") && (
+        <Section title="Box labels">
+          <form action={setLabelCount.bind(null, id)} className="card flex flex-wrap items-end gap-3" data-testid="box-labels-form">
+            <Field label="How many boxes">
+              <input name="count" type="number" min="0" max="500" defaultValue={so.label_count ?? 1} className="input w-28" />
+            </Field>
+            <SubmitButton pendingText="…">Print box labels</SubmitButton>
+            <p className="pb-2 text-xs text-stone-500">
+              {so.label_count != null ? `${so.label_count} printed so far. ` : ""}The count also shows on the pull sheet. Labels print on the label printer chosen in Settings.
+            </p>
+          </form>
+        </Section>
+      )}
       {anyShort && so.status !== "cancelled" && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Some lines need more than is on hand. Fulfillment will be blocked
@@ -753,7 +811,7 @@ const STEPS: { key: string; label: string; who: string }[] = [
 
 function OrderSteps({ status }: { status: string }) {
   if (status === "cancelled") return null;
-  const at = STEPS.findIndex((s) => s.key === status);
+  const at = STEPS.findIndex((s) => s.key === (status === "returned" ? "fulfilled" : status));
   return (
     <ol className="mb-6 grid grid-cols-5 gap-1 text-center text-[11px] sm:text-xs" aria-label="Order steps" data-testid="order-steps">
       {STEPS.map((s, i) => (

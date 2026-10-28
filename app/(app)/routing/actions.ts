@@ -14,6 +14,7 @@ export async function saveRoute(input: {
   stops: string[];
   mode: "manual" | "optimized";
   driver: string | null;
+  routeCode?: string;
 }): Promise<Result> {
   const { supabase, profile } = await getSession();
   if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
@@ -23,13 +24,14 @@ export async function saveRoute(input: {
     {
       route_date: input.date,
       layout_id: input.layoutId,
+      route_code: (input.routeCode ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3),
       stops,
       mode: input.mode === "optimized" ? "optimized" : "manual",
       driver: input.driver?.trim().slice(0, 80) || null,
       updated_by: profile.id,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "route_date,layout_id" },
+    { onConflict: "route_date,layout_id,route_code" },
   );
   if (error) return { ok: false, error: dbMessage(error) };
   revalidatePath("/routing");

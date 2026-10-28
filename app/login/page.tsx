@@ -36,8 +36,8 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
             </label>
           )}
           <label className="block">
-            <span className="label">Email</span>
-            <input name="email" type="email" className="input" required autoComplete="email" />
+            <span className="label">{isSignup ? "Email" : "Username or email"}</span>
+            <input name="email" type={isSignup ? "email" : "text"} className="input" required autoComplete="username" autoCapitalize="none" spellCheck={false} />
           </label>
           <label className="block">
             <span className="label">Password</span>
@@ -55,17 +55,13 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
           </SubmitButton>
         </form>
 
-        <p className="mt-5 text-center text-sm text-stone-500">
-          {isSignup ? (
+        {isSignup && (
+          <p className="mt-5 text-center text-sm text-stone-500">
             <a href="/login" className="link">
               Already have an account? Sign in
             </a>
-          ) : (
-            <a href="/login?mode=signup" className="link">
-              New team member? Create an account
-            </a>
-          )}
-        </p>
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { date } from "@/lib/format";
-import { remove, setUp, verify } from "./actions";
+import { createLogin, remove, resetPassword, setUp, verify } from "./actions";
+import { usernameOf } from "@/lib/username";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
 
@@ -32,8 +33,40 @@ export default async function LoginsPage({ searchParams }: { searchParams: SP })
       <ErrorBanner error={error} />
       <Notice message={message} />
 
-      <Section title="Set up a login">
-        <p className="mb-3 text-sm text-stone-500">The customer signs up on the login page first. They appear here, switched off, until you attach them to a customer.</p>
+      <Section title="Create a customer login">
+        <form action={createLogin} className="card grid gap-3 sm:grid-cols-6" data-testid="create-login">
+          <label className="sm:col-span-3">
+            <span className="label">Customer</span>
+            <select name="customer_id" className="input" required>
+              <option value="">Choose</option>
+              {(customers ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="sm:col-span-3">
+            <span className="label">Person&apos;s name</span>
+            <input name="full_name" className="input" required />
+          </label>
+          <label className="sm:col-span-3">
+            <span className="label">Username</span>
+            <input name="username" className="input" required autoCapitalize="none" spellCheck={false} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,29}" title="3 to 30 letters, numbers, dots, dashes or underscores" />
+          </label>
+          <label className="sm:col-span-3">
+            <span className="label">Password (give it to the customer)</span>
+            <input name="password" type="text" className="input" required minLength={8} autoComplete="off" />
+          </label>
+          <div className="sm:col-span-6">
+            <SubmitButton>Create login</SubmitButton>
+            <p className="mt-2 text-xs text-stone-500">The customer account needs a route, address, phone and sales rep first. A different person then verifies the login before it works.</p>
+          </div>
+        </form>
+      </Section>
+
+      <Section title="Set up someone who already has a login">
+        <p className="mb-3 text-sm text-stone-500">People who signed up themselves wait here, switched off, until you attach them to a customer.</p>
         {pending.length === 0 ? (
           <Empty>No one is waiting for a login.</Empty>
         ) : (
@@ -76,7 +109,7 @@ export default async function LoginsPage({ searchParams }: { searchParams: SP })
                 <div key={a.profile_id} className="card flex flex-wrap items-center gap-3" data-login={a.profile_id}>
                   <div className="min-w-48 flex-1">
                     <div className="font-medium">
-                      {who(a.profile_id)} <span className="text-stone-500">for</span> {(a as any).customers?.name}
+                      {who(a.profile_id)} <span className="font-mono text-xs text-stone-500">({usernameOf((people ?? []).find((x) => x.id === a.profile_id)?.email)})</span> <span className="text-stone-500">for</span> {(a as any).customers?.name}
                     </div>
                     <div className="text-xs text-stone-500">
                       Set up by {who(a.set_up_by)} on {date(a.set_up_at)}
@@ -93,6 +126,11 @@ export default async function LoginsPage({ searchParams }: { searchParams: SP })
                       <SubmitButton>Verify</SubmitButton>
                     </form>
                   )}
+                  <form action={resetPassword} className="flex gap-1">
+                    <input type="hidden" name="profile_id" value={a.profile_id} />
+                    <input name="password" type="text" minLength={8} className="input w-36" placeholder="New password" required autoComplete="off" aria-label="New password" />
+                    <button className="btn">Set</button>
+                  </form>
                   <form action={remove}>
                     <input type="hidden" name="profile_id" value={a.profile_id} />
                     <button className="btn">Remove</button>

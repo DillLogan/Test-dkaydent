@@ -6,7 +6,7 @@ import { closestFirst, fmtMiles, geoKey, mapsLinks, miles, type LatLng } from "@
 import { saveGeocodes, saveRoute, scanRouteOrder } from "@/app/(app)/routing/actions";
 import { ScanInput } from "@/components/ScanInput";
 
-export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null };
+export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null; route?: string | null; boxes?: number | null };
 type Shop = { id: string; name: string; address: string };
 
 declare global {
@@ -36,6 +36,7 @@ export function RouteBuilder(props: {
   coords: Record<string, LatLng>;
   mapsKey: string | null;
   canEdit: boolean;
+  routeCode?: string;
 }) {
   const { date, shop, mapsKey, canEdit } = props;
   const [extra, setExtra] = useState<RouteOrder[]>([]);
@@ -151,7 +152,7 @@ export function RouteBuilder(props: {
 
   function save() {
     start(async () => {
-      const r = await saveRoute({ date, layoutId: shop.id, stops, mode, driver: driver || null });
+      const r = await saveRoute({ date, layoutId: shop.id, stops, mode, driver: driver || null, routeCode: props.routeCode });
       setMsg(r.ok ? { ok: true, text: "Route saved." } : { ok: false, text: r.error });
     });
   }
@@ -243,7 +244,7 @@ export function RouteBuilder(props: {
 
           <section aria-label="Route sheet" data-testid="route-sheet" className="rounded-2xl border border-stone-200 bg-white p-5 text-stone-900 print:border-0 print:p-0">
             <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-stone-900 pb-2">
-              <h2 className="text-lg font-bold">Route sheet · {date}</h2>
+              <h2 className="text-lg font-bold">Route sheet · {date}{props.routeCode ? ` · Route ${props.routeCode}` : ""}</h2>
               <div className="text-sm">
                 {shop.name}
                 {driver && ` · Driver: ${driver}`}
@@ -265,6 +266,9 @@ export function RouteBuilder(props: {
                       </div>
                       <div className="text-sm">{o.address || <span className="text-amber-700">No delivery address</span>}</div>
                     </div>
+                    <span className="text-xs font-semibold tabular-nums" data-testid="stop-boxes">
+                      {o.boxes != null ? `${o.boxes} box${o.boxes === 1 ? "" : "es"}` : "boxes ?"}
+                    </span>
                     {d !== null && <span className="text-xs text-stone-500 tabular-nums">{fmtMiles(d)} from shop</span>}
                     <span className="mt-1 inline-block h-4 w-4 border-[1.5px] border-stone-900 print:inline-block" aria-label="Delivered" />
                     {canEdit && (
@@ -285,6 +289,12 @@ export function RouteBuilder(props: {
               })}
               {!stops.length && <li className="py-2 text-sm text-stone-500">No stops selected.</li>}
             </ol>
+            {stops.length > 0 && (
+              <p className="mt-3 border-t-2 border-stone-900 pt-2 text-sm font-semibold" data-testid="route-boxes">
+                {stops.length} stop{stops.length === 1 ? "" : "s"} · {stops.reduce((n, id) => n + (byId.get(id)?.boxes ?? 0), 0)} boxes expected
+                {stops.some((id) => byId.get(id)?.boxes == null) ? " (some orders have no label count yet)" : ""}
+              </p>
+            )}
           </section>
 
           {missing > 0 && <p className="text-xs text-amber-700 print:hidden">{missing} stop(s) have no delivery address. Add one on the order or customer.</p>}

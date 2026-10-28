@@ -5,6 +5,7 @@ import { buildPullTicket, ticketQty, type TicketLot } from "@/lib/pullTicket";
 import { PrintButton } from "@/components/PrintButton";
 import { PageHeader } from "@/components/ui";
 import { MustCheck } from "@/components/MustCheck";
+import { Barcode } from "@/components/Barcode";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -13,7 +14,7 @@ export default async function PullTicketPage({ params }: Props) {
   const { supabase } = await getSession();
 
   const [{ data: so }, { data: lines }, { data: layouts }] = await Promise.all([
-    supabase.from("sales_orders").select("id, so_number, status, ship_date, notes, must_check, customers(name)").eq("id", id).maybeSingle(),
+    supabase.from("sales_orders").select("id, so_number, status, ship_date, notes, must_check, label_count, customers(name)").eq("id", id).maybeSingle(),
     supabase
       .from("sales_order_lines")
       .select("id, product_id, qty, products(sku, name, base_unit), product_units(name, factor)")
@@ -83,6 +84,7 @@ export default async function PullTicketPage({ params }: Props) {
             <div className="text-xs font-semibold tracking-wider text-[#57534e] uppercase">Pull ticket</div>
             <h1 className="text-2xl font-bold">{so.so_number}</h1>
             <div className="text-sm">{customer}</div>
+            <Barcode value={so.so_number} className="mt-2 h-9 w-44" />
           </div>
           <dl className="ml-auto grid grid-cols-[auto_auto] gap-x-3 text-right text-sm">
             <dt className="text-[#57534e]">Ships</dt>
@@ -117,6 +119,10 @@ export default async function PullTicketPage({ params }: Props) {
           </section>
         )}
 
+        <div className="mt-6 flex items-end gap-3 text-sm" data-testid="ticket-labels">
+          <span className="font-semibold">Box labels printed:</span>
+          <span className="inline-block min-w-16 border-b border-[#111111] text-center">{so.label_count ?? ""}</span>
+        </div>
         <footer className="mt-6 grid break-inside-avoid grid-cols-2 gap-10 text-sm" data-testid="ticket-signatures">
           {["Pulled by", "Packed by"].map((t) => (
             <div key={t}>

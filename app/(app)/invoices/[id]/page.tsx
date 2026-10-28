@@ -74,7 +74,13 @@ export default async function InvoicePage({ params, searchParams }: Props) {
       <ErrorBanner error={error} />
       <Notice message={message} />
 
-      <article className="card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none">
+      {["Customer copy", "Office copy"].map((copyLabel, ci) => (
+      <article
+        key={copyLabel}
+        data-copy={copyLabel}
+        className={`card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none ${ci === 1 ? "hidden print:block [break-before:page]" : ""}`}
+      >
+        <div className="mb-2 hidden text-right text-xs font-semibold tracking-wider text-[#57534e] uppercase print:block">{copyLabel}</div>
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="font-display text-xl text-brand-700">DKaydent</div>
@@ -193,6 +199,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
           <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
         </div>
       </article>
+      ))}
 
       {inv.status !== "void" && (
         <div className="mx-auto mt-8 max-w-3xl print:hidden">
