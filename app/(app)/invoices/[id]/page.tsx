@@ -8,6 +8,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
+import { Barcode } from "@/components/Barcode";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -186,6 +187,11 @@ export default async function InvoicePage({ params, searchParams }: Props) {
         </div>
 
         {inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
+
+        <div className="mt-8 ml-auto w-56 break-inside-avoid" data-testid="invoice-barcode">
+          <Barcode value={inv.invoice_number} className="h-12 w-full" />
+          <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
+        </div>
       </article>
 
       {inv.status !== "void" && (

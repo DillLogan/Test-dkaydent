@@ -26,7 +26,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
     const [{ data: rows }, { data: sheet }] = await Promise.all([
       supabase
         .from("sales_orders")
-        .select("id, so_number, status, delivery_address, must_check, customers(name)")
+        .select("id, so_number, status, delivery_address, must_check, ship_date, customers(name)")
         .eq("ship_date", date)
         .eq("layout_id", shop.id)
         .in("status", ["completed", "invoiced"])
@@ -41,6 +41,17 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
       status: o.status,
     }));
     saved = sheet ? { stops: sheet.stops ?? [], driver: sheet.driver } : null;
+    // Orders scanned onto this route that ship on another day
+    const extraIds = (saved?.stops ?? []).filter((id) => !orders.some((o) => o.id === id));
+    if (extraIds.length) {
+      const { data: more } = await supabase
+        .from("sales_orders")
+        .select("id, so_number, status, delivery_address, ship_date, customers(name)")
+        .in("id", extraIds)
+        .in("status", ["completed", "invoiced"]);
+      for (const o of (more ?? []) as any[])
+        orders.push({ id: o.id, number: o.so_number, customer: o.customers?.name ?? "", address: o.delivery_address ?? "", status: o.status, ships: o.ship_date });
+    }
     const keys = [...new Set([...orders.map((o) => geoKey(o.address)), geoKey(shop.address)].filter(Boolean))];
     if (keys.length) {
       const { data: g } = await supabase.from("geocodes").select("address, lat, lng").in("address", keys);
