@@ -16,6 +16,9 @@ export function VendorFields({ vendor }: { vendor: R }) {
           <option value="supplier">Hard goods supplier</option>
         </select>
       </Field>
+      <Field label="Discount %" className="sm:col-span-2">
+        <input name="discount_pct" type="number" min="0" max="100" step="0.01" className="input" defaultValue={v("discount_pct") || 0} />
+      </Field>
       <Field label="Contact" className="sm:col-span-2">
         <input name="contact_name" className="input" defaultValue={v("contact_name")} />
       </Field>

@@ -30,6 +30,8 @@ const GROUPS: NavGroup[] = [
       { href: "/counter", label: "Counter sale" },
       { href: "/sales", label: "Sales orders" },
       { href: "/customers", label: "Customers" },
+      { href: "/admin/logins", label: "Customer logins" },
+      { href: "/catalog", label: "Sales catalog" },
       { href: "/invoices", label: "Invoices" },
       { href: "/returns", label: "Returns & credits" },
       { href: "/payments", label: "Payments" },
@@ -46,6 +48,16 @@ const GROUPS: NavGroup[] = [
 ];
 
 export async function Nav({ profile }: { profile: Profile }) {
+  if (profile.role === "customer") {
+    return (
+      <NavShell
+        groups={[{ title: "", links: [{ href: "/shop", label: "Shop" }, { href: "/settings", label: "Settings" }] }]}
+        userName={profile.full_name || profile.email || ""}
+        roleLabel="Customer"
+        signOut={signOut}
+      />
+    );
+  }
   let unread = 0;
   try {
     const supabase = await createClient();

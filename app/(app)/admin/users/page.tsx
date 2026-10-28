@@ -10,7 +10,7 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function UsersPage({ searchParams }: { searchParams: SP }) {
   const { error, message } = await searchParams;
   const { supabase, user } = await requireRole();
-  const { data: users } = await supabase.from("profiles").select("*").order("active").order("created_at");
+  const { data: users } = await supabase.from("profiles").select("*").neq("role", "customer").order("active").order("created_at");
 
   return (
     <>

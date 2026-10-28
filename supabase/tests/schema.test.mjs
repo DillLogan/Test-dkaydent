@@ -631,4 +631,85 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Number((await one(`select count(*) c from chat_channels where id=$1`, [grp])).c) === 0, "leaving a group hides it");
   await db.exec(`reset role`);
 }
+
+// ---- customer shopping login ----
+{
+  await db.exec(`reset role`);
+  const cu = "00000000-0000-0000-0000-0000000000c1", s2 = "00000000-0000-0000-0000-0000000000c2", cu2 = "00000000-0000-0000-0000-0000000000c3";
+  await q(`insert into auth.users values ($1,'shop@x.com','{"full_name":"Shopper"}'),($2,'rep2@x.com','{}'),($3,'shop2@x.com','{}')`, [cu, s2, cu2]);
+  await q(`update profiles set active=true where id in ($1,$2)`, [sales, s2]);
+  const [custA, custB] = (await q(`select id from customers where name <> 'Walk-in' order by created_at limit 2`)).map((r) => r.id);
+  await q(`update customers set discount_pct=10 where id=$1`, [custA]);
+  await as(admin);
+  await expectErr(`update profiles set role='customer' where id=$1`, [cu], "Customer logins are set up", "role cannot be switched to customer directly");
+  await as(sales);
+  await expectErr(`select portal_set_up($1,$2)`, [admin, custA], "already has staff access", "cannot turn an active staff member into a customer");
+  await q(`select portal_set_up($1,$2)`, [cu, custA]);
+  let pr = await one(`select role, active from profiles where id=$1`, [cu]);
+  ok(pr.role === "customer" && pr.active === false, "set-up makes a customer login that is still switched off");
+  await expectErr(`select portal_verify($1)`, [cu], "different person", "the person who set it up cannot verify it");
+  await as(s2);
+  await q(`select portal_verify($1)`, [cu]);
+  pr = await one(`select active from profiles where id=$1`, [cu]);
+  ok(pr.active === true, "a different sales person verifies and switches it on");
+
+  // pick something sellable with stock
+  const item = await one(`select u.id unit_id, u.product_id, u.factor from product_units u join products p on p.id=u.product_id
+                           where p.active and customer_unit_price($1, u.id) > 0 and product_available_base(p.id) >= u.factor * 3 order by u.factor limit 1`, [custA]);
+  ok(!!item, "found a sellable unit with stock for the portal tests");
+  const list = Number((await one(`select customer_list_price($1,$2) p`, [custA, item.unit_id])).p);
+  const eff = Number((await one(`select customer_unit_price($1,$2) p`, [custA, item.unit_id])).p);
+  ok(Math.abs(eff - Math.round(list * 0.9 * 100) / 100) < 0.011, `10% customer discount applies (${list} -> ${eff})`);
+  await q(`insert into customer_prices (customer_id, product_unit_id, price) values ($1,$2,1.23)`, [custA, item.unit_id]);
+  ok(Number((await one(`select customer_unit_price($1,$2) p`, [custA, item.unit_id])).p) === 1.23, "special price beats tier price and discount");
+
+  await db.exec(`set role authenticated`);
+  await as(cu);
+  for (const t of ["products", "customers", "sales_orders", "lots", "invoices", "customer_prices", "portal_accounts", "chat_channels"]) {
+    ok(Number((await one(`select count(*) c from ${t}`)).c) === 0, `customer cannot read ${t} directly`);
+  }
+  const me = (await one(`select portal_me() m`)).m;
+  ok(me.discount_pct == 10, "portal_me returns the customer's own discount");
+  const cat = (await one(`select portal_catalog() c`)).c;
+  const row = cat.find((r) => r.unit_id === item.unit_id);
+  ok(row && Number(row.price) === 1.23 && row.special === true && Number(row.available) >= 3, "catalog shows the customer's special price and exact availability");
+  ok(!("cost" in row) && !JSON.stringify(row).includes("unit_cost"), "catalog carries no cost");
+  ok((await one(`select customer_unit_price($1,$2) p`, [custB, item.unit_id])).p === null, "customer cannot ask another customer's price");
+  ok((await one(`select so_total($1) t`, [(await one(`select id from sales_orders limit 1`, [])) ?.id ?? null])).t === null, "customer gets nothing from so_total");
+  await expectErr(`select catalog_checkout($1,'[]'::jsonb,null)`, [custA], "Only sales", "customer cannot use the staff cart");
+  await expectErr(`select portal_checkout('[]'::jsonb,null)`, [], "cart is empty", "empty cart rejected");
+  await expectErr(`select portal_checkout($1::jsonb,null)`, [JSON.stringify([{ unit_id: item.unit_id, qty: 100000 }])], "Not enough in stock", "cannot order more than is available");
+  const so = (await one(`select portal_checkout($1::jsonb,'please leave at the back door') id`, [JSON.stringify([{ unit_id: item.unit_id, qty: 2 }])])).id;
+  const orders = (await one(`select portal_orders() o`)).o;
+  ok(orders.length === 1 && orders[0].status === "draft" && orders[0].source === "portal" && Number(orders[0].total) === 2.46, "checkout makes a draft order at the customer's price");
+  await db.exec(`reset role`);
+  const ln = await one(`select unit_price, qty from sales_order_lines where so_id=$1`, [so]);
+  ok(Number(ln.unit_price) === 1.23 && Number(ln.qty) === 2, "price was worked out by the database");
+  ok((await one(`select source, customer_id from sales_orders where id=$1`, [so])).customer_id === custA, "order belongs to the customer's own account");
+
+  await as(sales);
+  const cs = await one(`select catalog_staff($1) c`, [custB]);
+  ok(Array.isArray(cs.c) && cs.c.length >= 1 && "tier_price" in cs.c[0], "sales catalog lists items with pricing fields");
+  await as(cu);
+  await expectErr(`select catalog_staff($1)`, [custB], "Only sales", "customer cannot open the sales catalog");
+  // staff cart for any customer
+  await as(sales);
+  const so2 = (await one(`select catalog_checkout($1,$2::jsonb,null) id`, [custB, JSON.stringify([{ unit_id: item.unit_id, qty: 1 }])])).id;
+  ok((await one(`select source from sales_orders where id=$1`, [so2])).source === "app", "sales can build a cart order for a customer");
+
+  // a login that was set up but not verified cannot shop
+  await as(admin);
+  await q(`select portal_set_up($1,$2)`, [cu2, custB]);
+  await db.exec(`set role authenticated`);
+  await as(cu2);
+  await expectErr(`select portal_catalog()`, [], "not set up", "an unverified login cannot shop");
+  await db.exec(`reset role`);
+  await as(sales);
+  await q(`select portal_remove($1)`, [cu]);
+  await db.exec(`set role authenticated`);
+  await as(cu);
+  await expectErr(`select portal_catalog()`, [], "not set up", "a removed login cannot shop");
+  await db.exec(`reset role`);
+}
+
 console.log(`\n${pass} checks passed`);
