@@ -14,6 +14,7 @@ function customerFields(fd: FormData) {
     address: str(fd, "address"),
     delivery_address: str(fd, "delivery_address"),
     price_tier_id: str(fd, "price_tier_id"),
+    discount_pct: Math.min(100, Math.max(0, num(fd, "discount_pct") ?? 0)),
     payment_terms_days: int(fd, "payment_terms_days") ?? 30,
     resale_certificate: str(fd, "resale_certificate"),
     notes: str(fd, "notes"),

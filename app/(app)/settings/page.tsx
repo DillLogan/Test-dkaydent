@@ -17,6 +17,7 @@ export default async function SettingsPage() {
         </p>
         <ThemePicker />
       </Section>
+      {profile.role !== "customer" && (<>
       <Section title="Help">
         <div className="card flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-stone-500">Step-by-step tutorials for the main jobs, and a searchable knowledge base.</p>
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
         </p>
         <PrintSettingsForm />
       </Section>
+      </>)}
     </>
   );
 }

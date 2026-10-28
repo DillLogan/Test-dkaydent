@@ -197,8 +197,17 @@ export const ARTICLES: Article[] = [
     "Buyer manages products, vendors, purchase orders and receiving.",
     "Orders manager marks pulled orders Completed (or sends them back), creates and voids invoices, and builds delivery routes.",
     "Routing: the orders manager, warehouse and admins can change routes. Everyone else can look at them.",
+    "Customer is for a buyer who orders from you. A customer login only gets the Shop page and their own display settings. See Customer logins and the shop. This is separate from the staff Buyer role.",
     "Everyone signed in and active can read orders, stock and use Messages.",
   ] },
+  { id: "customer-logins", category: "Orders", title: "Customer logins, the shop and the sales catalog", body: [
+    "A customer with a login can browse your items, see their own prices and add things to a cart. Their cart becomes a draft sales order that sales approves. They cannot see anything else in the system.",
+    "Setting up a login takes two people. First the customer signs up on the login page. They stay switched off. Sales or an admin opens Customer logins, chooses the customer for that person and presses Set up.",
+    "A different sales person or admin then presses Verify on the same row. Nobody can verify a login they set up themselves. Until it is verified the customer cannot shop. Remove takes the access away again.",
+    "Prices a customer sees come from, in order: a price set just for them, otherwise the tier price (or the usual markup) less the customer's Discount %. Set the discount on the customer page. They also see the exact number available, which is stock on hand less what is already waiting on confirmed orders.",
+    "The Sales catalog is the same list for staff. Pick a customer and each item shows what they would pay. Type a price under This customer only to give them a special price, or under the tier price to change it for everyone in that tier. Leave a box empty to go back to the normal price. Add items to the cart and press Create draft order.",
+    "The customer's own orders arrive as drafts marked Customer cart in Sales orders. Check them, then confirm as usual. The customer sees them as Waiting for approval.",
+  ], images: ["Customers who have signed up wait here until you choose which customer they belong to.", "A second person presses Verify before the customer can shop.", "On the Sales catalog, type a price for this customer only, or change the tier price.", "The customer's shop shows their price and how many are available. Press Add.", "Send order turns the cart into a draft order for sales to approve."] },
   { id: "must-check", category: "Orders", title: "MUST CHECK", body: [
     "Sales reps can flag any order MUST CHECK with a button at the top of the order, at any status.",
     "The red MUST CHECK box shows on the order and prints in the top right of the pull ticket with a line underneath for a signature.",

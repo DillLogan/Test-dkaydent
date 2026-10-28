@@ -166,6 +166,9 @@ export default async function SalesPage({
                     {o.source === "web" && (
                       <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">Web</span>
                     )}
+                    {o.source === "portal" && (
+                      <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">Customer cart</span>
+                    )}
                     {o.must_check && (
                       <span className="ml-2 rounded border border-red-600 px-1 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap text-red-600">
                         MUST CHECK
