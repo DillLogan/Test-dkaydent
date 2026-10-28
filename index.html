@@ -659,6 +659,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 
 .help-shot { display: block; width: 100%; max-width: 640px; margin-top: 8px; border: 1px solid var(--line, #e2e6df); border-radius: 12px; height: auto; }
 
+.route-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+@media (max-width: 800px) { .route-grid { grid-template-columns: minmax(0, 1fr); } }
+.route-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.route-stop { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line, #e2e6df); border-radius: 12px; min-width: 0; flex-wrap: wrap; }
+.route-stop .rn { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand, #2f6b3f); color: #fff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+.route-stop .rs-main { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.route-stop .rs-btns { display: inline-flex; gap: 6px; }
+.route-total { margin: 12px 0; }
+.route-map { width: 100%; height: auto; display: block; }
+.route-map .rm-bg { fill: var(--brand-soft, #eef4ee); stroke: var(--line, #e2e6df); }
+.route-map .rm-line { fill: none; stroke: var(--brand, #2f6b3f); stroke-width: 3; stroke-linejoin: round; stroke-dasharray: 6 5; }
+.route-map .rm-stop { fill: var(--brand, #2f6b3f); }
+.route-map .rm-shop { fill: #b45309; }
+.route-map text { fill: #fff; font: 700 12px system-ui, sans-serif; }
+.bad { color: #b42318; }
+
 </style>
 
 </head>
@@ -2693,6 +2709,53 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
   const MAX_MESSAGES = 220;
 
   const chat = (s) => (s.chat ||= { channels: [], messages: [], reactions: {} });
+
+  // ---- Routing: sample addresses, stand-in "geocoder", saved route sheets
+  DK.ROUTE_START = "1200 Market St, Philadelphia, PA 19107";
+  const SHOP_PT = { lat: 39.9526, lng: -75.1652 };
+  const hash = (str) => { let h = 2166136261; for (const ch of String(str).toLowerCase().replace(/\s+/g, " ").trim()) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
+  /** Demo only: a repeatable pretend position 2 to 30 miles from the shop. The real app uses Google's geocoder. */
+  DK.routeGeo = (addr) => {
+    if (!addr) return null;
+    if (String(addr).trim().toLowerCase() === DK.ROUTE_START.toLowerCase()) return SHOP_PT;
+    const h = hash(addr), ang = ((h % 3600) / 3600) * 2 * Math.PI, d = 2 + ((h >>> 12) % 280) / 10;
+    return { lat: SHOP_PT.lat + (d * Math.cos(ang)) / 69, lng: SHOP_PT.lng + (d * Math.sin(ang)) / (69 * Math.cos((SHOP_PT.lat * Math.PI) / 180)) };
+  };
+  DK.miles = (a, b) => { const R = 3958.8, r = (x) => (x * Math.PI) / 180, dl = r(b.lat - a.lat), dn = r(b.lng - a.lng); const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.min(1, Math.sqrt(h))); };
+  /** Google Maps driving links, 10 stops per link, no return trip. */
+  DK.mapsLinks = (origin, stops) => {
+    const out = []; let from = origin;
+    for (let i = 0; i < stops.length; i += 10) {
+      const leg = stops.slice(i, i + 10), dest = leg[leg.length - 1], via = leg.slice(0, -1);
+      const q = new URLSearchParams({ api: "1", origin: from, destination: dest, travelmode: "driving" });
+      if (via.length) q.set("waypoints", via.join("|"));
+      out.push({ label: stops.length > 10 ? "Stops " + (i + 1) + "–" + (i + leg.length) : "Whole route", href: "https://www.google.com/maps/dir/?" + q.toString() });
+      from = dest;
+    }
+    return out;
+  };
+  const ADDR = {
+    "Bloom & Vine Florist": ["410 Bloom St, Bryn Mawr, PA 19010", null],
+    "Evergreen Events": ["88 Pine Ridge Rd, Media, PA 19063", "Event hall dock, 2 Chestnut Ln, Wayne, PA 19087"],
+    "Hillcrest Funeral Home": ["27 Hillcrest Ave, Upper Darby, PA 19082", null],
+    "Magnolia Market Grocers": ["905 Magnolia Dr, King of Prussia, PA 19406", null],
+    "Petal & Stem Studio": ["15 Orchard Ln, Doylestown, PA 18901", null],
+    "Riverside Hotel Group": ["300 River Rd, Conshohocken, PA 19428", "Hotel service entrance, 301 River Rd, Conshohocken, PA 19428"],
+    "The Garden Gate": ["62 Garden Way, West Chester, PA 19380", null],
+    "Willow Lane Weddings": ["7 Willow Ln, Newtown Square, PA 19073", null],
+  };
+  DK.hooks.afterSample.push((s) => {
+    for (const c of s.customers) { const a = ADDR[c.name]; if (a) { c.address = c.address || a[0]; c.deliveryAddress = c.deliveryAddress || a[1]; } }
+    for (const o of s.sos) { if (!o.deliveryAddress) { const c = s.customers.find((x) => x.id === o.customerId) || {}; o.deliveryAddress = c.deliveryAddress || c.address || null; } }
+    s.routes = {};
+  });
+  OPS.routeSave = (s, ctx, a) => {
+    if (!["admin", "orders_manager", "warehouse"].includes(ctx.role)) fail("Only the orders manager, warehouse or an admin can set the route");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date || "")) fail("Pick a date");
+    const ok = new Set(s.sos.filter((o) => o.ship === a.date && ["completed", "invoiced"].includes(o.status)).map((o) => o.id));
+    const stops = [...new Set(a.stops || [])].filter((id) => ok.has(id));
+    (s.routes ||= {})[a.date] = { start: String(a.start || DK.ROUTE_START).trim().slice(0, 200) || DK.ROUTE_START, driver: String(a.driver || "").trim().slice(0, 80), stops };
+  };
   /** Channels this role can see: team channels by role, plus its own chats and groups. */
   DK.chatChannelsFor = (s, role) => {
     const c = s.chat || { channels: [] };
@@ -4196,11 +4259,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
       ["", [["messages", "Messages"]]],
       ["Buying", [["purchasing", "Purchasing"], ["receiving", "Receiving"], ["vendors", "Vendors"]]],
       ["Stock", [["inventory", "Inventory"], ["floorplan", "Location in shop"], ["products", "Products"], ["locations", "Locations"], ["scan", "Scan"]]],
-      ["Selling", [["counter", "Counter sale"], ["sales", "Sales orders"], ["customers", "Customers"], ["invoices", "Invoices"], ["returns", "Returns & credits"], ["payments", "Payments"]]],
+      ["Selling", [["counter", "Counter sale"], ["sales", "Sales orders"], ["routing", "Routing"], ["customers", "Customers"], ["invoices", "Invoices"], ["returns", "Returns & credits"], ["payments", "Payments"]]],
       ["Reports & data", [["reports", "Reports"], ["import", "Import & export"]]],
       ["Settings", [["settings", "Settings"], ["tutorials", "Tutorials"], ["kb", "Knowledge base"]]],
     );
-    for (const k of ["receiving", "floorplan", "counter", "payments", "messages", "tutorials", "kb"]) HASHABLE.add(k);
+    for (const k of ["receiving", "floorplan", "counter", "payments", "messages", "routing", "tutorials", "kb"]) HASHABLE.add(k);
     Object.assign(SECTION, { recurring: "sales", recurringOne: "sales", pullTicket: "sales", shipment: "receiving", standing: "receiving", standingOne: "receiving", categories: "products", terminals: "payments" });
   }
 
@@ -5480,6 +5543,82 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
   }
   ACTS.kbCat = (el) => { document.querySelectorAll("[data-act=kbCat]").forEach((b) => b.setAttribute("aria-pressed", String(b === el))); kbFilter(); };
   app.addEventListener("input", (ev) => { if (ev.target.matches && ev.target.matches("[data-kbsearch]")) kbFilter(); });
+
+  // ---- Routing (demo): the day's completed orders, stop order, distances and Google Maps links
+  const ROUTE_OK = ["completed", "invoiced"];
+  const routeDay = () => {
+    const r = (ui.route ||= { date: (S.sos || []).filter((o) => ROUTE_OK.includes(o.status) && o.ship).map((o) => o.ship).sort().pop() || today() });
+    const elig = S.sos.filter((o) => o.ship === r.date && ROUTE_OK.includes(o.status)).sort((a, b) => a.number.localeCompare(b.number));
+    const saved = (S.routes || {})[r.date];
+    const byId = new Map(elig.map((o) => [o.id, o]));
+    const ids = (saved ? saved.stops : elig.map((o) => o.id)).filter((id) => byId.has(id));
+    return { date: r.date, elig, byId, ids, start: saved ? saved.start : DK.ROUTE_START, driver: saved ? saved.driver : "" };
+  };
+  const routeSave = (d, ids, extra = {}) => commit("routeSave", { date: d.date, start: extra.start ?? d.start, driver: extra.driver ?? d.driver, stops: ids });
+  const routeLegs = (d) => {
+    let prev = DK.routeGeo(d.start), total = 0;
+    const rows = d.ids.map((id) => {
+      const o = d.byId.get(id), pt = DK.routeGeo(o.deliveryAddress);
+      let mi = null;
+      if (pt && prev) { mi = DK.miles(prev, pt); total += mi; prev = pt; }
+      return { o, pt, mi, c: S.customers.find((x) => x.id === o.customerId) };
+    });
+    return { rows, total };
+  };
+  const routeMap = (d, legs) => {
+    const pts = [{ p: DK.routeGeo(d.start), n: "S" }, ...legs.rows.map((r, i) => ({ p: r.pt, n: String(i + 1) }))].filter((x) => x.p);
+    if (pts.length < 2) return "";
+    const W = 440, H = 280, pad = 30;
+    const lat = pts.map((x) => x.p.lat), lng = pts.map((x) => x.p.lng);
+    const [a, b, c, e] = [Math.min(...lat), Math.max(...lat), Math.min(...lng), Math.max(...lng)];
+    const X = (v) => pad + ((v - c) / (e - c || 1)) * (W - pad * 2), Y = (v) => H - pad - ((v - a) / (b - a || 1)) * (H - pad * 2);
+    return `<svg class="route-map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Sketch of the route: the shop, then each stop in order"><rect x="0" y="0" width="${W}" height="${H}" rx="14" class="rm-bg"/>
+      <polyline class="rm-line" points="${pts.map((x) => X(x.p.lng) + "," + Y(x.p.lat)).join(" ")}"/>
+      ${pts.map((x, i) => `<g transform="translate(${X(x.p.lng)} ${Y(x.p.lat)})">${i === 0 ? `<rect x="-11" y="-11" width="22" height="22" rx="5" class="rm-shop"/>` : `<circle r="11" class="rm-stop"/>`}<text y="4" text-anchor="middle">${x.n}</text></g>`).join("")}</svg>`;
+  };
+  PAGES.routing = () => {
+    const d = routeDay(), legs = routeLegs(d), canE = can("orders_manager", "warehouse");
+    const off = d.elig.filter((o) => !d.ids.includes(o.id));
+    const withAddr = legs.rows.filter((r) => r.o.deliveryAddress);
+    const links = withAddr.length ? DK.mapsLinks(d.start, withAddr.map((r) => r.o.deliveryAddress)) : [];
+    const mins = Math.round((legs.total / 30) * 60);
+    const stopRow = (r, i) => `<li class="route-stop"><span class="rn">${i + 1}</span>
+      <div class="rs-main"><b>${link("so", r.o.id, esc(r.o.number))}</b> · ${esc(r.c?.name || "")} ${badge(r.o.status)}<div class="small ${r.o.deliveryAddress ? "" : "bad"}">${esc(r.o.deliveryAddress || "No delivery address on this order")}</div></div>
+      <span class="rs-mi small faint">${r.mi === null ? "" : (r.mi < 10 ? r.mi.toFixed(1) : Math.round(r.mi)) + " mi"}</span>
+      ${canE ? `<span class="rs-btns"><button type="button" class="btn btn-s" data-act="routeMove" data-id="${r.o.id}" data-v="-1" aria-label="Move ${esc(r.o.number)} earlier" ${i === 0 ? "disabled" : ""}>↑</button><button type="button" class="btn btn-s" data-act="routeMove" data-id="${r.o.id}" data-v="1" aria-label="Move ${esc(r.o.number)} later" ${i === legs.rows.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="btn btn-s" data-act="routeOff" data-id="${r.o.id}" aria-label="Take ${esc(r.o.number)} off the route">Remove</button></span>` : ""}</li>`;
+    return `${head("Routing", "Pick the day's completed orders, set the stop order and print the route sheet", `<button type="button" class="btn" data-act="printNow">Print route sheet</button>`)}
+      <div class="banner banner-demo"><span>Demo: map positions and distances are made up from the address text so you can try the screen. The real app uses Google to find each address, and Maps opens with real roads and drive times.</span></div>
+      <section class="section" data-testid="routing"><form class="row" data-form="routeDate"><label class="f"><span>Delivery day</span><input type="date" name="date" value="${esc(d.date)}" required></label><button class="btn">Show</button>
+        <span class="small faint">${d.elig.length} completed ${d.elig.length === 1 ? "order" : "orders"} ship this day</span></form>
+        <form class="row" data-form="routeMeta" style="margin-top:10px"><label class="f grow"><span>Start from (shop delivery address)</span><input name="start" value="${esc(d.start)}" ${canE ? "" : "disabled"} required></label><label class="f"><span>Driver</span><input name="driver" value="${esc(d.driver)}" placeholder="Name" ${canE ? "" : "disabled"}></label>${canE ? `<button class="btn">Save</button>` : ""}</form></section>
+      ${!d.elig.length ? empty("No completed orders ship on this day. Try another date (the sample data has orders on most days in October).") : `
+      <div class="route-grid">
+        <section class="section"><div class="section-head"><h2>Stops, in order</h2><div class="actions">${canE ? `<button type="button" class="btn" data-act="routeSort" ${legs.rows.length < 2 ? "disabled" : ""}>Closest to farthest</button>` : ""}</div></div>
+          ${legs.rows.length ? `<p class="small faint" style="margin:0 0 8px">Starts at the shop, ends at the last stop (no trip back).</p><ol class="route-list">${legs.rows.map(stopRow).join("")}</ol>
+          <p class="route-total" data-testid="route-total"><b>${legs.rows.length}</b> ${legs.rows.length === 1 ? "stop" : "stops"} · <b>${legs.total.toFixed(1)} mi</b> · about ${mins < 60 ? mins + " min" : Math.floor(mins / 60) + " h " + (mins % 60) + " min"} driving <span class="faint small">(straight-line estimate)</span></p>
+          <div class="actions">${links.map((l) => `<a class="btn btn-p" href="${esc(l.href)}" target="_blank" rel="noopener">Open in Google Maps${links.length > 1 ? " · " + esc(l.label) : ""}</a>`).join("")}</div>` : `<p class="small faint">No stops yet. Add orders from the list.</p>`}
+          ${off.length ? `<h3 style="margin:16px 0 6px;font-size:14px">Not on this route</h3><ul class="route-list">${off.map((o) => `<li class="route-stop"><div class="rs-main"><b>${link("so", o.id, esc(o.number))}</b> · ${esc(S.customers.find((x) => x.id === o.customerId)?.name || "")}<div class="small">${esc(o.deliveryAddress || "No delivery address")}</div></div>${canE ? `<button type="button" class="btn btn-s" data-act="routeOn" data-id="${o.id}">Add</button>` : ""}</li>`).join("")}</ul>` : ""}
+        </section>
+        <section class="section"><div class="section-head"><h2>Route sketch</h2></div>${routeMap(d, legs) || `<p class="small faint">Add at least one stop with an address to see the sketch.</p>`}</section>
+      </div>`}`;
+  };
+  Object.assign(ACTS, {
+    routeMove: (el) => { const d = routeDay(), ids = d.ids.slice(), i = ids.indexOf(el.dataset.id), j = i + Number(el.dataset.v); if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; routeSave(d, ids); },
+    routeOff: (el) => { const d = routeDay(); routeSave(d, d.ids.filter((x) => x !== el.dataset.id)); },
+    routeOn: (el) => { const d = routeDay(); routeSave(d, [...d.ids, el.dataset.id]); },
+    routeSort: () => {
+      const d = routeDay(), legs = routeLegs(d), from = DK.routeGeo(d.start);
+      const dist = (r) => (r.pt && from ? DK.miles(from, r.pt) : null);
+      const withD = legs.rows.map((r, i) => ({ r, i, k: dist(r) }));
+      withD.sort((a, b) => (a.k === null) - (b.k === null) || (a.k ?? 0) - (b.k ?? 0) || a.i - b.i);
+      routeSave(d, withD.map((x) => x.r.o.id));
+    },
+  });
+  Object.assign(FORMS, {
+    routeDate: (o) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date || "")) return; ui.route = { date: o.date }; render(); },
+    routeMeta: (o) => { const d = routeDay(); routeSave(d, d.ids, { start: o.start, driver: o.driver }); },
+  });
+
 
 
   function afterRender() {
