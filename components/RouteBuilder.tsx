@@ -4,9 +4,10 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { closestFirst, fmtMiles, geoKey, mapsLinks, miles, type LatLng } from "@/lib/routing";
 import { saveGeocodes, saveRoute, scanRouteOrder } from "@/app/(app)/routing/actions";
+import type { PrintConfig } from "@/lib/printConfig";
 import { ScanInput } from "@/components/ScanInput";
 
-export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null; route?: string | null; boxes?: number | null };
+export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null; route?: string | null; boxes?: number | null; phone?: string | null };
 type Shop = { id: string; name: string; address: string };
 
 declare global {
@@ -37,6 +38,7 @@ export function RouteBuilder(props: {
   mapsKey: string | null;
   canEdit: boolean;
   routeCode?: string;
+  print?: PrintConfig;
 }) {
   const { date, shop, mapsKey, canEdit } = props;
   const [extra, setExtra] = useState<RouteOrder[]>([]);
@@ -251,6 +253,11 @@ export function RouteBuilder(props: {
                 {mode === "optimized" && " · closest to farthest"}
               </div>
             </header>
+            {props.print && (props.print.header.address || props.print.header.phone) && (
+              <p className="mb-1 text-xs text-stone-600">
+                {props.print.header.name} {props.print.header.address.replace(/\s*\n\s*/g, ", ")} {props.print.header.phone}
+              </p>
+            )}
             {shop.address && <p className="mb-3 text-sm">Start: {shop.address}</p>}
             <ol className="divide-y divide-stone-200">
               {stops.map((id, i) => {
@@ -265,10 +272,13 @@ export function RouteBuilder(props: {
                         {o.ships && o.ships !== date && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">ships {o.ships}</span>}
                       </div>
                       <div className="text-sm">{o.address || <span className="text-amber-700">No delivery address</span>}</div>
+                      {(props.print?.route.showPhone ?? true) && o.phone && <div className="text-xs text-stone-600">{o.phone}</div>}
                     </div>
-                    <span className="text-xs font-semibold tabular-nums" data-testid="stop-boxes">
-                      {o.boxes != null ? `${o.boxes} box${o.boxes === 1 ? "" : "es"}` : "boxes ?"}
-                    </span>
+                    {(props.print?.route.showBoxes ?? true) && (
+                      <span className="text-xs font-semibold tabular-nums" data-testid="stop-boxes">
+                        {o.boxes != null ? `${o.boxes} box${o.boxes === 1 ? "" : "es"}` : "boxes ?"}
+                      </span>
+                    )}
                     {d !== null && <span className="text-xs text-stone-500 tabular-nums">{fmtMiles(d)} from shop</span>}
                     <span className="mt-1 inline-block h-4 w-4 border-[1.5px] border-stone-900 print:inline-block" aria-label="Delivered" />
                     {canEdit && (
@@ -291,10 +301,12 @@ export function RouteBuilder(props: {
             </ol>
             {stops.length > 0 && (
               <p className="mt-3 border-t-2 border-stone-900 pt-2 text-sm font-semibold" data-testid="route-boxes">
-                {stops.length} stop{stops.length === 1 ? "" : "s"} · {stops.reduce((n, id) => n + (byId.get(id)?.boxes ?? 0), 0)} boxes expected
-                {stops.some((id) => byId.get(id)?.boxes == null) ? " (some orders have no label count yet)" : ""}
+                {stops.length} stop{stops.length === 1 ? "" : "s"}
+                {(props.print?.route.showBoxes ?? true) && ` · ${stops.reduce((n, id) => n + (byId.get(id)?.boxes ?? 0), 0)} boxes expected`}
+                {(props.print?.route.showBoxes ?? true) && stops.some((id) => byId.get(id)?.boxes == null) ? " (some orders have no label count yet)" : ""}
               </p>
             )}
+            {props.print?.header.footer && <p className="mt-3 text-xs text-stone-600">{props.print.header.footer}</p>}
           </section>
 
           {missing > 0 && <p className="text-xs text-amber-700 print:hidden">{missing} stop(s) have no delivery address. Add one on the order or customer.</p>}

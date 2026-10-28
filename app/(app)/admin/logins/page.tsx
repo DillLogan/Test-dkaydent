@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { date } from "@/lib/format";
-import { createLogin, remove, resetPassword, setUp, verify } from "./actions";
+import { createLogin, decideReset, remove, resetPassword, setUp, verify } from "./actions";
 import { usernameOf } from "@/lib/username";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Empty, ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
@@ -10,10 +10,11 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function LoginsPage({ searchParams }: { searchParams: SP }) {
   const { error, message } = await searchParams;
   const { supabase, user } = await requireRole("sales");
-  const [{ data: accounts }, { data: waiting }, { data: customers }] = await Promise.all([
+  const [{ data: accounts }, { data: waiting }, { data: customers }, { data: resets }] = await Promise.all([
     supabase.from("portal_accounts").select("*, customers(name)").order("set_up_at", { ascending: false }),
     supabase.from("profiles").select("id, email, full_name, created_at").eq("active", false).neq("role", "customer").order("created_at"),
     supabase.from("customers").select("id, name").eq("active", true).order("name"),
+    supabase.from("password_requests").select("id, requested_at, profiles!password_requests_profile_id_fkey(full_name, email), customers(name)").eq("status", "pending").order("requested_at"),
   ]);
   const ids = (accounts ?? []).flatMap((a) => [a.profile_id, a.set_up_by, a.verified_by]).filter(Boolean);
   const { data: people } = ids.length ? await supabase.from("profiles").select("id, email, full_name").in("id", ids) : { data: [] };
@@ -32,6 +33,26 @@ export default async function LoginsPage({ searchParams }: { searchParams: SP })
       />
       <ErrorBanner error={error} />
       <Notice message={message} />
+
+      {(resets ?? []).length > 0 && (
+        <Section title="Password reset requests">
+          <div className="space-y-2" data-testid="reset-requests">
+            {(resets ?? []).map((r: any) => (
+              <form key={r.id} action={decideReset} className="card flex flex-wrap items-center gap-3">
+                <input type="hidden" name="id" value={r.id} />
+                <div className="min-w-48 flex-1">
+                  <div className="font-medium">
+                    {r.profiles?.full_name || usernameOf(r.profiles?.email)} <span className="text-stone-500">for</span> {r.customers?.name}
+                  </div>
+                  <div className="text-xs text-stone-500">Asked {date(r.requested_at)}. After you approve, they choose a new password on the sign-in page.</div>
+                </div>
+                <button className="btn btn-primary" name="approve" value="1">Approve</button>
+                <button className="btn" name="approve" value="0">Deny</button>
+              </form>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Create a customer login">
         <form action={createLogin} className="card grid gap-3 sm:grid-cols-6" data-testid="create-login">

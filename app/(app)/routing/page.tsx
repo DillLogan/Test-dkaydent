@@ -4,6 +4,7 @@ import { can } from "@/lib/roles";
 import { geoKey } from "@/lib/routing";
 import { today } from "@/lib/format";
 import { ErrorBanner, PageHeader } from "@/components/ui";
+import { loadPrintConfig } from "@/lib/printConfig";
 import { RouteBuilder, type RouteOrder } from "@/components/RouteBuilder";
 
 type SP = Promise<Record<string, string | undefined>>;
@@ -28,7 +29,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
     const [{ data: rows }, { data: sheet }] = await Promise.all([
       supabase
         .from("sales_orders")
-        .select("id, so_number, status, delivery_address, must_check, ship_date, label_count, customers(name, route_code)")
+        .select("id, so_number, status, delivery_address, must_check, ship_date, label_count, customers(name, route_code, phone)")
         .eq("ship_date", date)
         .eq("layout_id", shop.id)
         .in("status", ["completed", "invoiced"])
@@ -43,6 +44,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
       status: o.status,
       route: o.customers?.route_code ?? null,
       boxes: o.label_count ?? null,
+      phone: o.customers?.phone ?? null,
     }));
     for (const o of all) routeCounts[o.route ?? "—"] = (routeCounts[o.route ?? "—"] ?? 0) + 1;
     orders = route ? all.filter((o) => o.route === route) : all;
@@ -52,11 +54,11 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
     if (extraIds.length) {
       const { data: more } = await supabase
         .from("sales_orders")
-        .select("id, so_number, status, delivery_address, ship_date, label_count, customers(name, route_code)")
+        .select("id, so_number, status, delivery_address, ship_date, label_count, customers(name, route_code, phone)")
         .in("id", extraIds)
         .in("status", ["completed", "invoiced"]);
       for (const o of (more ?? []) as any[])
-        orders.push({ id: o.id, number: o.so_number, customer: o.customers?.name ?? "", address: o.delivery_address ?? "", status: o.status, ships: o.ship_date, route: o.customers?.route_code ?? null, boxes: o.label_count ?? null });
+        orders.push({ id: o.id, number: o.so_number, customer: o.customers?.name ?? "", address: o.delivery_address ?? "", status: o.status, ships: o.ship_date, route: o.customers?.route_code ?? null, boxes: o.label_count ?? null, phone: o.customers?.phone ?? null });
     }
     const keys = [...new Set([...orders.map((o) => geoKey(o.address)), geoKey(shop.address)].filter(Boolean))];
     if (keys.length) {
@@ -109,6 +111,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
           coords={coords}
           mapsKey={settings?.google_maps_key ?? null}
           canEdit={can(profile, "orders_manager", "warehouse")}
+          print={await loadPrintConfig(supabase)}
         />
       )}
     </>

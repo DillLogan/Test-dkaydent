@@ -61,6 +61,7 @@ export async function Nav({ profile }: { profile: Profile }) {
   }
   let unread = 0;
   let waiting = 0;
+  let resetWaiting = 0;
   try {
     const supabase = await createClient();
     const { data } = await supabase.rpc("chat_unread");
@@ -69,6 +70,8 @@ export async function Nav({ profile }: { profile: Profile }) {
       // customer orders waiting on this person, as their assigned rep
       const { data: mine } = await supabase.from("sales_orders").select("id, customers!inner(rep_id)").eq("source", "portal").eq("status", "draft").eq("customers.rep_id", profile.id);
       waiting = mine?.length ?? 0;
+      const { data: resets } = await supabase.rpc("pending_reset_count");
+      resetWaiting = Number(resets ?? 0);
     }
   } catch {
     /* the badge is optional */
@@ -95,7 +98,7 @@ export async function Nav({ profile }: { profile: Profile }) {
       };
   return (
     <NavShell
-      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l)) }))}
+      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l.href === "/admin/logins" && resetWaiting ? { ...l, label: `Customer logins (${resetWaiting})` } : l)) }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}

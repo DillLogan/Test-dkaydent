@@ -55,6 +55,13 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
           </SubmitButton>
         </form>
 
+        {!isSignup && (
+          <p className="mt-5 text-center text-sm text-stone-500">
+            <a href="/login/forgot" className="link">
+              Forgot password?
+            </a>
+          </p>
+        )}
         {isSignup && (
           <p className="mt-5 text-center text-sm text-stone-500">
             <a href="/login" className="link">

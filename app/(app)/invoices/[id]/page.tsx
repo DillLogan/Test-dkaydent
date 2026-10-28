@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { Barcode } from "@/components/Barcode";
+import { loadPrintConfig } from "@/lib/printConfig";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -36,6 +37,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
     .order("created_at");
   const { data: paidRows } = await supabase.from("payments").select("amount").eq("so_id", inv.so_id).eq("status", "completed");
   const paid = (paidRows ?? []).reduce((t, p) => t + Number(p.amount), 0);
+  const pc = await loadPrintConfig(supabase);
   const canEdit = can(profile, "sales", "orders_manager");
   const so = inv.sales_orders as unknown as { delivery_address: string | null; shop_layouts: { name: string; address: string | null } | null } | null;
   const overdue = inv.status === "open" && inv.due_at < today();
@@ -74,7 +76,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
       <ErrorBanner error={error} />
       <Notice message={message} />
 
-      {["Customer copy", "Office copy"].map((copyLabel, ci) => (
+      {[pc.invoice.customerTitle, pc.invoice.officeTitle].map((copyLabel, ci) => (
       <article
         key={copyLabel}
         data-copy={copyLabel}
@@ -83,8 +85,9 @@ export default async function InvoicePage({ params, searchParams }: Props) {
         <div className="mb-2 hidden text-right text-xs font-semibold tracking-wider text-[#57534e] uppercase print:block">{copyLabel}</div>
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="font-display text-xl text-brand-700">DKaydent</div>
-            <div className="text-xl font-semibold">Wholesale</div>
+            <div className="font-display text-xl text-brand-700">{pc.header.name}</div>
+            {pc.header.address && <div className="whitespace-pre-line text-sm">{pc.header.address}</div>}
+            {pc.header.phone && <div className="text-sm">{pc.header.phone}</div>}
           </div>
           <div className="text-right">
             <div className="text-2xl font-semibold">Invoice</div>
@@ -102,7 +105,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
             {c?.contact_name && <div>{c.contact_name}</div>}
             {c?.address && <div className="whitespace-pre-line text-sm">{c.address}</div>}
             {c?.email && <div className="text-sm">{c.email}</div>}
-            {c?.resale_certificate && <div className="mt-1 text-xs text-stone-500">Resale cert #{c.resale_certificate}</div>}
+            {pc.invoice.showResale && c?.resale_certificate && <div className="mt-1 text-xs text-stone-500">Resale cert #{c.resale_certificate}</div>}
           </div>
           <div>
             <div className="label">Deliver to</div>
@@ -153,7 +156,7 @@ export default async function InvoicePage({ params, searchParams }: Props) {
               <tr key={l.id}>
                 <td>
                   {l.products?.name}
-                  <div className="text-xs text-stone-500 tabular-nums">{l.products?.sku}</div>
+                  {pc.invoice.showSku && <div className="text-xs text-stone-500 tabular-nums">{l.products?.sku}</div>}
                 </td>
                 <td className="num">
                   {qty(l.qty)} {l.product_units?.name}
@@ -192,12 +195,17 @@ export default async function InvoicePage({ params, searchParams }: Props) {
           )}
         </div>
 
-        {inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
+        {pc.invoice.showNotes && inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
+        {pc.invoice.terms && <p className="mt-6 whitespace-pre-line text-xs text-stone-600" data-testid="invoice-terms">{pc.invoice.terms}</p>}
+        {pc.invoice.note && <p className="mt-3 whitespace-pre-line text-sm" data-testid="invoice-note">{pc.invoice.note}</p>}
 
-        <div className="mt-8 ml-auto w-56 break-inside-avoid" data-testid="invoice-barcode">
-          <Barcode value={inv.invoice_number} className="h-12 w-full" />
-          <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
-        </div>
+        {pc.invoice.showBarcode && (
+          <div className="mt-8 ml-auto w-56 break-inside-avoid" data-testid="invoice-barcode">
+            <Barcode value={inv.invoice_number} className="h-12 w-full" />
+            <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
+          </div>
+        )}
+        {pc.header.footer && <p className="mt-6 whitespace-pre-line text-center text-xs text-stone-600">{pc.header.footer}</p>}
       </article>
       ))}
 

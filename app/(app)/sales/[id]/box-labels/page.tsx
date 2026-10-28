@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { barcodeSvg } from "@/components/Barcode";
 import { LabelPrintView, type PrintLabel } from "@/components/LabelPrintView";
+import { loadPrintConfig } from "@/lib/printConfig";
 import { Empty, PageHeader } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }> };
@@ -17,12 +18,13 @@ export default async function BoxLabelsPage({ params }: Props) {
     .maybeSingle();
   if (!so) notFound();
   const c = so.customers as unknown as { name: string; address: string | null; route_code: string | null } | null;
+  const pc = await loadPrintConfig(supabase);
   const n = so.label_count ?? 0;
-  const addr = (so.delivery_address || c?.address || "").replace(/\s*\n\s*/g, ", ");
+  const addr = pc.labels.showAddress ? (so.delivery_address || c?.address || "").replace(/\s*\n\s*/g, ", ") : "";
   const svg = barcodeSvg(so.so_number);
   const labels: PrintLabel[] = Array.from({ length: n }, (_, i) => {
     const box = `Box ${i + 1} of ${n}`;
-    const route = c?.route_code ? ` · ${c.route_code}` : "";
+    const route = pc.labels.showRoute && c?.route_code ? ` · ${c.route_code}` : "";
     return {
       key: `${so.id}-${i + 1}`,
       code: so.so_number,

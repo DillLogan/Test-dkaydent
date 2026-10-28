@@ -106,9 +106,9 @@ export function LabelPrintView({ labels, initialCopies, hideCopies }: { labels: 
         </div>
         <p className="text-xs text-stone-500" data-testid="print-summary">
           {s.mode === "label"
-            ? `Label printer: ${all.length} page${all.length === 1 ? "" : "s"} of ${s.w} × ${s.h} in, no margins. In the print dialog choose your label printer and the same label size.`
+            ? `Label printer: ${all.length} page${all.length === 1 ? "" : "s"} of ${s.w} × ${s.h} in, no margins. In the print dialog choose ${s.labelPrinter ? `“${s.labelPrinter}”` : "your label printer"} and the same label size.`
             : fitsPaper
-              ? `Regular printer: ${perRow * perCol} labels per ${s.paper === "a4" ? "A4" : "letter"} page (${perRow} across × ${perCol} down), cut along the dashed lines. ${Math.ceil(all.length / (perRow * perCol))} page${Math.ceil(all.length / (perRow * perCol)) === 1 ? "" : "s"}.`
+              ? `Regular printer: ${perRow * perCol} labels per ${s.paper === "a4" ? "A4" : "letter"} page (${perRow} across × ${perCol} down), cut along the dashed lines.${s.regularPrinter ? ` In the print dialog choose “${s.regularPrinter}”.` : ""} ${Math.ceil(all.length / (perRow * perCol))} page${Math.ceil(all.length / (perRow * perCol)) === 1 ? "" : "s"}.`
               : `A ${s.w} × ${s.h} in label doesn't fit on ${s.paper === "a4" ? "A4" : "letter"} paper. Choose a smaller size.`}{" "}
           Changes here apply to this print only; set defaults in Settings → Printing.
         </p>
