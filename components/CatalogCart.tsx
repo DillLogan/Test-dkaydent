@@ -10,6 +10,7 @@ export function CatalogCart({
   customerId,
   tierId,
   tierName,
+  payment,
   checkoutAction,
   priceAction,
 }: {
@@ -17,6 +18,7 @@ export function CatalogCart({
   customerId: string;
   tierId: string | null;
   tierName: string | null;
+  payment: { usual: string | null; cashPct: number };
   checkoutAction: (fd: FormData) => void | Promise<void>;
   priceAction: (fd: FormData) => void | Promise<void>;
 }) {
@@ -26,6 +28,7 @@ export function CatalogCart({
       action={checkoutAction}
       hidden={{ customer_id: customerId }}
       submitLabel="Create draft order"
+      payment={payment}
       extra={(i) => {
         const it = i as StaffItem;
         return (

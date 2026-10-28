@@ -10,10 +10,10 @@ export type Profile = {
 
 export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "admin", label: "Admin", description: "Everything, including user management" },
-  { value: "buyer", label: "Buyer", description: "Products, vendors, purchase orders, receiving" },
+  { value: "buyer", label: "Staff", description: "Products, vendors, purchase orders, receiving" },
   { value: "warehouse", label: "Warehouse", description: "Locations, receiving, transfers, shrink, counts, fulfillment" },
   { value: "sales", label: "Sales", description: "Customers, pricing, sales orders, invoices" },
-  { value: "orders_manager", label: "Orders manager", description: "Checks pulled orders, marks them completed, invoices, builds delivery routes" },
+  { value: "orders_manager", label: "Delivery/Order Management", description: "Checks pulled orders, marks them completed, invoices, builds delivery routes" },
 ];
 
 /** Customer logins are set up on the Customer logins page, so they are not in the staff role list above. */

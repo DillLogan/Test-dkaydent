@@ -634,7 +634,7 @@ export default async function SOPage({ params, searchParams }: Props) {
 
       {so.status === "fulfilled" && (
         <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm text-amber-900">
-          Pulled. Waiting for the orders manager to check it and mark it completed before it can be invoiced.
+          Pulled. Waiting for Delivery/Order Management to check it and mark it completed before it can be invoiced.
         </div>
       )}
 
@@ -747,7 +747,7 @@ const STEPS: { key: string; label: string; who: string }[] = [
   { key: "draft", label: "Draft", who: "Sales rep" },
   { key: "confirmed", label: "Ready to pull", who: "Pick ticket printed" },
   { key: "fulfilled", label: "Pulled", who: "Ticket turned in" },
-  { key: "completed", label: "Completed", who: "Orders manager" },
+  { key: "completed", label: "Completed", who: "Delivery/Order Management" },
   { key: "invoiced", label: "Invoiced", who: "Invoice printed" },
 ];
 

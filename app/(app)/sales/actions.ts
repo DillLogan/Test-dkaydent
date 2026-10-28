@@ -107,7 +107,7 @@ export async function fulfillSO(id: string) {
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   revalidatePath("/inventory");
-  redirect(`${path}?message=${encodeURIComponent("Marked pulled (oldest lots first). The orders manager can now complete it.")}`);
+  redirect(`${path}?message=${encodeURIComponent("Marked pulled (oldest lots first). Delivery/Order Management can now complete it.")}`);
 }
 
 /** Orders manager: the pull ticket is back, the order is checked and done. */
@@ -168,7 +168,7 @@ export async function fulfillSOPicked(id: string, fd: FormData) {
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   revalidatePath("/inventory");
-  redirect(`${path}?message=${encodeURIComponent("Marked pulled from the lots you picked. The orders manager can now complete it.")}`);
+  redirect(`${path}?message=${encodeURIComponent("Marked pulled from the lots you picked. Delivery/Order Management can now complete it.")}`);
 }
 
 export async function createReturn(id: string, lineIds: string[], fd: FormData) {

@@ -16,7 +16,7 @@ export async function saveRoute(input: {
   driver: string | null;
 }): Promise<Result> {
   const { supabase, profile } = await getSession();
-  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only the orders manager or warehouse can change routes." };
+  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { ok: false, error: "Pick a day." };
   const stops = [...new Set(input.stops)].slice(0, 200);
   const { error } = await supabase.from("route_sheets").upsert(
@@ -54,7 +54,7 @@ export type ScannedStop = { id: string; number: string; customer: string; addres
 /** Turn a scanned invoice or order number into a route stop. */
 export async function scanRouteOrder(raw: string): Promise<{ ok: true; order: ScannedStop } | { ok: false; error: string }> {
   const { supabase, profile } = await getSession();
-  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only the orders manager or warehouse can change routes." };
+  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
   const code = raw.trim().toUpperCase().slice(0, 40);
   if (!code) return { ok: false, error: "Scan an invoice or order barcode." };
   let soId: string | null = null;

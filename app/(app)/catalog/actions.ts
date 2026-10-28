@@ -38,7 +38,7 @@ export async function catalogCheckout(fd: FormData) {
   } catch {
     fail(path, "The cart could not be read.");
   }
-  const { data, error } = await supabase.rpc("catalog_checkout", { p_customer_id: customer, p_lines: lines, p_notes: String(fd.get("notes") ?? "") });
+  const { data, error } = await supabase.rpc("catalog_checkout", { p_customer_id: customer, p_lines: lines, p_notes: String(fd.get("notes") ?? ""), p_payment: String(fd.get("payment") ?? "") || null });
   if (error) fail(path, dbMessage(error));
   revalidatePath("/sales");
   redirect(`/sales/${data}?message=${encodeURIComponent("Draft order created from the cart.")}`);
