@@ -284,6 +284,7 @@ export const ARTICLES: Article[] = [
   ] },
   { id: "appearance", category: "Settings", title: "Appearance and printing settings", body: [
     "Settings → Appearance sets the colour palette and light, dark or follow-my-device. It is saved on that device.",
+    "Font: pick any of 12 open-source typefaces for yourself, including OpenDyslexic (made to help people with dyslexia), Lexend and Atkinson Hyperlegible (both made for easier reading). Choose Palette default to go back. Each person's choice is saved on their own device.",
     "Invoices, labels and pull tickets always print in black and white whatever palette is chosen.",
     "Printing settings (label or regular printer) are saved per computer.",
   ] },
