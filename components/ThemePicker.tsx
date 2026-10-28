@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PALETTE_KEY, PALETTES, THEME_KEY, type PaletteId, type ThemeChoice } from "@/lib/theme";
+import { FONT_KEY, FONTS, PALETTE_KEY, PALETTES, THEME_KEY, type PaletteId, type ThemeChoice } from "@/lib/theme";
 
 const MODES: { value: ThemeChoice; label: string; help: string }[] = [
   { value: "light", label: "Light", help: "Always light" },
@@ -39,6 +39,7 @@ function Radio({ on }: { on: boolean }) {
 export function ThemePicker() {
   const [mode, setMode] = useState<ThemeChoice | null>(null);
   const [palette, setPalette] = useState<PaletteId | null>(null);
+  const [font, setFont] = useState<string | null>(null);
 
   useEffect(() => {
     let m: string | null = null;
@@ -46,7 +47,10 @@ export function ThemePicker() {
     try {
       m = localStorage.getItem(THEME_KEY);
       p = localStorage.getItem(PALETTE_KEY);
-    } catch {}
+      setFont(FONTS.some((x) => x.id === localStorage.getItem(FONT_KEY)) ? localStorage.getItem(FONT_KEY) : "");
+    } catch {
+      setFont("");
+    }
     setMode(m === "light" || m === "dark" ? m : "system");
     setPalette(PALETTES.some((x) => x.id === p) ? (p as PaletteId) : "fern");
   }, []);
@@ -127,6 +131,44 @@ export function ThemePicker() {
                 <span>
                   <span className="block text-sm font-medium">{o.label}</span>
                   <span className="block text-xs text-stone-500">{o.help}</span>
+                </span>
+                <Radio on={on} />
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="label">Font</legend>
+        <p className="mb-3 text-sm text-stone-500">Pick the typeface that is easiest for you to read. This is saved on this device for you only.</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="font-picker">
+          {[{ id: "", name: "Palette default", family: "", help: "The font that comes with your colours" }, ...FONTS].map((f) => {
+            const on = (font ?? "") === f.id;
+            return (
+              <label
+                key={f.id || "default"}
+                className={`lift card flex cursor-pointer items-center justify-between gap-3 p-4 ${on ? "border-brand-500 ring-2 ring-brand-500/40" : "hover:border-stone-300"}`}
+              >
+                <input
+                  type="radio"
+                  name="font"
+                  value={f.id}
+                  checked={on}
+                  onChange={() => {
+                    setFont(f.id);
+                    save(FONT_KEY, f.id, "");
+                  }}
+                  className="sr-only"
+                />
+                <span className="min-w-0">
+                  <span className="block text-base" style={f.family ? { fontFamily: f.family } : undefined}>
+                    {f.name}
+                  </span>
+                  <span className="block truncate text-sm text-stone-600" style={f.family ? { fontFamily: f.family } : undefined}>
+                    Pack 12 stems, Aa 0123
+                  </span>
+                  <span className="block text-xs text-stone-500">{f.help}</span>
                 </span>
                 <Radio on={on} />
               </label>
