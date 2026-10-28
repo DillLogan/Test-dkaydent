@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { PageHeader } from "@/components/ui";
 import { MustCheck } from "@/components/MustCheck";
 import { Barcode } from "@/components/Barcode";
+import { loadPrintConfig } from "@/lib/printConfig";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -62,6 +63,7 @@ export default async function PullTicketPage({ params }: Props) {
   );
   const showShop = (layouts?.length ?? 0) > 1;
   const customer = (so.customers as unknown as { name: string } | null)?.name;
+  const pc = await loadPrintConfig(supabase);
   const done = so.status !== "draft" && so.status !== "confirmed";
 
   return (
@@ -81,10 +83,11 @@ export default async function PullTicketPage({ params }: Props) {
       <article className="mx-auto max-w-[8.5in] rounded-lg border border-[#d6d3d1] bg-[#ffffff] p-8 text-[#111111] shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none" data-testid="pull-ticket">
         <header className="mb-5 flex items-start justify-between gap-6 border-b-2 border-[#111111] pb-3">
           <div>
-            <div className="text-xs font-semibold tracking-wider text-[#57534e] uppercase">Pull ticket</div>
+            <div className="text-xs font-semibold tracking-wider text-[#57534e] uppercase">{pc.header.name} · Pull ticket</div>
+            {(pc.header.address || pc.header.phone) && <div className="text-xs text-[#57534e]">{[pc.header.address.replace(/\s*\n\s*/g, ", "), pc.header.phone].filter(Boolean).join(" · ")}</div>}
             <h1 className="text-2xl font-bold">{so.so_number}</h1>
             <div className="text-sm">{customer}</div>
-            <Barcode value={so.so_number} className="mt-2 h-9 w-44" />
+            {pc.pull.showBarcode && <Barcode value={so.so_number} className="mt-2 h-9 w-44" />}
           </div>
           <dl className="ml-auto grid grid-cols-[auto_auto] gap-x-3 text-right text-sm">
             <dt className="text-[#57534e]">Ships</dt>
@@ -96,7 +99,7 @@ export default async function PullTicketPage({ params }: Props) {
           </dl>
           {so.must_check && <MustCheck />}
         </header>
-        {so.notes && <p className="mb-4 text-sm text-[#44403c]">Note: {so.notes}</p>}
+        {pc.pull.showNotes && so.notes && <p className="mb-4 text-sm text-[#44403c]">Note: {so.notes}</p>}
 
         {!lines?.length && <p className="text-sm text-[#57534e]">This order has no lines yet.</p>}
 
@@ -106,7 +109,7 @@ export default async function PullTicketPage({ params }: Props) {
             {shop.sections.map((sec) => (
               <div key={sec.name} className="mb-4 break-inside-avoid" data-section={sec.name}>
                 <h3 className="mb-1 bg-[#f5f5f4] px-2 py-1 text-sm font-bold tracking-wide uppercase print:bg-[#eeeeee]">{sec.name}</h3>
-                <TicketTable rows={sec.rows} />
+                <TicketTable rows={sec.rows} pc={pc.pull} />
               </div>
             ))}
           </section>
@@ -115,14 +118,16 @@ export default async function PullTicketPage({ params }: Props) {
         {ticket.short.length > 0 && (
           <section className="mb-4 break-inside-avoid" data-section="Not in stock">
             <h3 className="mb-1 bg-[#fef3c7] px-2 py-1 text-sm font-bold tracking-wide uppercase">Not in stock</h3>
-            <TicketTable rows={ticket.short} short />
+            <TicketTable rows={ticket.short} short pc={pc.pull} />
           </section>
         )}
 
-        <div className="mt-6 flex items-end gap-3 text-sm" data-testid="ticket-labels">
-          <span className="font-semibold">Box labels printed:</span>
-          <span className="inline-block min-w-16 border-b border-[#111111] text-center">{so.label_count ?? ""}</span>
-        </div>
+        {pc.pull.showLabelLine && (
+          <div className="mt-6 flex items-end gap-3 text-sm" data-testid="ticket-labels">
+            <span className="font-semibold">Box labels printed:</span>
+            <span className="inline-block min-w-16 border-b border-[#111111] text-center">{so.label_count ?? ""}</span>
+          </div>
+        )}
         <footer className="mt-6 grid break-inside-avoid grid-cols-2 gap-10 text-sm" data-testid="ticket-signatures">
           {["Pulled by", "Packed by"].map((t) => (
             <div key={t}>
@@ -131,12 +136,13 @@ export default async function PullTicketPage({ params }: Props) {
             </div>
           ))}
         </footer>
+        {pc.header.footer && <p className="mt-4 whitespace-pre-line text-center text-xs text-[#57534e]">{pc.header.footer}</p>}
       </article>
     </>
   );
 }
 
-function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>["short"]; short?: boolean }) {
+function TicketTable({ rows, short, pc }: { rows: ReturnType<typeof buildPullTicket>["short"]; short?: boolean; pc: { showSku: boolean; showLot: boolean } }) {
   return (
     <table className="w-full table-fixed border-collapse text-sm">
       <colgroup>
@@ -151,7 +157,7 @@ function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>
         <tr className="border-b border-[#a8a29e] text-left text-xs text-[#57534e]">
           <th className="w-8 py-1" aria-label="Pulled" />
           <th className="py-1">Item</th>
-          <th className="py-1">{short ? "" : "Lot"}</th>
+          <th className="py-1">{short || !pc.showLot ? "" : "Lot"}</th>
           <th className="py-1 text-right">{short ? "Short by" : "Pull"}</th>
           <th className="py-1 pl-3">Pulled</th>
           <th className="py-1 pl-3">Packed</th>
@@ -165,11 +171,11 @@ function TicketTable({ rows, short }: { rows: ReturnType<typeof buildPullTicket>
             </td>
             <td className="py-1.5">
               <div className="font-medium">{r.name}</div>
-              <div className="font-mono text-xs text-[#57534e]">{r.sku}</div>
+              {pc.showSku && <div className="font-mono text-xs text-[#57534e]">{r.sku}</div>}
             </td>
             <td className="py-1.5 font-mono text-xs">
-              {short ? "" : r.lotCode ?? "—"}
-              {r.expiresAt && <div className="font-sans text-[#57534e]">exp {date(r.expiresAt)}</div>}
+              {short || !pc.showLot ? "" : r.lotCode ?? "—"}
+              {pc.showLot && r.expiresAt && <div className="font-sans text-[#57534e]">exp {date(r.expiresAt)}</div>}
             </td>
             <td className="py-1.5 text-right font-semibold whitespace-nowrap tabular-nums">{ticketQty(r)}</td>
             <td className="py-1.5 pl-3 align-bottom">

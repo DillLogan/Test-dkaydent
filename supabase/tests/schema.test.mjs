@@ -765,4 +765,35 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Number((await one(`select label_count from sales_orders where id=$1`, [wso])).label_count) === 3, "label count saved");
 }
 
+// ---- password reset requests and printouts config ----
+{
+  await as(admin);
+  const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
+  const rid = (await one(`insert into password_requests (profile_id) values ($1) returning id`, [cu])).id;
+  ok(Number((await one(`select pending_reset_count() n`)).n) >= 1, "pending reset request is counted for admin");
+  await as(cu);
+  await db.exec(`set role authenticated`);
+  await expectErr(`insert into password_requests (profile_id) values ($1)`, [cu], "row-level security", "a customer can't write requests directly");
+  await expectErr(`select decide_password_request($1,true)`, [rid], "Only sales", "a customer can't approve their own reset");
+  ok((await q(`select 1 from password_requests`)).length === 0, "a customer can't read requests");
+  ok((await q(`select 1 from print_config`)).length === 0, "customer can't read printouts config");
+  await db.exec(`reset role`);
+  await as(admin);
+  await q(`select decide_password_request($1,true)`, [rid]);
+  ok((await one(`select status from password_requests where id=$1`, [rid])).status === "approved", "request approved");
+  await expectErr(`select decide_password_request($1,false)`, [rid], "no longer pending", "can't decide twice");
+  // printouts config
+  ok((await q(`select 1 from print_config`)).length === 1, "printouts config row exists");
+  await q(`update print_config set config='{"header":{"name":"Test Co"}}' where id=1`);
+  ok((await one(`select config->'header'->>'name' n from print_config`)).n === "Test Co", "admin saves printouts config");
+  await expectErr(`insert into print_config (id) values (2)`, [], "", "only one config row");
+  await q(`update profiles set active=true where id=$1`, [sales]);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  const upd = await db.query(`update print_config set config='{}' where id=1 returning id`);
+  ok(upd.rows.length === 0, "sales can't change printouts config");
+  ok((await q(`select 1 from print_config`)).length === 1, "sales can read printouts config");
+  await db.exec(`reset role`);
+}
+
 console.log(`\n${pass} checks passed`);

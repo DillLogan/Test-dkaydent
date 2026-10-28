@@ -72,3 +72,7 @@ export async function resetPassword(fd: FormData) {
   if (error) fail(PATH, error.message);
   redirect(`${PATH}?message=${encodeURIComponent("New password saved.")}`);
 }
+
+export async function decideReset(fd: FormData) {
+  await run("decide_password_request", { p_id: str(fd, "id"), p_approve: fd.get("approve") === "1" ? "true" : "false" } as never, "Decision saved.");
+}

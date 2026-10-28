@@ -104,6 +104,17 @@ export function PrintSettingsForm() {
           ))}
         </select>
       </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="label">Label printer name</span>
+          <input className="input" value={s.labelPrinter} maxLength={80} placeholder="e.g. Zebra ZD410" onChange={(e) => update({ ...s, labelPrinter: e.target.value })} />
+        </label>
+        <label className="block">
+          <span className="label">Regular printer name</span>
+          <input className="input" value={s.regularPrinter} maxLength={80} placeholder="e.g. Office HP" onChange={(e) => update({ ...s, regularPrinter: e.target.value })} />
+        </label>
+        <p className="text-xs text-stone-500 sm:col-span-2">Browsers can&apos;t list your printers, so type the names as they appear in the print dialog. Box labels remind staff to pick the label printer; every other printout reminds them to pick the regular printer.</p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <a href="/labels?test=1" className="btn">
           Print a test label
