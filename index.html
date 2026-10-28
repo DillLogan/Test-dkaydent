@@ -687,6 +687,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--b
 .help-fig { margin: 12px 0 0; } .help-fig figcaption { margin-top: 4px; }
 .tabs[aria-label="Category"] { flex-wrap: wrap; max-width: 100%; height: auto; }
 
+.help-list { transition: opacity .16s ease; }
+.help-list.kb-out { opacity: 0; }
+.help-list.kb-in { animation: kbIn .32s ease both; }
+@keyframes kbIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+.tabs[aria-label="Category"] button[aria-pressed="true"] { background: var(--brand); color: var(--surface); border-color: var(--brand); }
+.help-art[open] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft, rgba(47,107,63,.18)); }
+
 </style>
 
 </head>
@@ -5572,7 +5579,14 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
     });
     const c = document.querySelector("[data-kbcount]"); if (c) c.textContent = n + (n === 1 ? " article" : " articles");
   }
-  ACTS.kbCat = (el) => { document.querySelectorAll("[data-act=kbCat]").forEach((b) => b.setAttribute("aria-pressed", String(b === el))); kbFilter(); };
+  ACTS.kbCat = (el) => {
+    if (el.getAttribute("aria-pressed") === "true") return;
+    document.querySelectorAll("[data-act=kbCat]").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+    const list = document.querySelector(".help-list");
+    if (!list || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return kbFilter();
+    list.classList.remove("kb-in"); list.classList.add("kb-out");
+    setTimeout(() => { kbFilter(); list.classList.remove("kb-out"); void list.offsetWidth; list.classList.add("kb-in"); setTimeout(() => list.classList.remove("kb-in"), 360); }, 170);
+  };
   app.addEventListener("input", (ev) => { if (ev.target.matches && ev.target.matches("[data-kbsearch]")) kbFilter(); });
 
 
