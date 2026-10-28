@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FONT_KEY, FONTS, PALETTE_KEY, PALETTES, THEME_KEY, type PaletteId, type ThemeChoice } from "@/lib/theme";
+import { CUSTOM_KEY, CUSTOM_SEED_KEY, FONT_KEY, FONTS, PALETTE_KEY, PALETTES, THEME_KEY, type PaletteId, type ThemeChoice } from "@/lib/theme";
+import { buildTheme, isHex, suggestSeeds, swatches } from "@/lib/themeGen";
 
 const MODES: { value: ThemeChoice; label: string; help: string }[] = [
   { value: "light", label: "Light", help: "Always light" },
@@ -36,6 +37,161 @@ function Radio({ on }: { on: boolean }) {
   );
 }
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/** Read a photo in the browser and suggest theme colours from it. The photo is never uploaded or saved. */
+async function coloursFromFile(file: File): Promise<string[]> {
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw new Error("Choose a JPG, PNG, WebP or GIF picture.");
+  if (file.size > MAX_IMAGE_BYTES) throw new Error("That picture is over 10 MB. Choose a smaller one.");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    await new Promise<void>((ok, bad) => {
+      img.onload = () => ok();
+      img.onerror = () => bad(new Error("That picture could not be opened."));
+      img.src = url;
+    });
+    const size = 64;
+    const scale = Math.min(1, size / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("This browser can't read pictures.");
+    ctx.drawImage(img, 0, 0, w, h);
+    const found = suggestSeeds(ctx.getImageData(0, 0, w, h).data);
+    if (!found.length) throw new Error("No strong colours found in that picture. Try another, or pick a colour yourself.");
+    return found;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) {
+  const [accent, setAccent] = useState("#255e38");
+  const [hex, setHex] = useState("#255e38");
+  const [hi, setHi] = useState(false);
+  const [picks, setPicks] = useState<string[]>([]);
+  const [msg, setMsg] = useState("");
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CUSTOM_SEED_KEY) || "null");
+      if (raw && isHex(raw.accent)) {
+        setAccent(raw.accent);
+        setHex(raw.accent);
+        setHi(!!raw.contrast);
+      }
+    } catch {}
+  }, []);
+
+  const theme = buildTheme({ accent, contrast: hi });
+  const sw = swatches(theme);
+
+  function choose(v: string) {
+    setAccent(v);
+    setHex(v);
+  }
+  function saveIt() {
+    try {
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(theme));
+      localStorage.setItem(CUSTOM_SEED_KEY, JSON.stringify({ accent, contrast: hi }));
+    } catch {
+      setMsg("This browser wouldn't save the theme (private mode?). It will last until you close the tab.");
+    }
+    onUse();
+    setMsg("Custom theme saved on this device.");
+  }
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setMsg("");
+    try {
+      const found = await coloursFromFile(f);
+      setPicks(found);
+      choose(found[0]);
+    } catch (err) {
+      setPicks([]);
+      setMsg(err instanceof Error ? err.message : "That picture could not be used.");
+    }
+  }
+
+  return (
+    <div className="card space-y-4 p-4" data-testid="custom-theme">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-medium">Make your own</div>
+          <div className="text-xs text-stone-500">Pick one colour (or take it from a photo). The rest is worked out, with text kept easy to read.</div>
+        </div>
+        <button type="button" className="btn" onClick={() => setOpen(!open)} aria-expanded={open}>
+          {open ? "Close" : active ? "Edit custom theme" : "Create custom theme"}
+        </button>
+      </div>
+      {open && (
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="block">
+                <span className="label">Main colour</span>
+                <input type="color" value={accent} onChange={(e) => choose(e.target.value)} className="h-10 w-16 cursor-pointer rounded border border-stone-300 bg-transparent p-0.5" aria-label="Main colour" />
+              </label>
+              <label className="block">
+                <span className="label">Hex code</span>
+                <input
+                  className="input w-32 font-mono"
+                  value={hex}
+                  maxLength={7}
+                  spellCheck={false}
+                  onChange={(e) => {
+                    const v = e.target.value.startsWith("#") ? e.target.value : "#" + e.target.value;
+                    setHex(v);
+                    if (isHex(v)) setAccent(v.toLowerCase());
+                  }}
+                  aria-label="Hex code"
+                />
+              </label>
+              <label className="block">
+                <span className="label">From a photo</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onFile} className="block text-sm" aria-label="Choose a photo to take colours from" />
+              </label>
+            </div>
+            {picks.length > 0 && (
+              <div>
+                <div className="label">Colours found in your photo</div>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Colours from your photo">
+                  {picks.map((c) => (
+                    <button key={c} type="button" onClick={() => choose(c)} className={`h-10 w-10 rounded-full border-2 ${c === accent ? "border-stone-900" : "border-stone-200"}`} style={{ background: c }} aria-label={`Use ${c}`} aria-pressed={c === accent} />
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-stone-500">The photo is read in your browser and is not uploaded or kept.</p>
+              </div>
+            )}
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={hi} onChange={(e) => setHi(e.target.checked)} className="h-4 w-4" />
+              High contrast (stronger borders, extra-dark text)
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="btn btn-primary" onClick={saveIt} data-testid="use-custom">
+                Use this theme
+              </button>
+              <span className="text-sm text-brand-700" aria-live="polite">{msg}</span>
+            </div>
+          </div>
+          <div className="flex h-24 overflow-hidden rounded-xl border border-stone-200 self-start" aria-hidden="true" data-testid="custom-preview">
+            <Mini bg={sw.light[0]} surface={sw.light[1]} text={sw.light[2]} accent={sw.light[3]} />
+            <Mini bg={sw.dark[0]} surface={sw.dark[0]} text={sw.light[0]} accent={sw.dark[1]} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ThemePicker() {
   const [mode, setMode] = useState<ThemeChoice | null>(null);
   const [palette, setPalette] = useState<PaletteId | null>(null);
@@ -52,7 +208,7 @@ export function ThemePicker() {
       setFont("");
     }
     setMode(m === "light" || m === "dark" ? m : "system");
-    setPalette(PALETTES.some((x) => x.id === p) ? (p as PaletteId) : "fern");
+    setPalette(PALETTES.some((x) => x.id === p) || p === "custom" ? (p as PaletteId) : "fern");
   }, []);
 
   function save(key: string, value: string, fallback: string) {
@@ -105,6 +261,27 @@ export function ThemePicker() {
             );
           })}
         </div>
+        <div className="mt-3">
+          <CustomTheme
+            active={palette === "custom"}
+            onUse={() => {
+              setPalette("custom");
+              save(PALETTE_KEY, "custom", "fern");
+            }}
+          />
+        </div>
+        {palette === "custom" && (
+          <button
+            type="button"
+            className="btn mt-3"
+            onClick={() => {
+              setPalette("fern");
+              save(PALETTE_KEY, "fern", "fern");
+            }}
+          >
+            Go back to the default colours
+          </button>
+        )}
       </fieldset>
 
       <fieldset>

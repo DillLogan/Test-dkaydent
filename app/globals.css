@@ -508,3 +508,245 @@ html.theme-anim *::after {
 .kb-in { animation: kb-in 0.32s ease both; }
 @keyframes kb-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .kb-in { animation: none; } }
+
+/* ---------- Generated palettes ----------
+   Dahlia, Marigold, Sage, Ocean, Copper and High contrast are made by lib/themeGen.ts, the same
+   generator that builds a person's custom theme, so every text colour meets its contrast target. */
+[data-palette="dahlia"] { --app-sans: var(--ff-figtree); --app-display: var(--ff-newsreader); --display-weight: 500; }
+[data-palette="marigold"] { --app-sans: var(--ff-nunito-sans); --app-display: var(--ff-gloock); --display-weight: 400; }
+[data-palette="sage"] { --app-sans: var(--ff-outfit); --app-display: var(--ff-instrument-serif); --display-weight: 400; }
+[data-palette="ocean"] { --app-sans: var(--ff-figtree); --app-display: var(--ff-instrument-serif); --display-weight: 400; }
+[data-palette="copper"] { --app-sans: var(--ff-outfit); --app-display: var(--ff-newsreader); --display-weight: 500; }
+[data-palette="contrast"] { --app-sans: var(--ff-figtree); --app-display: var(--ff-figtree); --display-weight: 600; }
+[data-palette="custom"] { --app-sans: var(--ff-figtree); --app-display: var(--ff-newsreader); --display-weight: 500; }
+
+@media screen {
+  :root[data-palette="dahlia"] {
+    --color-white: #fffefe;
+    --color-stone-50: #f5f1f4;
+    --color-stone-100: #ede8eb;
+    --color-stone-200: #e0dbde;
+    --color-stone-300: #ccc7cb;
+    --color-stone-400: #a29da0;
+    --color-stone-500: #706b6e;
+    --color-stone-600: #555154;
+    --color-stone-700: #403c3e;
+    --color-stone-800: #2e2a2d;
+    --color-stone-900: #1d191c;
+    --color-brand-50: #ffeef6;
+    --color-brand-100: #fedbec;
+    --color-brand-700: #8b3869;
+    --color-brand-800: #6c214e;
+    --color-brand-600: #a24c7d;
+    --color-brand-500: #c06798;
+  }
+  :root[data-theme="dark"][data-palette="dahlia"] {
+    --color-white: #1e1a1d;
+    --color-stone-50: #120e11;
+    --color-stone-100: #252124;
+    --color-stone-200: #332f32;
+    --color-stone-300: #444042;
+    --color-stone-400: #6f6a6d;
+    --color-stone-500: #a8a3a6;
+    --color-stone-600: #c4bfc2;
+    --color-stone-700: #d8d2d6;
+    --color-stone-800: #e7e3e5;
+    --color-stone-900: #f2edf0;
+    --color-brand-50: #361b2a;
+    --color-brand-100: #4b263a;
+    --color-brand-700: #f295c7;
+    --color-brand-600: #fea9d6;
+    --color-brand-800: #ffc3e1;
+    --color-brand-500: #ca70a1;
+  }
+  :root[data-palette="marigold"] {
+    --color-white: #fffefc;
+    --color-stone-50: #f5f2ec;
+    --color-stone-100: #edeae1;
+    --color-stone-200: #e0dcd4;
+    --color-stone-300: #ccc9c0;
+    --color-stone-400: #a19e96;
+    --color-stone-500: #706d65;
+    --color-stone-600: #55524b;
+    --color-stone-700: #403d36;
+    --color-stone-800: #2e2b25;
+    --color-stone-900: #1d1a14;
+    --color-brand-50: #fff1e5;
+    --color-brand-100: #fee0c7;
+    --color-brand-700: #824c0d;
+    --color-brand-800: #623600;
+    --color-brand-600: #9d5d11;
+    --color-brand-500: #bd7629;
+  }
+  :root[data-theme="dark"][data-palette="marigold"] {
+    --color-white: #1e1b15;
+    --color-stone-50: #120f09;
+    --color-stone-100: #25231c;
+    --color-stone-200: #333029;
+    --color-stone-300: #44413a;
+    --color-stone-400: #6f6b64;
+    --color-stone-500: #a8a49c;
+    --color-stone-600: #c4c1b8;
+    --color-stone-700: #d7d4cb;
+    --color-stone-800: #e6e4df;
+    --color-stone-900: #f2eee5;
+    --color-brand-50: #35200a;
+    --color-brand-100: #4a2c0c;
+    --color-brand-700: #efa55c;
+    --color-brand-600: #fbb777;
+    --color-brand-800: #ffcd9f;
+    --color-brand-500: #c77f34;
+  }
+  :root[data-palette="sage"] {
+    --color-white: #fdfefd;
+    --color-stone-50: #f1f3f0;
+    --color-stone-100: #e7ebe6;
+    --color-stone-200: #daded9;
+    --color-stone-300: #c6cac5;
+    --color-stone-400: #9ca09b;
+    --color-stone-500: #6b6e6a;
+    --color-stone-600: #505450;
+    --color-stone-700: #3b3e3a;
+    --color-stone-800: #292c29;
+    --color-stone-900: #191b18;
+    --color-brand-50: #fff0eb;
+    --color-brand-100: #fddfd4;
+    --color-brand-700: #923d1f;
+    --color-brand-800: #722608;
+    --color-brand-600: #a95234;
+    --color-brand-500: #c76d4e;
+  }
+  :root[data-theme="dark"][data-palette="sage"] {
+    --color-white: #1a1d19;
+    --color-stone-50: #0e100d;
+    --color-stone-100: #212420;
+    --color-stone-200: #2e312e;
+    --color-stone-300: #3f423e;
+    --color-stone-400: #6a6d69;
+    --color-stone-500: #a2a6a1;
+    --color-stone-600: #bec2bd;
+    --color-stone-700: #d2d5d1;
+    --color-stone-800: #e3e5e2;
+    --color-stone-900: #ecf0eb;
+    --color-brand-50: #381d14;
+    --color-brand-100: #4e281b;
+    --color-brand-700: #fa9b7b;
+    --color-brand-600: #feb299;
+    --color-brand-800: #fecab8;
+    --color-brand-500: #d17657;
+  }
+  :root[data-palette="ocean"] {
+    --color-white: #fdfeff;
+    --color-stone-50: #eff3f6;
+    --color-stone-100: #e5ebee;
+    --color-stone-200: #d8dee1;
+    --color-stone-300: #c4cacd;
+    --color-stone-400: #9a9fa2;
+    --color-stone-500: #686e71;
+    --color-stone-600: #4e5356;
+    --color-stone-700: #393e41;
+    --color-stone-800: #272c2f;
+    --color-stone-900: #171b1e;
+    --color-brand-50: #e5f7fe;
+    --color-brand-100: #ceecf8;
+    --color-brand-700: #02657e;
+    --color-brand-800: #044a5d;
+    --color-brand-600: #1a7a96;
+    --color-brand-500: #3d95b2;
+  }
+  :root[data-theme="dark"][data-palette="ocean"] {
+    --color-white: #181d1f;
+    --color-stone-50: #0c1012;
+    --color-stone-100: #1f2426;
+    --color-stone-200: #2c3134;
+    --color-stone-300: #3d4245;
+    --color-stone-400: #676d70;
+    --color-stone-500: #a0a6a9;
+    --color-stone-600: #bcc2c5;
+    --color-stone-700: #cfd5d9;
+    --color-stone-800: #e1e5e7;
+    --color-stone-900: #e9f0f3;
+    --color-brand-50: #102932;
+    --color-brand-100: #143946;
+    --color-brand-700: #6fc5e3;
+    --color-brand-600: #88d4ef;
+    --color-brand-800: #a8e2f7;
+    --color-brand-500: #479fbc;
+  }
+  :root[data-palette="copper"] {
+    --color-white: #fefefe;
+    --color-stone-50: #f2f2f2;
+    --color-stone-100: #eaeaea;
+    --color-stone-200: #dcdcdc;
+    --color-stone-300: #c9c9c9;
+    --color-stone-400: #9e9e9e;
+    --color-stone-500: #6d6d6d;
+    --color-stone-600: #525252;
+    --color-stone-700: #3d3d3d;
+    --color-stone-800: #2b2b2b;
+    --color-stone-900: #1b1b1b;
+    --color-brand-50: #fff0e9;
+    --color-brand-100: #fddfd0;
+    --color-brand-700: #8f410c;
+    --color-brand-800: #6c2d00;
+    --color-brand-600: #a9531e;
+    --color-brand-500: #c76e3c;
+  }
+  :root[data-theme="dark"][data-palette="copper"] {
+    --color-white: #1c1c1c;
+    --color-stone-50: #0f0f0f;
+    --color-stone-100: #232323;
+    --color-stone-200: #303030;
+    --color-stone-300: #414141;
+    --color-stone-400: #6c6c6c;
+    --color-stone-500: #a4a4a4;
+    --color-stone-600: #c1c1c1;
+    --color-stone-700: #d4d4d4;
+    --color-stone-800: #e4e4e4;
+    --color-stone-900: #eeeeee;
+    --color-brand-50: #381d0f;
+    --color-brand-100: #4f2914;
+    --color-brand-700: #fb9c6a;
+    --color-brand-600: #feb38d;
+    --color-brand-800: #fecbb1;
+    --color-brand-500: #d17745;
+  }
+  :root[data-palette="contrast"] {
+    --color-white: #fefefe;
+    --color-stone-50: #f3f3f3;
+    --color-stone-100: #e8e8e8;
+    --color-stone-200: #b7b7b7;
+    --color-stone-300: #929292;
+    --color-stone-400: #717171;
+    --color-stone-500: #525252;
+    --color-stone-600: #3a3a3a;
+    --color-stone-700: #262626;
+    --color-stone-800: #141414;
+    --color-stone-900: #030303;
+    --color-brand-50: #eef4fe;
+    --color-brand-100: #d9e7ff;
+    --color-brand-700: #104196;
+    --color-brand-800: #022a6f;
+    --color-brand-600: #2556ac;
+    --color-brand-500: #3f71ca;
+  }
+  :root[data-theme="dark"][data-palette="contrast"] {
+    --color-white: #1c1c1c;
+    --color-stone-50: #070707;
+    --color-stone-100: #161616;
+    --color-stone-200: #333333;
+    --color-stone-300: #525252;
+    --color-stone-400: #7a7a7a;
+    --color-stone-500: #b7b7b7;
+    --color-stone-600: #d4d4d4;
+    --color-stone-700: #e8e8e8;
+    --color-stone-800: #f2f2f2;
+    --color-stone-900: #fcfcfc;
+    --color-brand-50: #152540;
+    --color-brand-100: #1d335a;
+    --color-brand-700: #aeccfe;
+    --color-brand-600: #c8dcfe;
+    --color-brand-800: #e1ecff;
+    --color-brand-500: #72a4fa;
+  }
+}
