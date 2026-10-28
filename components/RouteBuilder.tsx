@@ -3,9 +3,10 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { closestFirst, fmtMiles, geoKey, mapsLinks, miles, type LatLng } from "@/lib/routing";
-import { saveGeocodes, saveRoute } from "@/app/(app)/routing/actions";
+import { saveGeocodes, saveRoute, scanRouteOrder } from "@/app/(app)/routing/actions";
+import { ScanInput } from "@/components/ScanInput";
 
-export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string };
+export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null };
 type Shop = { id: string; name: string; address: string };
 
 declare global {
@@ -36,12 +37,14 @@ export function RouteBuilder(props: {
   mapsKey: string | null;
   canEdit: boolean;
 }) {
-  const { date, shop, orders, mapsKey, canEdit } = props;
+  const { date, shop, mapsKey, canEdit } = props;
+  const [extra, setExtra] = useState<RouteOrder[]>([]);
+  const orders = useMemo(() => [...props.orders, ...extra.filter((e) => !props.orders.some((o) => o.id === e.id))], [props.orders, extra]);
   const router = useRouter();
   const byId = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders]);
   const [stops, setStops] = useState<string[]>(() => {
     const kept = (props.saved?.stops ?? []).filter((id) => byId.has(id));
-    return props.saved ? kept : orders.map((o) => o.id);
+    return props.saved ? kept : props.orders.map((o) => o.id);
   });
   const [driver, setDriver] = useState(props.saved?.driver ?? "");
   const [coords, setCoords] = useState(props.coords);
@@ -153,6 +156,17 @@ export function RouteBuilder(props: {
     });
   }
 
+  async function onScan(code: string) {
+    const r = await scanRouteOrder(code);
+    if (!r.ok) return setMsg({ ok: false, text: r.error });
+    const o = r.order;
+    if (stops.includes(o.id)) return setMsg({ ok: true, text: `${o.number} (${o.customer}) is already on the route.` });
+    setExtra((x) => (x.some((e) => e.id === o.id) ? x : [...x, { ...o, ships: o.ships && o.ships !== date ? o.ships : null }]));
+    setStops((st) => [...st, o.id]);
+    setMode("manual");
+    setMsg({ ok: true, text: `Added ${o.number} (${o.customer})${o.ships && o.ships !== date ? ` — it ships ${o.ships}, not ${date}` : ""}. Save the route to keep it.` });
+  }
+
   const nav = (next: { date?: string; shop?: string }) =>
     router.push(`/routing?date=${next.date ?? date}&shop=${next.shop ?? shop.id}`);
 
@@ -179,6 +193,12 @@ export function RouteBuilder(props: {
           <span className="label">Driver</span>
           <input className="input" value={driver} onChange={(e) => setDriver(e.target.value)} maxLength={80} disabled={!canEdit} />
         </label>
+        {canEdit && (
+          <div className="block min-w-[16rem] flex-1" data-testid="route-scan">
+            <span className="label">Scan an invoice to add its order</span>
+            <ScanInput onCode={onScan} placeholder="Scan the invoice barcode, then Enter" label="Scan invoice" />
+          </div>
+        )}
         <div className="text-sm text-stone-500">
           Start: {shop.address || <span className="text-amber-700">no address set for {shop.name}</span>}
         </div>
@@ -190,7 +210,7 @@ export function RouteBuilder(props: {
         </div>
       )}
 
-      {!orders.length ? (
+      {!orders.length && !stops.length ? (
         <p className="text-sm text-stone-500">No completed orders ship from {shop.name} on this day. The orders manager completes them on the order page.</p>
       ) : (
         <>
@@ -241,6 +261,7 @@ export function RouteBuilder(props: {
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">
                         {o.customer} <span className="font-mono text-xs text-stone-500">{o.number}</span>
+                        {o.ships && o.ships !== date && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">ships {o.ships}</span>}
                       </div>
                       <div className="text-sm">{o.address || <span className="text-amber-700">No delivery address</span>}</div>
                     </div>

@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, ExpiryText, Notice, PageHeader, Section } from "@/components/ui";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { MiniMap } from "@/components/MiniMap";
+import { VendorReturn } from "@/components/VendorReturn";
 import { imageUrl } from "@/lib/images";
 import { loadPlan } from "@/lib/plan";
 import { removeLotPhoto, uploadLotPhoto } from "../../../photos/actions";
@@ -34,7 +35,7 @@ export default async function LotPage({ params, searchParams }: Props) {
   const [{ data: lot }, { data: movements }, { data: locations }] = await Promise.all([
     supabase
       .from("lots")
-      .select("*, products(id, sku, name, base_unit, kind, image_path, product_homes(layout_id, location_id)), locations(id, name, layout_id), purchase_order_lines(po_id, purchase_orders(po_number))")
+      .select("*, products(id, sku, name, base_unit, kind, image_path, product_homes(layout_id, location_id)), locations(id, name, layout_id), purchase_order_lines(po_id, qty, product_units(name), purchase_orders(po_number, vendors(name, email, contact_name)))")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("stock_movements").select("*, locations(name), profiles(full_name)").eq("lot_id", id).order("created_at"),
@@ -54,6 +55,8 @@ export default async function LotPage({ params, searchParams }: Props) {
     ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000)
     : null;
   const po = lot.purchase_order_lines?.purchase_orders;
+  const vendor = (po as any)?.vendors as { name: string; email: string | null; contact_name: string | null } | null | undefined;
+  const pol = lot.purchase_order_lines as any;
   const plan = await loadPlan(supabase, lot.locations.layout_id);
   const home =
     ((lot.products.product_homes ?? []) as { layout_id: string; location_id: string }[]).find((h) => h.layout_id === plan.layout.id)
@@ -216,6 +219,25 @@ export default async function LotPage({ params, searchParams }: Props) {
           </form>
         </div>
       )}
+
+      <Section title="Return to vendor">
+        <VendorReturn
+          info={{
+            lotCode: lot.lot_code,
+            product: lot.products.name,
+            sku: lot.products.sku,
+            qtyReceived: `${inUnits(Number(lot.qty_received_base), units ?? [], base)} (${qty(lot.qty_received_base)} ${base})`,
+            cost: `${unitMoney(lot.unit_cost_base)} per ${base}`,
+            receivedOn: date(lot.received_at),
+            expiresOn: lot.expires_at ? date(lot.expires_at) : "",
+            po: po?.po_number ?? null,
+            poLine: pol ? `${qty(pol.qty)} ${pol.product_units?.name ?? ""}` : null,
+            vendor: vendor?.name ?? null,
+            vendorEmail: vendor?.email ?? null,
+            contact: vendor?.contact_name ?? null,
+          }}
+        />
+      </Section>
 
       <Section title="History">
         <div className="table-wrap">

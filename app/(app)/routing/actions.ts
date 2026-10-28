@@ -48,3 +48,39 @@ export async function saveGeocodes(rows: { address: string; lat: number; lng: nu
   if (error) return { ok: false, error: dbMessage(error) };
   return { ok: true };
 }
+
+export type ScannedStop = { id: string; number: string; customer: string; address: string; status: string; ships: string | null };
+
+/** Turn a scanned invoice or order number into a route stop. */
+export async function scanRouteOrder(raw: string): Promise<{ ok: true; order: ScannedStop } | { ok: false; error: string }> {
+  const { supabase, profile } = await getSession();
+  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only the orders manager or warehouse can change routes." };
+  const code = raw.trim().toUpperCase().slice(0, 40);
+  if (!code) return { ok: false, error: "Scan an invoice or order barcode." };
+  let soId: string | null = null;
+  const { data: inv } = await supabase.from("invoices").select("so_id").eq("invoice_number", code).maybeSingle();
+  if (inv) soId = inv.so_id;
+  else {
+    const { data: so } = await supabase.from("sales_orders").select("id").eq("so_number", code).maybeSingle();
+    soId = so?.id ?? null;
+  }
+  if (!soId) return { ok: false, error: `“${raw.trim()}” isn't an invoice or order number.` };
+  const { data: o } = await supabase
+    .from("sales_orders")
+    .select("id, so_number, status, delivery_address, ship_date, customers(name)")
+    .eq("id", soId)
+    .maybeSingle();
+  if (!o) return { ok: false, error: "Order not found." };
+  if (o.status !== "completed" && o.status !== "invoiced") return { ok: false, error: `${o.so_number} is ${o.status}; only completed or invoiced orders go on a route.` };
+  return {
+    ok: true,
+    order: {
+      id: o.id,
+      number: o.so_number,
+      customer: (o.customers as unknown as { name: string } | null)?.name ?? "",
+      address: o.delivery_address ?? "",
+      status: o.status,
+      ships: o.ship_date,
+    },
+  };
+}

@@ -206,6 +206,19 @@ export const ARTICLES: Article[] = [
     "A new order copies the delivery address, or the location address if there is no delivery address. You can change it on that one order under Details → Deliver to.",
     "Invoices show both: Bill to · location, and Deliver to. They also show which shop the order ships from (set Ships from on the order if you have more than one shop).",
   ] },
+  { id: "scan-box-return", category: "Stock", title: "Returning a received box to the vendor (scan the box label)", body: [
+    "Every lot you receive gets a label with a barcode (Lot labels on the purchase order, or Labels). Print one label per physical box; they all carry the same lot code.",
+    "To start a return, scan the box label on the Scan page, with a handheld scanner or the Camera button on a phone. The lot page opens.",
+    "Under Return to vendor you will see the vendor and their email, the purchase order, product, quantity received, cost, lot code and received date.",
+    "Tap Email vendor to open a draft addressed to the vendor with all of that filled in. Add the reason and send it from your mail app. Copy details copies the same text.",
+    "If the vendor has no email, add it on the vendor page first. Credits you receive from the vendor are not tracked in the app yet.",
+  ] },
+  { id: "scan-route", category: "Orders", title: "Adding orders to a route by scanning the invoice", body: [
+    "Every invoice prints a barcode of its invoice number at the bottom right.",
+    "On Routing, scan that barcode (scanner or Camera) to add the order to the day's route. Scanning an order number works too.",
+    "Only Completed or Invoiced orders can be added. An order that ships on a different day is added and marked with its ship date.",
+    "Scanning an order that is already on the route just tells you so. Tap Save route to keep the changes.",
+  ] },
   { id: "pull-order", category: "Stock", title: "How stock is chosen when an order is pulled", body: [
     "Mark pulled takes stock from the oldest lots first (by received date), so older flowers go first.",
     "Mark pulled from chosen lots lets you pick exact lots or scan them. The quantities must add up to the line.",
