@@ -8,7 +8,7 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function CatalogPage({ searchParams }: { searchParams: SP }) {
   const { error, message, c } = await searchParams;
   const { supabase } = await requireRole("sales");
-  const { data: customers } = await supabase.from("customers").select("id, name, price_tier_id, discount_pct").eq("active", true).order("name");
+  const { data: customers } = await supabase.from("customers").select("id, name, price_tier_id, discount_pct, cash_discount_pct, default_payment").eq("active", true).order("name");
   const cust = (customers ?? []).find((x) => x.id === c);
   let items: StaffItem[] = [];
   let tierName: string | null = null;
@@ -56,6 +56,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: SP }
           customerId={cust.id}
           tierId={cust.price_tier_id}
           tierName={tierName}
+          payment={{ usual: cust.default_payment, cashPct: Number(cust.cash_discount_pct ?? 0) }}
           checkoutAction={catalogCheckout}
           priceAction={saveItemPrices}
         />

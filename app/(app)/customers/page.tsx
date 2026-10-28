@@ -20,6 +20,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: SP
     supabase.from("price_tiers").select("id, name").order("name"),
   ]);
 
+  const { data: reps } = await supabase.from("profiles").select("id, full_name, email, role").eq("active", true).in("role", ["sales", "admin"]).order("full_name");
+  const repList = (reps ?? []).map((r) => ({ id: r.id, name: r.full_name || r.email || "" }));
+
   return (
     <>
       <PageHeader title="Customers" subtitle="Florists, designers and resellers you sell to">
@@ -82,7 +85,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: SP
       {can(profile, "sales") && (
         <Section title="Add customer">
           <form action={createCustomer} className="card space-y-4">
-            <CustomerFields customer={null} tiers={tiers ?? []} />
+            <CustomerFields customer={null} tiers={tiers ?? []} reps={repList} />
             <SubmitButton>Add customer</SubmitButton>
           </form>
         </Section>

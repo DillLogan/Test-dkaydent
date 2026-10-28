@@ -28,6 +28,7 @@ const GROUPS: NavGroup[] = [
     title: "Selling",
     links: [
       { href: "/counter", label: "Counter sale" },
+      { href: "/sales/open", label: "Open orders" },
       { href: "/sales", label: "Sales orders" },
       { href: "/customers", label: "Customers" },
       { href: "/admin/logins", label: "Customer logins" },
@@ -59,10 +60,16 @@ export async function Nav({ profile }: { profile: Profile }) {
     );
   }
   let unread = 0;
+  let waiting = 0;
   try {
     const supabase = await createClient();
     const { data } = await supabase.rpc("chat_unread");
     unread = (data ?? []).reduce((n: number, r: { unread: number }) => n + Number(r.unread), 0);
+    if (can(profile, "sales")) {
+      // customer orders waiting on this person, as their assigned rep
+      const { data: mine } = await supabase.from("sales_orders").select("id, customers!inner(rep_id)").eq("source", "portal").eq("status", "draft").eq("customers.rep_id", profile.id);
+      waiting = mine?.length ?? 0;
+    }
   } catch {
     /* the badge is optional */
   }
@@ -88,7 +95,7 @@ export async function Nav({ profile }: { profile: Profile }) {
       };
   return (
     <NavShell
-      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l)) }))}
+      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l)) }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}

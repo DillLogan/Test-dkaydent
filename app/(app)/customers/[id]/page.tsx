@@ -63,6 +63,8 @@ export default async function CustomerPage({ params, searchParams }: Props) {
     .select("total, credit_status")
     .eq("customer_id", id);
   if (!customer) notFound();
+  const { data: reps } = await supabase.from("profiles").select("id, full_name, email, role").eq("active", true).in("role", ["sales", "admin"]).order("full_name");
+  const repList = (reps ?? []).map((r) => ({ id: r.id, name: r.full_name || r.email || "" }));
   const canEdit = can(profile, "sales");
 
   const revenue = sum(lines, (l) => l.revenue);
@@ -216,7 +218,7 @@ export default async function CustomerPage({ params, searchParams }: Props) {
       <Section title="Details">
         <form action={updateCustomer.bind(null, id)} className="card space-y-4">
           <fieldset disabled={!canEdit} className="space-y-4">
-            <CustomerFields customer={customer} tiers={tiers ?? []} />
+            <CustomerFields customer={customer} tiers={tiers ?? []} reps={repList} />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

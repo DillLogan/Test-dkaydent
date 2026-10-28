@@ -640,6 +640,15 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await q(`update profiles set active=true where id in ($1,$2)`, [sales, s2]);
   const [custA, custB] = (await q(`select id from customers where name <> 'Walk-in' order by created_at limit 2`)).map((r) => r.id);
   await q(`update customers set discount_pct=10 where id=$1`, [custA]);
+  // incomplete accounts cannot get a login
+  await as(sales);
+  await expectErr(`select portal_set_up($1,$2)`, [cu, custA], "Missing:", "login needs route and sales rep first");
+  await as(admin);
+  await q(`update customers set route_code=' nor ', rep_id=$2, phone='555-0100', address=coalesce(address,'1 Main St'), default_payment='card', cash_discount_pct=5 where id=$1`, [custA, sales]);
+  await q(`update customers set route_code='se', rep_id=$2, phone='555-0101', address=coalesce(address,'2 Main St'), default_payment='check' where id=$1`, [custB, sales]);
+  ok((await one(`select route_code from customers where id=$1`, [custA])).route_code === "NOR", "route code saved in capitals");
+  await expectErr(`update customers set route_code='ABCD' where id=$1`, [custA], "route_code", "route code is at most 3 letters");
+  await expectErr(`update customers set route_code='A1' where id=$1`, [custA], "route_code", "route code is letters only");
   await as(admin);
   await expectErr(`update profiles set role='customer' where id=$1`, [cu], "Customer logins are set up", "role cannot be switched to customer directly");
   await as(sales);
@@ -692,6 +701,21 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Array.isArray(cs.c) && cs.c.length >= 1 && "tier_price" in cs.c[0], "sales catalog lists items with pricing fields");
   await as(cu);
   await expectErr(`select catalog_staff($1)`, [custB], "Only sales", "customer cannot open the sales catalog");
+  // payment type and cash discount: separate from the sales discount
+  const cashSo = (await one(`select portal_checkout($1::jsonb,null,'cash') id`, [JSON.stringify([{ unit_id: item.unit_id, qty: 1 }])])).id;
+  const cashLine = await one(`select l.unit_price, so.payment_type from sales_order_lines l join sales_orders so on so.id=l.so_id where so.id=$1`, [cashSo]);
+  ok(cashLine.payment_type === "cash" && Math.abs(Number(cashLine.unit_price) - Math.round(1.23 * 0.95 * 100) / 100) < 0.005, "cash order takes the cash discount off the price");
+  const defSo = (await one(`select portal_checkout($1::jsonb,null) id`, [JSON.stringify([{ unit_id: item.unit_id, qty: 1 }])])).id;
+  ok((await one(`select payment_type from sales_orders where id=$1`, [defSo])).payment_type === "card", "payment defaults to the customer's setting");
+  await expectErr(`select portal_checkout($1::jsonb,null,'bitcoin')`, [JSON.stringify([{ unit_id: item.unit_id, qty: 1 }])], "cash, card or check", "unknown payment type rejected");
+  const hist = await one(`select portal_orders() o`);
+  ok(hist.o[0].lines.length >= 1 && "payment_type" in hist.o[0], "order history carries items and payment type");
+  await as(sales);
+  await expectErr(`select deny_order($1,'  ')`, [cashSo], "reason", "denying needs a reason");
+  await q(`select deny_order($1,'Out of season')`, [cashSo]);
+  await as(cu);
+  ok((await one(`select portal_orders() o`)).o.some((x) => x.denied_reason === "Out of season" && x.status === "cancelled"), "customer sees the denial reason");
+  await as(sales);
   // staff cart for any customer
   await as(sales);
   const so2 = (await one(`select catalog_checkout($1,$2::jsonb,null) id`, [custB, JSON.stringify([{ unit_id: item.unit_id, qty: 1 }])])).id;

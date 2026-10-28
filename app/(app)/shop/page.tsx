@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth";
-import { date, money } from "@/lib/format";
-import { Cart, type CatalogItem } from "@/components/Cart";
-import { ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
+import { Cart, type CatalogItem, type HistoryOrder } from "@/components/Cart";
+import { ErrorBanner, Notice, PageHeader } from "@/components/ui";
 import { checkout } from "./actions";
 
 type SP = Promise<Record<string, string | undefined>>;
@@ -19,7 +18,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader
         title="Shop"
-        subtitle={ready ? `Ordering for ${(me as any).name}. Orders are sent to us for approval.` : "Your login is waiting to be set up."}
+        subtitle={ready ? `Ordering for ${(me as any).name}${(me as any).rep ? ` · your rep is ${(me as any).rep}` : ""}. Orders are sent to us for approval.` : "Your login is waiting to be set up."}
       />
       <ErrorBanner error={error} />
       <Notice message={message} />
@@ -29,20 +28,13 @@ export default async function ShopPage({ searchParams }: { searchParams: SP }) {
         </div>
       ) : (
         <>
-          <Cart items={(catalog ?? []) as CatalogItem[]} action={checkout} submitLabel="Send order" />
-          <Section title="Your recent orders">
-            <div className="space-y-2">
-              {((orders ?? []) as any[]).length === 0 && <p className="text-sm text-stone-500">No orders yet.</p>}
-              {((orders ?? []) as any[]).map((o) => (
-                <div key={o.so_number} className="card flex justify-between text-sm">
-                  <span>
-                    {date(o.order_date)} · {o.status === "draft" ? "Waiting for approval" : o.status}
-                  </span>
-                  <span className="font-medium">{money(o.total)}</span>
-                </div>
-              ))}
-            </div>
-          </Section>
+          <Cart
+            items={(catalog ?? []) as CatalogItem[]}
+            action={checkout}
+            submitLabel="Send order"
+            payment={{ usual: (me as any).default_payment ?? null, cashPct: Number((me as any).cash_discount_pct ?? 0) }}
+            history={(orders ?? []) as HistoryOrder[]}
+          />
         </>
       )}
     </>

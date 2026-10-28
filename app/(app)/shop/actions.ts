@@ -14,7 +14,7 @@ export async function checkout(fd: FormData) {
     fail("/shop", "The cart could not be read.");
   }
   const notes = String(fd.get("notes") ?? "");
-  const { error } = await supabase.rpc("portal_checkout", { p_lines: lines, p_notes: notes });
+  const { error } = await supabase.rpc("portal_checkout", { p_lines: lines, p_notes: notes, p_payment: String(fd.get("payment") ?? "") || null });
   if (error) fail("/shop", dbMessage(error));
   revalidatePath("/shop");
   redirect(`/shop?message=${encodeURIComponent("Thanks. Your order was sent to us for approval.")}`);
