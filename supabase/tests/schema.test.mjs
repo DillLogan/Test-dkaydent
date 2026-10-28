@@ -736,4 +736,33 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+// ---- order workflow: returned to sales, restock on edit, label count ----
+{
+  await as(admin);
+  const sku = await one(`select u.id unit_id, u.product_id, u.factor from product_units u join products p on p.id=u.product_id
+                          where p.active and product_available_base(p.id) >= u.factor*6 order by u.factor limit 1`);
+  const wc = (await one(`select id from customers where name <> 'Walk-in' order by created_at limit 1`)).id;
+  const wso = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [wc])).id;
+  const wl = (await one(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,4,2) returning id`, [wso, sku.product_id, sku.unit_id])).id;
+  await q(`update sales_orders set status='confirmed' where id=$1`, [wso]);
+  await q(`select fulfill_sales_order($1)`, [wso]);
+  const stock = async () => Number((await one(`select coalesce(sum(qty_on_hand_base),0) q from lots where product_id=$1`, [sku.product_id])).q);
+  const s0 = await stock();
+  await expectErr(`select return_to_sales($1,'  ')`, [wso], "note", "sending back needs a note");
+  await q(`select return_to_sales($1,'Two were short')`, [wso]);
+  ok((await one(`select status from sales_orders where id=$1`, [wso])).status === "returned", "pulled order goes back to sales");
+  await expectErr(`update sales_orders set status='fulfilled' where id=$1`, [wso], "cannot be changed", "status can't be changed by hand once returned");
+  await expectErr(`select adjust_returned_line($1,$2,5)`, [wso, wl], "cannot be more", "quantity can only go down");
+  await q(`select adjust_returned_line($1,$2,2)`, [wso, wl]);
+  ok((await stock()) - s0 === 2 * Number(sku.factor), "the difference went back on the shelf");
+  const ln = await one(`select qty, cost_total from sales_order_lines where id=$1`, [wl]);
+  ok(Number(ln.qty) === 2 && Number(ln.cost_total) > 0, "line shows the new quantity and cost");
+  await q(`select resubmit_returned($1)`, [wso]);
+  ok((await one(`select status from sales_orders where id=$1`, [wso])).status === "fulfilled", "sent on, it is back at the pulled step");
+  await expectErr(`select resubmit_returned($1)`, [wso], "sent back to sales", "can't send on twice");
+  await expectErr(`select set_label_count($1,-1)`, [wso], "0 to 500", "label count must be sensible");
+  await q(`select set_label_count($1,3)`, [wso]);
+  ok(Number((await one(`select label_count from sales_orders where id=$1`, [wso])).label_count) === 3, "label count saved");
+}
+
 console.log(`\n${pass} checks passed`);

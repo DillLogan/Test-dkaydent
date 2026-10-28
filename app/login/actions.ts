@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fail, str } from "@/lib/forms";
+import { loginEmail } from "@/lib/username";
 
 export async function signIn(fd: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: str(fd, "email") ?? "",
+    email: loginEmail(str(fd, "email") ?? ""),
     password: String(fd.get("password") ?? ""),
   });
   if (error) fail("/login", error.message);

@@ -56,6 +56,7 @@ export function Notice({ message }: { message?: string | null }) {
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  returned: "bg-amber-100 text-amber-800",
   draft: "bg-stone-100 text-stone-700",
   ordered: "bg-blue-50 text-blue-700",
   partially_received: "bg-amber-50 text-amber-800",

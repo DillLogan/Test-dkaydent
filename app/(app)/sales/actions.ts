@@ -195,3 +195,52 @@ export async function setCreditStatus(returnId: string, status: "open" | "applie
   revalidatePath("/returns");
   redirect(back);
 }
+
+/** Delivery/Order Management: something is wrong with the pulled order, so it goes back to sales. */
+export async function returnToSales(id: string, fd: FormData) {
+  const { supabase } = await requireRole("orders_manager");
+  const path = `/sales/${id}`;
+  const { error } = await supabase.rpc("return_to_sales", { p_so_id: id, p_note: String(fd.get("note") ?? "") });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  revalidatePath("/sales");
+  redirect(`${path}?message=${encodeURIComponent("Sent back to sales.")}`);
+}
+
+/** Sales: lower quantities on a returned order (the difference goes back on the shelf), then optionally send it on. */
+export async function fixReturned(id: string, fd: FormData) {
+  const { supabase } = await requireRole("sales");
+  const path = `/sales/${id}`;
+  const { data: lines } = await supabase.from("sales_order_lines").select("id, qty").eq("so_id", id);
+  for (const l of lines ?? []) {
+    const raw = fd.get(`qty_${l.id}`);
+    if (raw === null || raw === "") continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) fail(path, "Enter a number for each quantity.");
+    if (n === Number(l.qty)) continue;
+    const { error } = await supabase.rpc("adjust_returned_line", { p_so_id: id, p_line_id: l.id, p_new_qty: n });
+    if (error) fail(path, dbMessage(error));
+  }
+  if (fd.get("intent") === "send") {
+    const { error } = await supabase.rpc("resubmit_returned", { p_so_id: id });
+    if (error) fail(path, dbMessage(error));
+    revalidatePath("/sales");
+    revalidatePath("/inventory");
+    revalidatePath(path);
+    redirect(`${path}?message=${encodeURIComponent("Sent on to Delivery/Order Management.")}`);
+  }
+  revalidatePath(path);
+  revalidatePath("/inventory");
+  redirect(`${path}?message=${encodeURIComponent("Saved. Anything taken off went back on the shelf.")}`);
+}
+
+/** How many box labels, then straight to printing them. */
+export async function setLabelCount(id: string, fd: FormData) {
+  const { supabase } = await requireRole("sales", "warehouse", "orders_manager");
+  const path = `/sales/${id}`;
+  const n = Math.round(Number(fd.get("count")));
+  const { error } = await supabase.rpc("set_label_count", { p_so_id: id, p_count: n });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  redirect(`${path}/box-labels`);
+}
