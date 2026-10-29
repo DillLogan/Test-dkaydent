@@ -191,7 +191,7 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
   const [catalog, { data: images }, { data: lots }, { data: customers }, { data: tiers }, { data: tierPrices }, { data: terminals }] =
     await Promise.all([
       loadCatalog(supabase),
-      supabase.from("products").select("id, image_path").eq("active", true),
+      supabase.from("products").select("id, image_path, category").eq("active", true),
       supabase.from("lots").select("lot_code, product_id").gt("qty_on_hand_base", 0).limit(5000),
       supabase.from("customers").select("id, name, price_tier_id").eq("active", true).neq("name", "Walk-in").order("name"),
       supabase.from("price_tiers").select("id, markup_pct"),
@@ -199,6 +199,8 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
       supabase.from("payment_terminals").select("id, name, model").eq("active", true).order("name"),
     ]);
   const img = new Map((images ?? []).map((i) => [i.id, i.image_path]));
+  const catOf = new Map((images ?? []).map((i) => [i.id, i.category as string | null]));
+  const { data: cardFee } = await supabase.rpc("card_fee_pct");
   const products: CounterProduct[] = catalog
     .filter((p) => p.units.length)
     .map((p) => ({
@@ -207,6 +209,7 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
       name: p.name,
       base_unit: p.base_unit,
       image_path: img.get(p.id) ?? null,
+      category: catOf.get(p.id) ?? null,
       onHand: p.onHand,
       avgCost: p.avgCost,
       units: p.units.map((u) => ({ id: u.id, name: u.name, factor: u.factor })),
@@ -227,6 +230,7 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
         tierPrices={tp}
         terminals={terminals ?? []}
         defaultMarkup={35}
+        cardFee={Number(cardFee ?? 0)}
         action={counterCheckout}
       />
     </>

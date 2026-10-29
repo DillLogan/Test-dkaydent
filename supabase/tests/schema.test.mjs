@@ -25,6 +25,8 @@ for (const f of fs.readdirSync(`${root}/migrations`).filter((f) => f.endsWith(".
 }
 await db.exec(fs.readFileSync(`${root}/seed.sql`, "utf8"));
 ok(true, "migration + seed applied");
+ok(Number((await one(`select card_fee_pct from app_settings`)).card_fee_pct) === 2.5, "card fee starts at 2.5%");
+await q(`update app_settings set card_fee_pct = 0`); // the older checks below predate the card fee; it is tested on its own at the end
 
 const admin = "00000000-0000-0000-0000-000000000001";
 const sales = "00000000-0000-0000-0000-000000000002";
@@ -1034,6 +1036,62 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   lot = await one(`select section_id from lots where po_line_id=$1 and location_id=$2`, [lA, c2]);
   ok(lot.section_id === null, "outside its home location no spot is guessed");
   await q(`select set_home_location($1,$2,null)`, [rP, c1.layout_id]);
+}
+
+// ---- card processing fee ----
+{
+  await as(admin);
+  await q(`update app_settings set card_fee_pct = 2.5`);
+  const m2 = (x) => Math.round(Number(x) * 100) / 100;
+  const c = (await one(`select id from customers where name <> 'Walk-in' limit 1`)).id;
+  const ru = await one(`select u.id, p.id pid from product_units u join products p on p.id=u.product_id where p.sku='RO-FRE-60' and u.name='bunch'`);
+  const mk = async (pay) => {
+    const so = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [c])).id;
+    await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,4,25)`, [so, ru.pid, ru.id]);
+    if (pay) await q(`select set_so_payment($1,$2)`, [so, pay]);
+    await q(`update sales_orders set status='confirmed' where id=$1`, [so]);
+    return so;
+  };
+  const cardSo = await mk("card");
+  ok(m2((await one(`select so_total($1) t`, [cardSo])).t) === 102.5, "card order before invoicing: lines + 2.5% (100 -> 102.50)");
+  await q(`select fulfill_sales_order($1)`, [cardSo]);
+  await q(`select complete_sales_order($1)`, [cardSo]);
+  const inv = await one(`select * from invoices where id = $1`, [(await one(`select create_invoice($1, 7) id`, [cardSo])).id]);
+  ok(m2(inv.tax) === 7 && m2(inv.card_fee) === 2.68 && Number(inv.card_fee_rate) === 2.5 && m2(inv.total) === 109.68, `card invoice: fee on subtotal + tax (100 + 7 + 2.68 = ${inv.total})`);
+  await expectErr(`select set_so_payment($1,'cash')`, [cardSo], "already invoiced", "pay-by fixed once invoiced");
+  const cashSo = await mk("cash");
+  ok(m2((await one(`select so_total($1) t`, [cashSo])).t) === 100, "cash order: no fee");
+  const noneSo = await mk(null);
+  await q(`select fulfill_sales_order($1)`, [noneSo]);
+  await q(`select complete_sales_order($1)`, [noneSo]);
+  ok(m2((await one(`select card_fee from invoices where id = $1`, [(await one(`select create_invoice($1, 0) id`, [noneSo])).id])).card_fee) === 0, "pay-by not set: no fee");
+  await expectErr(`select set_so_payment($1,'bitcoin')`, [cashSo], "cash, card or check", "unknown pay-by refused");
+  // the rate is kept on the invoice
+  await q(`update app_settings set card_fee_pct = 3`);
+  ok(Number((await one(`select card_fee_rate from invoices where so_id=$1`, [cardSo])).card_fee_rate) === 2.5, "changing the rate leaves old invoices alone");
+  await q(`update app_settings set card_fee_pct = 2.5`);
+  // counter sale paid by card by hand
+  const cs = (await one(`select create_counter_sale(null, $1::jsonb) id`, [JSON.stringify([{ product_id: ru.pid, unit_id: ru.id, qty: 2, unit_price: 20 }])])).id;
+  const ci = await one(`select * from invoices where id = $1`, [(await one(`select complete_counter_sale($1, 0, '{"method":"card"}') id`, [cs])).id]);
+  ok(m2(ci.card_fee) === 1 && m2(ci.total) === 41 && ci.status === "paid", "card counter sale: fee added and paid in full (40 + 1)");
+  const cs2 = (await one(`select create_counter_sale(null, $1::jsonb) id`, [JSON.stringify([{ product_id: ru.pid, unit_id: ru.id, qty: 2, unit_price: 20 }])])).id;
+  ok(m2((await one(`select total from invoices where id = $1`, [(await one(`select complete_counter_sale($1, 0, '{"method":"cash"}') id`, [cs2])).id])).total) === 40, "cash counter sale: no fee");
+  // counter sale on a terminal: the charge includes the fee
+  const term = (await one(`select id from payment_terminals limit 1`)).id;
+  await q(`update terminal_requests set status='cancelled' where status='pending'`);
+  const ts = (await one(`select create_counter_sale(null, $1::jsonb) id`, [JSON.stringify([{ product_id: ru.pid, unit_id: ru.id, qty: 1, unit_price: 100 }])])).id;
+  await expectErr(`select create_terminal_request($1,'counter',$2,110,'simulator',false,7)`, [term, ts], "more than the $109.68", "terminal counter charge capped at total + tax + fee");
+  const tr = (await one(`select create_terminal_request($1,'counter',$2,109.68,'simulator',false,7) id`, [term, ts])).id;
+  await q(`select finalize_terminal_request($1, '{"status":"approved","txn_id":"FEE-1"}')`, [tr]);
+  const ti = await one(`select status, total, card_fee from invoices where so_id=$1`, [ts]);
+  ok(ti.status === "paid" && m2(ti.total) === 109.68, "terminal counter sale invoiced with the fee and paid");
+  // customers can read the rate, not the settings row
+  ok(Number((await one(`select card_fee_pct() r`)).r) === 2.5, "rate readable through card_fee_pct()");
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  await q(`update app_settings set card_fee_pct = 9`);
+  await db.exec(`reset role`);
+  ok(Number((await one(`select card_fee_pct from app_settings`)).card_fee_pct) === 2.5, "sales can't change the rate");
 }
 
 console.log(`\n${pass} checks passed`);

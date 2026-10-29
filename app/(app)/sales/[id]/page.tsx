@@ -115,6 +115,10 @@ export default async function SOPage({ params, searchParams }: Props) {
     };
   });
   const subtotal = sum(rows, (r) => r.revenue);
+  const { data: feeRate } = await supabase.rpc("card_fee_pct");
+  const cardFee = Number(feeRate ?? 0);
+  // a card order: the fee on the lines until it is invoiced (the invoice charges it on subtotal + tax)
+  const feeEst = so.payment_type === "card" && cardFee > 0 ? Math.round(Math.round(subtotal * 100) / 100 * cardFee) / 100 : 0;
   const costTotal = sum(rows, (r) => r.cost);
   const anyShort = rows.some((r) => r.short);
 
@@ -474,6 +478,16 @@ export default async function SOPage({ params, searchParams }: Props) {
                   )}
                   {isDraft && canSell && <td />}
                 </tr>
+                {!invoice && feeEst > 0 && (
+                  <tr data-testid="so-card-fee">
+                    <td colSpan={3} className="text-right text-stone-600">
+                      Card processing fee ({cardFee}%){" "}
+                      <span className="text-xs">· on the subtotal now, recalculated with tax on the invoice</span>
+                    </td>
+                    <td className="num">{money(feeEst)}</td>
+                    <td colSpan={(showCost ? 2 : 1) + (isDraft && canSell ? 1 : 0)} />
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>
@@ -737,7 +751,7 @@ export default async function SOPage({ params, searchParams }: Props) {
           <PaymentsPanel
             supabase={supabase}
             soId={id}
-            total={Math.round(subtotal * 100) / 100}
+            total={Math.round((subtotal + feeEst) * 100) / 100}
             purpose="deposit"
             back={`/sales/${id}`}
             canSell={canSell}
@@ -762,7 +776,15 @@ export default async function SOPage({ params, searchParams }: Props) {
                 defaultValue={so.ship_date ?? ""}
               />
             </Field>
-            <Field label="Notes" className="sm:col-span-3">
+            <Field label="Pays by">
+              <select name="payment_type" className="input" defaultValue={so.payment_type ?? ""} data-testid="pays-by">
+                <option value="">Not set</option>
+                <option value="cash">Cash</option>
+                <option value="card">Card{cardFee > 0 ? ` (+${cardFee}% fee)` : ""}</option>
+                <option value="check">Check</option>
+              </select>
+            </Field>
+            <Field label="Notes" className="sm:col-span-2">
               <input
                 name="notes"
                 className="input"

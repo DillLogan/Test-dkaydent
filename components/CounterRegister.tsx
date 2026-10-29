@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScanInput } from "./ScanInput";
 import { SubmitButton } from "./SubmitButton";
 import { ItemThumb } from "./ItemThumb";
@@ -11,6 +11,7 @@ export type CounterProduct = {
   name: string;
   base_unit: string;
   image_path: string | null;
+  category: string | null;
   onHand: number;
   avgCost: number | null;
   units: { id: string; name: string; factor: number }[];
@@ -30,6 +31,7 @@ export function CounterRegister({
   tierPrices,
   terminals,
   defaultMarkup,
+  cardFee,
   action,
 }: {
   products: CounterProduct[];
@@ -39,6 +41,8 @@ export function CounterRegister({
   tierPrices: Record<string, Record<string, number>>; // tier id -> unit id -> price
   terminals: { id: string; name: string; model: string }[];
   defaultMarkup: number;
+  /** card processing fee %, added when paying by card */
+  cardFee: number;
   action: (fd: FormData) => void;
 }) {
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -49,6 +53,7 @@ export function CounterRegister({
   const [tax, setTax] = useState(0);
   const [tendered, setTendered] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  const [browse, setBrowse] = useState(false);
 
   const tierOf = (cid: string) => {
     const c = customers.find((x) => x.id === cid);
@@ -63,10 +68,10 @@ export function CounterRegister({
     return p.avgCost !== null ? round2(p.avgCost * u.factor * (1 + markup / 100)) : 0;
   };
 
-  const add = (p: CounterProduct) => {
+  const add = (p: CounterProduct, unitId?: string) => {
     setNote(null);
     setLines((ls) => {
-      const unit = p.units[0];
+      const unit = p.units.find((u) => u.id === unitId) ?? p.units[0];
       const i = ls.findIndex((l) => l.product_id === p.id && l.unit_id === unit.id);
       if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + 1 } : l));
       return [...ls, { key: `${p.id}-${Date.now()}`, product_id: p.id, unit_id: unit.id, qty: 1, unit_price: priceFor(p, unit.id, customerId), priceEdited: false }];
@@ -92,8 +97,11 @@ export function CounterRegister({
   }, [search, products]);
 
   const subtotal = round2(lines.reduce((t, l) => t + l.qty * l.unit_price, 0));
-  const total = round2(subtotal * (1 + (tax || 0) / 100));
-  const taxAmt = round2(total - subtotal);
+  const taxAmt = round2(subtotal * ((tax || 0) / 100));
+  const total = round2(subtotal + taxAmt);
+  // paying by card adds the processing fee on subtotal + tax (same rounding as the invoice)
+  const feeAmt = round2(total * ((cardFee || 0) / 100));
+  const cardTotal = round2(total + feeAmt);
   const change = tendered ? round2(Number(tendered) - total) : null;
   const shortages = lines.filter((l) => {
     const p = byId.get(l.product_id)!;
@@ -132,12 +140,29 @@ export function CounterRegister({
               </ul>
             )}
           </div>
+          <button type="button" className="btn w-full" onClick={() => setBrowse(true)} data-testid="open-inventory" aria-haspopup="dialog">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Inventory
+          </button>
           {note && <p className="text-sm text-amber-800">{note}</p>}
         </div>
+        <InventoryBrowser
+          open={browse}
+          onClose={() => setBrowse(false)}
+          products={products}
+          lines={lines}
+          priceOf={(p, unitId) => priceFor(p, unitId, customerId)}
+          onAdd={add}
+        />
 
         {lines.length === 0 ? (
           <div className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-500">
-            Scan or search to add items.
+            Scan, search or open Inventory to add items.
           </div>
         ) : (
           <div className="table-wrap">
@@ -253,6 +278,18 @@ export function CounterRegister({
               {money(total)}
             </dd>
           </div>
+          {cardFee > 0 && terminals.length > 0 && (
+            <div className="space-y-0.5 rounded-md bg-stone-50 px-2 py-1.5 text-xs text-stone-600" data-testid="counter-card-fee">
+              <div className="flex justify-between">
+                <dt>Card processing fee ({cardFee}%)</dt>
+                <dd className="tabular-nums">{money(feeAmt)}</dd>
+              </div>
+              <div className="flex justify-between font-medium text-stone-800">
+                <dt>Total by card</dt>
+                <dd className="tabular-nums">{money(cardTotal)}</dd>
+              </div>
+            </div>
+          )}
         </dl>
 
         <fieldset disabled={!ready} className="space-y-3">
@@ -269,7 +306,7 @@ export function CounterRegister({
                 <input type="checkbox" name="tip_entry" /> Ask for a tip
               </label>
               <SubmitButton name="method" value="terminal" className="btn btn-primary w-full" pendingText="Sending to terminal…">
-                Charge {money(total)} on terminal
+                Charge {money(cardTotal)} on terminal
               </SubmitButton>
             </div>
           )}
@@ -307,5 +344,105 @@ export function CounterRegister({
         <p className="text-xs text-stone-500">Stock is taken (oldest lots first) only once the payment goes through.</p>
       </form>
     </div>
+  );
+}
+
+/** Shop the stock without typing: category tabs, item tiles, a button per unit. Stays open so several things can be added. */
+function InventoryBrowser({
+  open,
+  onClose,
+  products,
+  lines,
+  priceOf,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  products: CounterProduct[];
+  lines: Line[];
+  priceOf: (p: CounterProduct, unitId: string) => number;
+  onAdd: (p: CounterProduct, unitId: string) => void;
+}) {
+  const cats = useMemo(() => Array.from(new Set(products.map((p) => p.category || "Other"))).sort((a, b) => a.localeCompare(b)), [products]);
+  const [cat, setCat] = useState<string>("");
+  const tab = cat && cats.includes(cat) ? cat : cats[0] ?? "";
+  const shown = products.filter((p) => (p.category || "Other") === tab).sort((a, b) => Number(b.onHand > 0) - Number(a.onHand > 0) || a.name.localeCompare(b.name));
+  const inSale = (p: CounterProduct) => lines.filter((l) => l.product_id === p.id).reduce((t, l) => t + l.qty * (p.units.find((u) => u.id === l.unit_id)?.factor ?? 1), 0);
+  const count = lines.reduce((t, l) => t + (l.qty > 0 ? 1 : 0), 0);
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [open, onClose]);
+  return (
+    <>
+      <div className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} onClick={onClose} aria-hidden="true" />
+      <aside
+        role="dialog"
+        aria-label="Inventory"
+        aria-hidden={!open}
+        inert={!open}
+        data-testid="inventory-browser"
+        className={`fixed top-0 right-0 bottom-0 z-50 flex w-[min(760px,100vw)] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-stone-200 px-4 py-3">
+          <span className="font-semibold">Inventory</span>
+          <span className="flex-1 text-sm text-stone-500">{count ? `${count} line${count === 1 ? "" : "s"} in this sale` : "Tap a unit to add it to the sale"}</span>
+          <button type="button" className="btn btn-primary btn-sm" onClick={onClose} data-testid="inventory-done">
+            Done
+          </button>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto border-b border-stone-200 px-4 py-2" role="tablist" aria-label="Categories">
+          {cats.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="tab"
+              aria-selected={c === tab}
+              onClick={() => setCat(c)}
+              className={`shrink-0 rounded-full border px-3 py-1 text-sm whitespace-nowrap ${c === tab ? "border-brand-700 bg-brand-700 text-white" : "border-stone-200 bg-white hover:bg-stone-50"}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 overflow-y-auto p-4" role="tabpanel">
+          {shown.map((p) => {
+            const out = p.onHand <= 0;
+            const have = inSale(p);
+            const left = p.onHand - have;
+            return (
+              <div key={p.id} className={`card space-y-2 p-3 ${out ? "opacity-50" : ""}`} data-inv-item={p.id} aria-disabled={out}>
+                <div className="flex items-start gap-2">
+                  <ItemThumb name={p.name} path={p.image_path} size={44} />
+                  <div className="min-w-0">
+                    <div className="text-sm leading-tight font-medium">{p.name}</div>
+                    <div className={`text-xs ${out ? "text-red-700" : "text-stone-500"}`}>
+                      {out ? "Out of stock" : `${left} ${p.base_unit} left${have ? ` · ${have} in sale` : ""}`}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {p.units.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={out || u.factor > left}
+                      onClick={() => onAdd(p, u.id)}
+                      data-testid="inv-add"
+                      aria-label={`Add 1 ${u.name} of ${p.name}`}
+                    >
+                      + {u.name} <span className="tabular-nums text-stone-500">{money(priceOf(p, u.id))}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </aside>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { can } from "@/lib/roles";
 import { PrintSettingsForm } from "@/components/PrintSettingsForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
-import { changePassword } from "./actions";
+import { changePassword, setCardFee } from "./actions";
 import { createClient } from "@/lib/supabase/server";
 import { HINT_MAX } from "@/lib/passwordHint";
 
@@ -13,6 +13,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { profile } = await getSession();
   const isCustomer = profile.role === "customer";
   let hint = "";
+  let cardFee = 0;
+  if (profile.role === "admin") {
+    const supabase = await createClient();
+    const { data } = await supabase.from("app_settings").select("card_fee_pct").maybeSingle();
+    cardFee = Number(data?.card_fee_pct ?? 0);
+  }
   if (isCustomer) {
     const supabase = await createClient();
     const { data } = await supabase.from("password_hints").select("hint").eq("profile_id", profile.id).maybeSingle();
@@ -74,6 +80,21 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               Set up web store
             </Link>
           </div>
+        </Section>
+      )}
+      {profile.role === "admin" && (
+        <Section title="Card processing fee">
+          <form action={setCardFee} className="card flex flex-wrap items-end gap-3" data-testid="card-fee-form">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium">Fee on card orders (%)</span>
+              <input name="card_fee_pct" type="number" min="0" max="10" step="0.01" defaultValue={cardFee} className="input w-28" required />
+            </label>
+            <SubmitButton>Save</SubmitButton>
+            <p className="basis-full text-sm text-stone-500">
+              Added to orders paid by card, on the subtotal plus tax, as its own line on the invoice. Cash and check orders don&apos;t get it. 0 turns it off. Invoices
+              already made keep the rate they were made with.
+            </p>
+          </form>
         </Section>
       )}
       {profile.role === "admin" && (
