@@ -3952,8 +3952,16 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
   }
   let lastView = "";
   // ---------- sign-in for the whole demo (a screen on a public page, not real security: the files are public) ----------
-  const GATE = "327c06e191e9ebaccffdd990301ccf0d9209b654ca7a2b9979707f0990676cbb"; // SHA-256 of the demo username and password
-  const gateOk = () => store.get("dk-gate", "") === GATE;
+  // One login per team, all with the password AdminDill. Only the admin login can switch who it is viewing as.
+  // Values are SHA-256 of "dkaydent-demo|username|password" (username in lower case).
+  const GATES = {
+    "327c06e191e9ebaccffdd990301ccf0d9209b654ca7a2b9979707f0990676cbb": "admin", // DillAdmin
+    "ac6bb1a8e2b30e0dd9d25f13a33735fe4dcca665b572e8ef60542937132d9749": "sales", // DillSales
+    "b9337637f1a9fc8c804da8b124f6d0f74e084e1df3a4b1865b394ded3e2d2b8b": "customer", // Dillcustomer
+    "a1fbf7b6c275111ee569c03c8aff3396e84af5baf51e9669596f08913d188327": "warehouse", // DillWarehouse
+  };
+  const gateRole = () => GATES[store.get("dk-gate", "")] || null;
+  const gateOk = () => !!gateRole();
   ui.gateMsg = "";
   function renderGate() {
     document.title = "Sign in · DKaydent";
@@ -3967,6 +3975,9 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
   }
   function render() {
     if (!gateOk()) return renderGate();
+    const gr = gateRole();
+    if (gr !== "admin" && ui.role !== gr) { ui.role = gr; store.set("dk-role", gr); }
+    if (gr === "customer" && !ui.custLogin) { ui.custLogin = "lg-test"; store.set("dk-cust-login", "lg-test"); }
     const view = `${ui.page}:${ui.id || ""}`;
     const enter = view !== lastView;
     lastView = view;
@@ -3986,9 +3997,9 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         <span class="chip chip-demo">Demo · sample data</span>
         ${status}
         <button type="button" class="btn btn-s" data-act="gateOut" data-testid="gate-out">Sign out</button>
-        <label class="role" for="role">Viewing as
+        ${gateRole() === "admin" ? `<label class="role" for="role">Viewing as
           <select id="role" data-role>${Object.entries(DK.ROLES).map(([k, v]) => `<option value="${k}" ${k === ui.role ? "selected" : ""}>${v}</option>`).join("")}</select>
-        </label>
+        </label>` : `<span class="chip" data-testid="signed-role">Signed in: ${esc(DK.ROLES[ui.role] || "")}</span>`}
       </header>
       <div class="shell ${ui.navDrawer ? "nav-open" : ""}">
         <nav class="side" id="side" aria-label="Main">
@@ -5115,7 +5126,7 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
   });
   app.addEventListener("change", (ev) => {
     const t = ev.target;
-    if (t.matches("[data-role]")) {
+    if (t.matches("[data-role]") && gateRole() === "admin") {
       ui.role = t.value;
       store.set("dk-role", ui.role);
       ui.error = null;
@@ -6834,10 +6845,16 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
       const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`dkaydent-demo|${String(o.username || "").trim().toLowerCase()}|${String(o.password || "")}`));
       h = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
     } catch { ui.gateMsg = "This browser can't check the password here. Open the demo over https."; return render(); }
-    if (h !== GATE) { ui.gateMsg = "That username and password don't match."; return render(); }
-    store.set("dk-gate", GATE); ui.gateMsg = ""; document.title = "DKaydent Wholesale Demo"; render();
+    const role = GATES[h];
+    if (!role) { ui.gateMsg = "That username and password don't match."; return render(); }
+    store.set("dk-gate", h); ui.gateMsg = ""; document.title = "DKaydent Wholesale Demo";
+    ui.role = role; store.set("dk-role", role);
+    if (role === "customer") { ui.custLogin = "lg-test"; store.set("dk-cust-login", "lg-test"); }
+    ui.page = role === "customer" ? "shop" : "dashboard"; ui.id = null; ui.q = {};
+    try { history.replaceState(null, "", "#" + ui.page); } catch {}
+    render();
   };
-  ACTS.gateOut = () => { store.set("dk-gate", ""); ui.gateMsg = ""; render(); };
+  ACTS.gateOut = () => { if (gateRole() === "customer") { ui.custLogin = ""; store.set("dk-cust-login", ""); } store.set("dk-gate", ""); ui.gateMsg = ""; render(); };
   // Customer sign-in: the customer view asks for a username and password first (test login: testcustomer / 1234)
   const portal = (s) => DK.portal(s);
   const myLogin = () => { if (!S) return null; const l = portal(S).logins.find((x) => x.id === ui.custLogin); return l && l.customerId && l.verifiedBy ? l : null; };
@@ -6870,7 +6887,8 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
   const signedOnly = (name) => { const f = PAGES[name]; PAGES[name] = (...x) => (ui.role === "customer" && S && !myLogin() ? PAGES.custSignIn() : f(...x)); };
   ACTS.showHint = () => { const u = document.querySelector('[data-testid="signin-user"]')?.value || ui.signin.user; ui.signin.user = u; ui.signin.hint = u.trim() ? DK.hintFor(S, u) : "Type your username first."; render(); };
   ACTS.forgotToggle = () => { ui.signin.forgot = !ui.signin.forgot; render(); };
-  ACTS.custSignOut = () => { ui.custLogin = ""; store.set("dk-cust-login", ""); ui.signin = { msg: "You're signed out.", hint: "", failed: false, forgot: false, user: "" }; if (ui.cart) delete ui.cart.shop; render(); };
+  ACTS.custSignOut = () => {
+    if (gateRole() === "customer") return ACTS.gateOut(); ui.custLogin = ""; store.set("dk-cust-login", ""); ui.signin = { msg: "You're signed out.", hint: "", failed: false, forgot: false, user: "" }; if (ui.cart) delete ui.cart.shop; render(); };
   function passwordSection() {
     const isC = ui.role === "customer", lg = isC ? myLogin() : null;
     const pwReq = isC ? "" : "required";
