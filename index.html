@@ -886,6 +886,26 @@ html.mobile .pending { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 @media print { .tabbar { display: none !important; } html.mobile body { padding-bottom: 0; } }
 @media (prefers-reduced-motion: reduce) { .tabbar .tab::before, .tabbar .tab-ic { transition: none; } }
 
+/* ---------- Smooth interactions ---------- */
+:root { interpolate-size: allow-keywords; }
+input, select, textarea { transition: border-color .18s var(--ease), box-shadow .18s var(--ease), background-color .18s var(--ease); }
+input[type="checkbox"], input[type="radio"] { transition: transform .15s var(--ease); }
+input[type="checkbox"]:active, input[type="radio"]:active { transform: scale(.88); }
+a, .lnk { transition: color .15s var(--ease), opacity .15s var(--ease); }
+.side button, .nav-gh, .tabs button, .vt button, .inv-tab, .chip, .tab { transition: background-color .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease), transform .12s var(--ease); }
+.side button:active, .inv-tab:active, .tabs button:active { transform: scale(.97); }
+tbody tr { transition: background-color .15s var(--ease); }
+details::details-content { block-size: 0; overflow: clip; transition: block-size .3s var(--ease), content-visibility .3s allow-discrete; }
+details[open]::details-content { block-size: auto; }
+details > summary { transition: color .15s var(--ease); }
+.val-flash { animation: val-flash .9s var(--ease); border-radius: 4px; }
+@keyframes val-flash { 0% { background: color-mix(in srgb, var(--brand) 22%, transparent); } 100% { background: transparent; } }
+.flip-ghost, .flip-ghost-wrap { list-style: none; padding: 0; border-collapse: collapse; }
+@media (prefers-reduced-motion: reduce) {
+  input, select, textarea, a, .lnk, .side button, .nav-gh, .tabs button, .vt button, .inv-tab, .chip, .tab, tbody tr, details::details-content { transition: none !important; }
+  .val-flash { animation: none !important; }
+}
+
 /* Mobile mode: narrow-screen rules at any width (generated) */
 html.mobile .shell { display: block; }
 html.mobile .side { position: static; height: auto; display: flex; gap: 2px; overflow-x: auto; padding: 6px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -4429,6 +4449,7 @@ root.KBSearch = { searchKb, highlight, bestLine, queryTerms, stem };
     document.querySelector(".busy-bar")?.remove();
     if (ui.busy) renderBusy();
     const section = SECTION[ui.page] || ui.page;
+    const snap = !enter && typeof flipBefore === "function" ? flipBefore() : null; // smooth in-page changes (see ui-ext)
     ui.chatUnread = typeof chatUnreadTotal === "function" ? chatUnreadTotal() : 0;
     const status =
       mode === "live" ? `<span class="chip chip-live" title="Everyone with the link sees the same data">Shared · live</span>` :
@@ -4466,6 +4487,7 @@ root.KBSearch = { searchKb, highlight, bestLine, queryTerms, stem };
       ${ui.confirm ? modal() : ""}`;
     afterRender();
     motion(enter);
+    if (snap) flipAfter(snap);
   }
   function modal() {
     const c = ui.confirm;
@@ -5721,6 +5743,60 @@ root.KBSearch = { searchKb, highlight, bestLine, queryTerms, stem };
     return `<div class="view-switch"><button type="button" class="lnk" data-act="setViewMode" data-v="${m ? "pc" : "mobile"}" data-testid="view-switch">${m ? "Desktop site" : "Mobile site"}</button></div>`;
   }
   ACTS.setViewMode = (el) => { store.set("dk-view", el.dataset.v); location.reload(); };
+
+  // ---------- Smooth in-page changes ----------
+  // Every change redraws the page, so: items that stay glide from where they were, new ones fade and rise in,
+  // removed ones fade out where they were, and changed totals flash. Only within a page (a new page has its own entrance).
+  const FLIP_SEL = ".wrap tbody > tr, .wrap ul > li, .wrap .card, .wrap .banner, .wrap [data-item], .wrap .cart-line, .wrap .stepper, .cart-drawer .drawer-line, .cart-drawer .inv-tile, .tabbar .tab";
+  const FLASH_RE = /total|subtotal|count|fee|due|balance/i;
+  const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function flipKey(el, seen) {
+    const id = el.dataset.item || el.dataset.cartLine || el.dataset.drawerLine || el.dataset.invItem || el.dataset.testid || el.dataset.go || el.dataset.v || el.dataset.id;
+    const inner = id ? "" : (el.querySelector("[data-v],[data-id],[data-go]") || {}).dataset;
+    let k = el.tagName + "|" + (el.className || "").toString().split(" ")[0] + "|" + (id || (inner && (inner.v || inner.id || inner.go)) || (el.textContent || "").trim().slice(0, 48));
+    const n = (seen[k] = (seen[k] || 0) + 1);
+    return n > 1 ? k + "#" + n : k;
+  }
+  function flipBefore() {
+    if (reduceMotion() || ui.busy) return null;
+    const items = new Map(), seen = {}, flash = {};
+    const els = [...app.querySelectorAll(FLIP_SEL)].slice(0, 400);
+    for (const el of els) { const r = el.getBoundingClientRect(); if (r.width || r.height) items.set(flipKey(el, seen), { el, r }); }
+    for (const el of app.querySelectorAll("[data-testid]")) if (FLASH_RE.test(el.dataset.testid)) flash[el.dataset.testid] = el.textContent;
+    return { items, flash, sx: scrollX, sy: scrollY };
+  }
+  function flipAfter(snap) {
+    const seen = {}, now = new Set(), ease = "cubic-bezier(.22,1,.36,1)";
+    const dy0 = scrollY - snap.sy, dx0 = scrollX - snap.sx;
+    let moved = 0, added = 0;
+    for (const el of [...app.querySelectorAll(FLIP_SEL)].slice(0, 400)) {
+      const k = flipKey(el, seen), was = snap.items.get(k);
+      now.add(k);
+      const r = el.getBoundingClientRect();
+      if (was) {
+        const dx = was.r.left - r.left - dx0, dy = was.r.top - r.top - dy0;
+        if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && moved++ < 60 && Math.abs(dy) < innerHeight) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 280, easing: ease });
+      } else if (snap.items.size && added++ < 30 && r.width && r.bottom > 0 && r.top < innerHeight) {
+        el.animate([{ opacity: 0, transform: "translateY(6px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: ease, delay: Math.min(added, 8) * 18, fill: "backwards" });
+      }
+    }
+    // removed: a ghost fades out where it was
+    let gone = 0;
+    for (const [k, { el, r }] of snap.items) {
+      if (now.has(k) || gone++ > 20 || r.bottom < 0 || r.top > innerHeight || el.classList.contains("tab")) continue;
+      const g = el.cloneNode(true);
+      Object.assign(g.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", margin: "0", pointerEvents: "none", zIndex: "30", boxSizing: "border-box" });
+      g.setAttribute("aria-hidden", "true"); g.removeAttribute("id"); g.classList.add("flip-ghost");
+      if (g.tagName === "TR" || g.tagName === "LI") { const w = document.createElement(g.tagName === "TR" ? "table" : "ul"); w.style.cssText = g.style.cssText; g.removeAttribute("style"); w.className = "flip-ghost-wrap"; (g.tagName === "TR" ? w.appendChild(document.createElement("tbody")) : w).appendChild(g); document.body.appendChild(w); w.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.98)" }], { duration: 200, easing: "ease-out" }).onfinish = () => w.remove(); continue; }
+      document.body.appendChild(g);
+      g.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.98)" }], { duration: 200, easing: "ease-out" }).onfinish = () => g.remove();
+    }
+    // totals that changed
+    for (const el of app.querySelectorAll("[data-testid]")) {
+      const t = el.dataset.testid;
+      if (t in snap.flash && snap.flash[t] !== el.textContent) { el.classList.remove("val-flash"); void el.offsetWidth; el.classList.add("val-flash"); }
+    }
+  }
 
   // ---------- photos ----------
   const localImgs = {}; // public build: photo id -> object URL from IndexedDB
