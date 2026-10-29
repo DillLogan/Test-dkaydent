@@ -8,6 +8,7 @@ import { addPOLine, closePO, deletePO, receivePO, removePOLine, setPOStatus, upd
 import { skipOccurrence } from "../../receiving/actions";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ReceiveSpot } from "@/components/ReceiveSpot";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
@@ -17,7 +18,7 @@ export default async function POPage({ params, searchParams }: Props) {
   const { error, message } = await searchParams;
   const { supabase, profile } = await getSession();
 
-  const [{ data: po }, { data: lines }, { data: locations }] = await Promise.all([
+  const [{ data: po }, { data: lines }, { data: locations }, { data: sections }] = await Promise.all([
     supabase
       .from("purchase_orders")
       .select("*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name)")
@@ -25,10 +26,11 @@ export default async function POPage({ params, searchParams }: Props) {
       .maybeSingle(),
     supabase
       .from("purchase_order_lines")
-      .select("*, products(sku, name, base_unit, shelf_life_days), product_units(name, factor)")
+      .select("*, products(sku, name, base_unit, shelf_life_days, product_homes(location_id, section_id, shelf)), product_units(name, factor)")
       .eq("po_id", id)
       .order("created_at"),
     supabase.from("locations").select("id, name").eq("active", true).order("name"),
+    supabase.from("location_sections").select("id, location_id, name, shelves").order("name"),
   ]);
   if (!po) notFound();
 
@@ -272,7 +274,7 @@ export default async function POPage({ params, searchParams }: Props) {
                     <th>Product</th>
                     <th className="num">Remaining</th>
                     <th>Receive qty</th>
-                    <th>Location</th>
+                    <th>Location · section · shelf</th>
                     <th>Expires</th>
                     <th>Lot / farm code</th>
                   </tr>
@@ -295,14 +297,7 @@ export default async function POPage({ params, searchParams }: Props) {
                         />
                       </td>
                       <td>
-                        <select name={`loc_${r.id}`} className="input w-auto" defaultValue="">
-                          <option value="">Default</option>
-                          {(locations ?? []).map((l) => (
-                            <option key={l.id} value={l.id}>
-                              {l.name}
-                            </option>
-                          ))}
-                        </select>
+                        <ReceiveSpot lineId={r.id} name={r.products.name} locations={locations ?? []} sections={sections ?? []} homes={r.products.product_homes ?? []} defaultLoc="" defaultLabel="Default" />
                       </td>
                       <td>
                         <input

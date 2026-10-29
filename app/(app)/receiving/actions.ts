@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { dbMessage, fail, int, num, str } from "@/lib/forms";
+import { splitSpot } from "@/lib/spots";
 
 const LIST = "/receiving";
 const msg = (path: string, m: string) => `${path}${path.includes("?") ? "&" : "?"}message=${encodeURIComponent(m)}`;
@@ -89,6 +90,11 @@ export async function removePOFromShipment(id: string, poId: string) {
   redirect(path);
 }
 
+const spotOf = (fd: FormData, lineId: string) => {
+  const { sectionId, shelf } = splitSpot(fd.get(`spot_${lineId}`));
+  return { section_id: sectionId, shelf };
+};
+
 export async function receiveShipment(id: string, lineIds: string[], fd: FormData) {
   const { supabase } = await requireRole("buyer", "warehouse");
   const path = `${LIST}/${id}`;
@@ -97,6 +103,7 @@ export async function receiveShipment(id: string, lineIds: string[], fd: FormDat
       line_id: lineId,
       qty: num(fd, `qty_${lineId}`) ?? 0,
       location_id: str(fd, `loc_${lineId}`),
+      ...spotOf(fd, lineId),
       expires_at: str(fd, `exp_${lineId}`),
       lot_code: str(fd, `lot_${lineId}`),
     }))
