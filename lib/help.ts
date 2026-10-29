@@ -303,10 +303,19 @@ export const ARTICLES: Article[] = [
     "The pull ticket groups lines by the section the stock is in right now.",
     "Moving a section to another shop clears its old shape and the product homes that pointed to it.",
   ] },
+  { id: "sections-shelves", category: "Stock", title: "Sections and shelves inside a location", body: [
+    "A location (Cooler 1) can hold sections (Rack A, Bucket row), and each section can have shelves (1, 2, 3 or Top, Middle, Bottom).",
+    "Add one: Location in shop → Edit layout → + Add section. Pick the location, or + New location…, name the section and list its shelves. 1-4 makes shelves 1 to 4. It appears on the plan inside its location; drag and resize it like any area.",
+    "Tap a section to edit, rename or delete it. Tap a location to rename it or add a section to it.",
+    "Where stock sits: on a lot's page, set Section and shelf. Moving stock to another location clears it.",
+    "An item's usual spot: on the item's page, under its home area, set Usual section and shelf.",
+    "Pull tickets show Section · Shelf for each line: the stock's own spot, else the item's usual spot when the stock is in its home location. Lines are sorted by section, then shelf.",
+  ] },
   { id: "labels-faq", category: "Stock", title: "Label printing", body: [
     "Choose Label printer for a roll or thermal printer, or Regular printer for plain paper, in Settings → Printing.",
     "That choice is saved on the computer you are using, so each workstation can use its own printer.",
     "If labels print with extra blank pages, check the printer's paper size is set to the label size in your print dialog.",
+    "Every label shows the day it was printed.",
   ] },
   { id: "invoices-faq", category: "Money", title: "Invoices, tax and terms", body: [
     "Terms come from the customer (Net 30 by default) and set the due date.",

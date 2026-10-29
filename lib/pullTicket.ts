@@ -26,6 +26,8 @@ export type TicketLot = {
   createdAt: string;
   expiresAt: string | null;
   onHandBase: number;
+  section?: string | null; // where it sits inside the location (its own spot, else the item's home spot)
+  shelf?: string | null;
 };
 
 export type TicketRow = {
@@ -38,6 +40,8 @@ export type TicketRow = {
   baseUnit: string;
   unitName: string;
   factor: number;
+  section?: string | null;
+  shelf?: string | null;
 };
 export type TicketSection = { name: string; rows: TicketRow[] };
 export type TicketShop = { id: string; name: string; sections: TicketSection[] };
@@ -67,9 +71,11 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
       tree.set(lot.layoutId, shop);
       const rows = shop.get(lot.locationName) ?? [];
       shop.set(lot.locationName, rows);
-      const same = rows.find((r) => r.lineId === line.id && r.lotCode === lot.lotCode && r.expiresAt === lot.expiresAt);
+      const section = lot.section ?? null;
+      const shelf = lot.shelf ?? null;
+      const same = rows.find((r) => r.lineId === line.id && r.lotCode === lot.lotCode && r.expiresAt === lot.expiresAt && r.section === section && r.shelf === shelf);
       if (same) same.base += take;
-      else rows.push({ ...base, lotCode: lot.lotCode, expiresAt: lot.expiresAt, base: take });
+      else rows.push({ ...base, lotCode: lot.lotCode, expiresAt: lot.expiresAt, base: take, section, shelf });
     }
     if (need > 1e-9) short.push({ ...base, lotCode: null, expiresAt: null, base: need });
   }
@@ -81,7 +87,11 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
       name: l.name,
       sections: [...tree.get(l.id)!.entries()]
         .sort(([a], [b]) => byText(a, b))
-        .map(([name, rows]) => ({ name, rows: rows.sort((a, b) => byText(a.name, b.name)) })),
+        // within a location: by section, then shelf, then item (rows without a section last)
+        .map(([name, rows]) => ({
+          name,
+          rows: rows.sort((a, b) => Number(!a.section) - Number(!b.section) || byText(a.section ?? "", b.section ?? "") || byText(a.shelf ?? "", b.shelf ?? "") || byText(a.name, b.name)),
+        })),
     }));
   short.sort((a, b) => byText(a.name, b.name));
   return { shops, short };

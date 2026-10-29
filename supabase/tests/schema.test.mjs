@@ -819,4 +819,48 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+
+// ---- sections and shelves ----
+{
+  await as(admin);
+  const c1 = (await one(`select id, layout_id from locations where name='Cooler 1'`));
+  const c2 = (await one(`select id from locations where name='Cooler 2'`)).id;
+  const sec = (await one(`insert into location_sections (location_id, name, shelves) values ($1, ' Rack A ', array['1','2',' 2 ','Top','']) returning id, name, shelves`, [c1.id]));
+  ok(sec.name === "Rack A" && JSON.stringify(sec.shelves) === JSON.stringify(["1","2","Top"]), "section name and shelves cleaned: " + JSON.stringify(sec.shelves));
+  await expectErr(`insert into location_sections (location_id, name) values ($1, 'rack a')`, [c1.id], "location_sections_name_uidx", "section names are unique within a location");
+  const lot = (await one(`select id from lots where location_id=$1 and qty_on_hand_base > 0 limit 1`, [c1.id])).id;
+  await q(`select set_lot_spot($1,$2,'top')`, [lot, sec.id]);
+  const l1 = await one(`select section_id, shelf from lots where id=$1`, [lot]);
+  ok(l1.section_id === sec.id && l1.shelf === "Top", "lot spot saved with the shelf's own spelling");
+  await expectErr(`select set_lot_spot($1,$2,'9')`, [lot, sec.id], "no such shelf", "unknown shelf refused");
+  const sec2 = (await one(`insert into location_sections (location_id, name, shelves) values ($1, 'Bucket row', array['Floor']) returning id`, [c2])).id;
+  await expectErr(`select set_lot_spot($1,$2,null)`, [lot, sec2], "isn't in this lot's location", "section from another location refused");
+  ok((await one(`select section_name, shelf, spot_from from v_lot_spot where lot_id=$1`, [lot])).spot_from === "stock", "spot view reads the stock's own spot");
+  await q(`update location_sections set shelves=array['1','2'] where id=$1`, [sec.id]);
+  ok((await one(`select shelf from lots where id=$1`, [lot])).shelf === null, "removing a shelf clears it from stock");
+  // moving stock to another location clears its spot
+  await q(`select set_lot_spot($1,$2,'1')`, [lot, sec.id]);
+  const qty = Number((await one(`select qty_on_hand_base q from lots where id=$1`, [lot])).q);
+  const moved = (await one(`select transfer_stock($1,$2,$3) id`, [lot, qty, c2])).id;
+  ok((await one(`select section_id from lots where id=$1`, [moved])).section_id === null, "moved stock loses its old section");
+  // home spot
+  const prod = (await one(`select product_id from lots where id=$1`, [lot])).product_id;
+  await q(`select set_home_location($1,$2,$3)`, [prod, c1.layout_id, c1.id]);
+  await q(`select set_home_spot($1,$2,$3,'2')`, [prod, c1.layout_id, sec.id]);
+  ok((await one(`select shelf from product_homes where product_id=$1 and layout_id=$2`, [prod, c1.layout_id])).shelf === "2", "home spot saved");
+  await q(`select transfer_stock($1,$2,$3)`, [moved, qty, c1.id]);
+  const back = await one(`select section_name, shelf, spot_from from v_lot_spot where lot_id=$1`, [moved]);
+  ok(back.spot_from === "home" && back.section_name === "Rack A" && back.shelf === "2", "stock without its own spot uses the item's home spot");
+  await q(`select set_home_location($1,$2,$3)`, [prod, c1.layout_id, c2]);
+  ok((await one(`select section_id from product_homes where product_id=$1 and layout_id=$2`, [prod, c1.layout_id])).section_id === null, "moving the home clears its spot");
+  await q(`delete from location_sections where id=$1`, [sec.id]);
+  ok((await q(`select 1 from lots where section_id=$1`, [sec.id])).length === 0, "deleting a section frees stock");
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  await expectErr(`insert into location_sections (location_id, name) values ($1, 'X')`, [c2], "row-level security", "sales can't add sections");
+  await expectErr(`select set_lot_spot($1,null,null)`, [moved], "Not authorized", "sales can't move stock spots");
+  ok((await q(`select 1 from location_sections`)).length >= 1, "staff can read sections");
+  await db.exec(`reset role`);
+}
+
 console.log(`\n${pass} checks passed`);

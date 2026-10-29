@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { dbMessage, fail, str } from "@/lib/forms";
 import { IMAGE_BUCKET } from "@/lib/images";
 import { bbox, clamp, clampPts, validShape, type Pt } from "@/lib/shapes";
+import { splitSpot } from "@/lib/spots";
 
 type Result = { error?: string };
 
@@ -23,8 +24,13 @@ export async function saveArea(id: string, area: { points: Pt[]; color?: string 
     map_h: clamp(Math.max(b.h, 0.1), 0.1, 100),
   };
   if (area.color && /^#[0-9a-fA-F]{6}$/.test(area.color)) patch.map_color = area.color;
-  const { error } = await supabase.from("locations").update(patch).eq("id", id);
+  // the id is a location's or a section's
+  const { data: hit, error } = await supabase.from("locations").update(patch).eq("id", id).select("id");
   if (error) return { error: dbMessage(error) };
+  if (!hit?.length) {
+    const { error: e2 } = await supabase.from("location_sections").update(patch).eq("id", id);
+    if (e2) return { error: dbMessage(e2) };
+  }
   revalidatePath("/floor-plan");
   return {};
 }
@@ -47,6 +53,17 @@ export async function setFloorSize(layoutId: string, widthFt: number, heightFt: 
     const sy = Number(lay.height_ft) / h;
     if (Math.abs(sx - 1) > 1e-6 || Math.abs(sy - 1) > 1e-6) {
       const { data: locs } = await supabase.from("locations").select("id, map_shape").eq("layout_id", layoutId).not("map_shape", "is", null);
+      const { data: allLocs } = await supabase.from("locations").select("id").eq("layout_id", layoutId);
+      const { data: secs } = (allLocs ?? []).length
+        ? await supabase.from("location_sections").select("id, map_shape").in("location_id", (allLocs ?? []).map((x) => x.id)).not("map_shape", "is", null)
+        : { data: [] as { id: string; map_shape: unknown }[] };
+      for (const sec of secs ?? []) {
+        if (!validShape(sec.map_shape)) continue;
+        const pts = clampPts((sec.map_shape as Pt[]).map(([x, y]) => [x * sx, y * sy] as Pt));
+        if (!validShape(pts)) continue;
+        const b = bbox(pts);
+        await supabase.from("location_sections").update({ map_shape: pts, map_x: b.x, map_y: b.y, map_w: Math.max(b.w, 0.1), map_h: Math.max(b.h, 0.1) }).eq("id", sec.id);
+      }
       for (const l of locs ?? []) {
         if (!validShape(l.map_shape)) continue;
         const pts = clampPts((l.map_shape as Pt[]).map(([x, y]) => [x * sx, y * sy] as Pt));
@@ -70,8 +87,13 @@ export async function setFloorSize(layoutId: string, widthFt: number, heightFt: 
 
 export async function removeArea(id: string): Promise<Result> {
   const { supabase } = await requireRole("warehouse");
-  const { error } = await supabase.from("locations").update({ map_x: null, map_y: null, map_w: null, map_h: null, map_shape: null }).eq("id", id);
+  const off = { map_x: null, map_y: null, map_w: null, map_h: null, map_shape: null };
+  const { data: hit, error } = await supabase.from("locations").update(off).eq("id", id).select("id");
   if (error) return { error: dbMessage(error) };
+  if (!hit?.length) {
+    const { error: e2 } = await supabase.from("location_sections").update(off).eq("id", id);
+    if (e2) return { error: dbMessage(e2) };
+  }
   revalidatePath("/floor-plan");
   return {};
 }
@@ -225,4 +247,85 @@ export async function setHomeAreaInline(productId: string, layoutId: string, loc
   if (error) return { error: dbMessage(error) };
   revalidatePath("/floor-plan");
   return {};
+}
+
+// ---------- sections inside locations ----------
+export type SectionInput = {
+  id?: string;
+  layoutId: string;
+  locationId: string; // "__new" creates a location named newLocation in this layout
+  newLocation?: string;
+  name: string;
+  shelves: string;
+  place?: { points: Pt[]; color?: string } | null;
+};
+
+/** "1-4" → 1, 2, 3, 4; otherwise comma or line separated names. */
+function parseShelves(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of String(text ?? "").split(/[\n,]+/)) {
+    const t = raw.trim();
+    if (!t) continue;
+    const m = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(t);
+    if (m && Number(m[2]) >= Number(m[1]) && Number(m[2]) - Number(m[1]) < 50) for (let i = Number(m[1]); i <= Number(m[2]); i++) out.push(String(i));
+    else out.push(t.slice(0, 30));
+  }
+  return out.slice(0, 60);
+}
+
+/** Add or edit a section; can create its location too. Returns the section and location ids. */
+export async function saveSection(input: SectionInput): Promise<Result & { id?: string; locationId?: string }> {
+  const { supabase } = await requireRole("warehouse");
+  const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
+  if (!name || name.length > 40) return { error: "Name the section (up to 40 characters)." };
+  let locationId = input.locationId;
+  if (locationId === "__new") {
+    const ln = String(input.newLocation ?? "").trim().replace(/\s+/g, " ");
+    if (!ln) return { error: "Name the new location." };
+    const { data: loc, error } = await supabase.from("locations").insert({ name: ln, kind: "other", layout_id: input.layoutId }).select("id").single();
+    if (error) return { error: error.message.includes("duplicate") ? "A location with that name already exists. Choose it from the list." : dbMessage(error) };
+    locationId = loc.id;
+  }
+  const row: Record<string, unknown> = { name, location_id: locationId, shelves: parseShelves(input.shelves) };
+  if (!input.id && input.place && validShape(input.place.points)) {
+    const pts = clampPts(input.place.points);
+    const b = bbox(pts);
+    Object.assign(row, { map_shape: pts, map_x: b.x, map_y: b.y, map_w: Math.max(b.w, 0.1), map_h: Math.max(b.h, 0.1) });
+    if (input.place.color && /^#[0-9a-fA-F]{6}$/.test(input.place.color)) row.map_color = input.place.color;
+  }
+  const res = input.id
+    ? await supabase.from("location_sections").update(row).eq("id", input.id).select("id").single()
+    : await supabase.from("location_sections").insert(row).select("id").single();
+  if (res.error) return { error: res.error.message.includes("location_sections_name_uidx") ? "That location already has a section with this name." : dbMessage(res.error) };
+  revalidatePath("/floor-plan");
+  return { id: res.data.id, locationId };
+}
+
+export async function deleteSection(id: string): Promise<Result> {
+  const { supabase } = await requireRole("warehouse");
+  const { error } = await supabase.from("location_sections").delete().eq("id", id);
+  if (error) return { error: dbMessage(error) };
+  revalidatePath("/floor-plan");
+  return {};
+}
+
+export async function renameLocation(id: string, name: string): Promise<Result> {
+  const { supabase } = await requireRole("warehouse");
+  const n = String(name ?? "").trim().replace(/\s+/g, " ");
+  if (!n || n.length > 60) return { error: "Name the location (up to 60 characters)." };
+  const { error } = await supabase.from("locations").update({ name: n }).eq("id", id);
+  if (error) return { error: error.message.includes("duplicate") ? "Another location already has that name." : dbMessage(error) };
+  revalidatePath("/floor-plan");
+  return {};
+}
+
+/** An item's usual section and shelf inside its home area (form on the item page). */
+export async function setHomeSpot(productId: string, layoutId: string, fd: FormData) {
+  const { supabase } = await requireRole("buyer", "warehouse");
+  const path = `/products/${productId}`;
+  const { sectionId, shelf } = splitSpot(fd.get("spot"));
+  const { error } = await supabase.rpc("set_home_spot", { p_product_id: productId, p_layout_id: layoutId, p_section_id: sectionId, p_shelf: shelf });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  redirect(`${path}?message=${encodeURIComponent("Usual section and shelf saved.")}`);
 }

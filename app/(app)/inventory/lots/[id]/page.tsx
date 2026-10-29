@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { date, dateTime, inUnits, money, qty, today, unitMoney } from "@/lib/format";
-import { countLot, shrinkLot, transferLot } from "../../actions";
+import { countLot, setLotSpot, shrinkLot, transferLot } from "../../actions";
+import { spotOptions, spotText } from "@/lib/spots";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, ExpiryText, Notice, PageHeader, Section } from "@/components/ui";
 import { PhotoUpload } from "@/components/PhotoUpload";
@@ -57,6 +58,12 @@ export default async function LotPage({ params, searchParams }: Props) {
   const po = lot.purchase_order_lines?.purchase_orders;
   const vendor = (po as any)?.vendors as { name: string; email: string | null; contact_name: string | null } | null | undefined;
   const pol = lot.purchase_order_lines as any;
+  const [{ data: sections }, { data: spot }] = await Promise.all([
+    supabase.from("location_sections").select("id, name, shelves").eq("location_id", lot.location_id).order("name"),
+    supabase.from("v_lot_spot").select("section_name, shelf, spot_from").eq("lot_id", id).maybeSingle(),
+  ]);
+  const spotChoices = spotOptions(sections ?? []);
+  const spotNow = lot.section_id ? `${lot.section_id}::${lot.shelf ?? ""}` : "";
   const plan = await loadPlan(supabase, lot.locations.layout_id);
   const home =
     ((lot.products.product_homes ?? []) as { layout_id: string; location_id: string }[]).find((h) => h.layout_id === plan.layout.id)
@@ -131,6 +138,46 @@ export default async function LotPage({ params, searchParams }: Props) {
           </div>
         </div>
       </div>
+
+      <Section title="Section and shelf">
+        <div className="card space-y-3" data-testid="lot-spot">
+          <p className="text-sm">
+            {spot?.section_name ? (
+              <>
+                <b>{spotText(spot.section_name, spot.shelf)}</b> in {lot.locations.name}
+                {spot.spot_from === "home" && <span className="text-stone-500"> (the item&apos;s usual spot; this stock has none of its own)</span>}
+              </>
+            ) : (
+              <span className="text-stone-500">Not recorded. Pull tickets show only {lot.locations.name} for this stock.</span>
+            )}
+          </p>
+          {can(profile, "warehouse") &&
+            (spotChoices.length ? (
+              <form action={setLotSpot.bind(null, id)} className="flex flex-wrap items-end gap-2">
+                <label>
+                  <span className="label">Where this stock sits</span>
+                  <select name="spot" className="input w-auto" defaultValue={spotNow}>
+                    <option value="">Not set</option>
+                    {spotChoices.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <SubmitButton>Save</SubmitButton>
+              </form>
+            ) : (
+              <p className="text-xs text-stone-500">
+                {lot.locations.name} has no sections yet. Add them on{" "}
+                <Link href={`/floor-plan?layout=${lot.locations.layout_id}`} className="link">
+                  Location in shop
+                </Link>
+                .
+              </p>
+            ))}
+        </div>
+      </Section>
 
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <Section title="Delivery photo">
