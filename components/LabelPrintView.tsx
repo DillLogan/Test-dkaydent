@@ -6,7 +6,9 @@ import { LabelSizeFields, ModeSwitch } from "./PrintSettingsForm";
 
 export type PrintLabel = { key: string; code: string; title: string; sku: string; lines: string[]; svg: string | null; short?: string };
 
-const MARGIN = 0.25; // regular-printer page margin, inches
+const MARGIN = 0.25;
+/** The day the label is printed, e.g. "Oct 28, 2026". */
+const printedOn = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); // regular-printer page margin, inches
 
 /** One label drawn at its real size; text and barcode scale with the label. */
 function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: boolean }) {
@@ -48,6 +50,9 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
       )}
       <div className="text-center font-mono font-bold tracking-wider" style={{ fontSize: `${base * 0.12}in`, lineHeight: 1 }}>
         {l.code}
+      </div>
+      <div className="text-center whitespace-nowrap text-[#555555]" style={{ fontSize: `${base * 0.08}in`, lineHeight: 1 }} data-testid="label-printed" suppressHydrationWarning>
+        Printed {printedOn()}
       </div>
       {lines.map((line, i) => (
         <div key={i} className="truncate text-[#444444]" style={{ fontSize: `${base * 0.095}in`, lineHeight: 1.15 }}>
