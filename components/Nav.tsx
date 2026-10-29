@@ -52,7 +52,7 @@ export async function Nav({ profile }: { profile: Profile }) {
   if (profile.role === "customer") {
     return (
       <NavShell
-        groups={[{ title: "", links: [{ href: "/shop", label: "Shop" }, { href: "/settings", label: "Settings" }] }]}
+        groups={[{ title: "", links: [{ href: "/shop", label: "Shop" }, { href: "/settings", label: "Settings" }, { href: "/settings/customize", label: "Customize page" }] }]}
         userName={profile.full_name || profile.email || ""}
         roleLabel="Customer"
         signOut={signOut}
@@ -81,6 +81,7 @@ export async function Nav({ profile }: { profile: Profile }) {
         title: "Settings",
         links: [
           { href: "/settings", label: "Settings" },
+          { href: "/settings/customize", label: "Customize page" },
           { href: "/admin/users", label: "Users & roles" },
           { href: "/settings/web-store", label: "Web store" },
           { href: "/settings/tutorials", label: "Tutorials" },
@@ -92,6 +93,7 @@ export async function Nav({ profile }: { profile: Profile }) {
         title: "Settings",
         links: [
           { href: "/settings", label: "Settings" },
+          { href: "/settings/customize", label: "Customize page" },
           { href: "/settings/tutorials", label: "Tutorials" },
           { href: "/settings/knowledge-base", label: "Knowledge base" },
         ],

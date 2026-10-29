@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { ThemePicker } from "@/components/ThemePicker";
 import { PrintSettingsForm } from "@/components/PrintSettingsForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
@@ -15,13 +14,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <PageHeader title="Settings" subtitle="Preferences for this browser" />
       <ErrorBanner error={error} />
       <Notice message={message} />
-      <Section title="Appearance">
-        <p className="mb-3 text-sm text-stone-500">
-          Pick a colour palette and whether it shows light or dark. System follows your device and switches with it. Saved on this device;
-          invoices, labels and pull tickets always print in black and white.
-        </p>
-        <ThemePicker />
-      </Section>
       <Section title="Password">
         <form action={changePassword} className="card grid max-w-xl gap-3 sm:grid-cols-3" data-testid="change-password">
           <label>
