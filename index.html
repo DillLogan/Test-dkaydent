@@ -754,6 +754,9 @@ details[open] > :not(summary) { animation: rise-in 320ms var(--ease) both; }
 .signin { width: 100%; max-width: 400px; padding: 28px; }
 .signin-brand b { font: var(--dw) 26px/1 var(--display); }
 .signin-brand .small { color: var(--brand); }
+.shop-pick { display: grid; gap: 8px; }
+.shop-pick-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 12px 14px; height: auto; white-space: normal; }
+.shop-pick-btn .small { font-weight: 400; }
 .form-stack { display: grid; gap: 10px; }
 .form-stack .f { margin: 0; }
 .hint-box { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); color: var(--fg); }
@@ -4291,7 +4294,6 @@ root.KBSearch = { searchKb, highlight, bestLine, queryTerms, stem };
     if (!gateOk()) return renderGate();
     const gr = gateRole();
     if (gr !== "admin" && ui.role !== gr) { ui.role = gr; store.set("dk-role", gr); }
-    if (gr === "customer" && !ui.custLogin) { ui.custLogin = "lg-test"; store.set("dk-cust-login", "lg-test"); }
     const view = `${ui.page}:${ui.id || ""}`;
     const enter = view !== lastView;
     lastView = view;
@@ -7354,7 +7356,7 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
     if (!role) { ui.gateMsg = "That username and password don't match."; return render(); }
     store.set("dk-gate", h); ui.gateMsg = ""; document.title = "DKaydent Wholesale Demo";
     ui.role = role; store.set("dk-role", role);
-    if (role === "customer") { ui.custLogin = "lg-test"; store.set("dk-cust-login", "lg-test"); }
+    if (role === "customer") { ui.custLogin = ""; store.set("dk-cust-login", ""); ui.signin = { msg: "", hint: "", failed: false, forgot: false, user: "", shop: "" }; } // pick a shop, then sign in with its own login
     ui.page = role === "customer" ? "shop" : "dashboard"; ui.id = null; ui.q = {};
     try { history.replaceState(null, "", "#" + ui.page); } catch {}
     render();
@@ -7363,13 +7365,23 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
   // Customer sign-in: the customer view asks for a username and password first (test login: testcustomer / 1234)
   const portal = (s) => DK.portal(s);
   const myLogin = () => { if (!S) return null; const l = portal(S).logins.find((x) => x.id === ui.custLogin); return l && l.customerId && l.verifiedBy ? l : null; };
-  ui.signin = ui.signin || { msg: "", hint: "", failed: false, forgot: false, user: "" };
+  ui.signin = ui.signin || { msg: "", hint: "", failed: false, forgot: false, user: "", shop: "" };
+  /** Shops that have a working login: each shop signs in with its own, so it can only order for itself. */
+  const loginShops = () => { const ids = new Set(portal(S).logins.filter((l) => l.customerId && l.verifiedBy && l.pw).map((l) => l.customerId)); return S.customers.filter((c) => ids.has(c.id) && c.active !== false).sort((a, b) => a.name.localeCompare(b.name)); };
   PAGES.custSignIn = () => {
-    const g = ui.signin;
+    const g = ui.signin, shops = loginShops(), shop = g.shop && shops.find((c) => c.id === g.shop);
+    const brand = `<div class="signin-brand"><b>DKaydent</b><div class="small">Wholesale flowers &amp; goods</div></div>`;
+    if (!shop) return `<div class="signin-wrap"><div class="card signin pop-in" data-testid="cust-signin">${brand}
+      <h1 style="font-size:22px;margin:14px 0 4px">Which shop are you ordering for?</h1>
+      <p class="small" style="margin:0 0 12px">Pick your shop, then sign in with that shop's own login.</p>
+      ${g.msg ? `<div class="banner ${g.failed ? "banner-bad" : "banner-ok"}" role="status" style="margin-bottom:10px">${esc(g.msg)}</div>` : ""}
+      <div class="shop-pick" data-testid="shop-pick">${shops.length ? shops.map((c) => `<button type="button" class="btn shop-pick-btn" data-act="pickShop" data-v="${c.id}"><b>${esc(c.name)}</b>${c.address ? `<span class="small">${esc(c.address)}</span>` : ""}</button>`).join("") : `<p class="note">No shop has a login yet. Sales sets them up under Customer logins.</p>`}</div>
+    </div></div>`;
     return `<div class="signin-wrap"><div class="card signin pop-in" data-testid="cust-signin">
-      <div class="signin-brand"><b>DKaydent</b><div class="small">Wholesale flowers &amp; goods</div></div>
-      <h1 style="font-size:22px;margin:14px 0 4px">Sign in to shop</h1>
-      <p class="small" style="margin:0 0 12px">Customer accounts sign in with the username and password from their sales rep.</p>
+      ${brand}
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:14px" data-testid="signin-shop"><span class="small">Ordering for <b>${esc(shop.name)}</b></span><button type="button" class="lnk" data-act="pickShop" data-v="" data-testid="change-shop">Change shop</button></div>
+      <h1 style="font-size:22px;margin:6px 0 4px">Sign in to shop</h1>
+      <p class="small" style="margin:0 0 12px">Use ${esc(shop.name)}'s username and password from your sales rep.</p>
       ${g.msg ? `<div class="banner ${g.failed ? "banner-bad" : "banner-ok"}" role="alert" style="margin-bottom:10px">${esc(g.msg)}</div>` : ""}
       <form class="form-stack" data-form="custSignIn">
         <label class="f"><span>Username</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(g.user)}" data-testid="signin-user"></label>
@@ -7386,14 +7398,15 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
           <label class="f"><span>New password</span><input name="next" type="password" minlength="8" required></label>
           <label class="f"><span>Type it again</span><input name="again" type="password" minlength="8" required></label><button class="btn">Save password</button></form>
       </div>` : ""}
-      <p class="note" style="margin-top:14px" data-testid="test-login">Demo test login: <b>testcustomer</b> / <b>1234</b></p>
+      ${shop.id === "c-test" ? `<p class="note" style="margin-top:14px" data-testid="test-login">Demo test login: <b>testcustomer</b> / <b>1234</b></p>` : ""}
     </div></div>`;
   };
   const signedOnly = (name) => { const f = PAGES[name]; PAGES[name] = (...x) => (ui.role === "customer" && S && !myLogin() ? PAGES.custSignIn() : f(...x)); };
   ACTS.showHint = () => { const u = document.querySelector('[data-testid="signin-user"]')?.value || ui.signin.user; ui.signin.user = u; ui.signin.hint = u.trim() ? DK.hintFor(S, u) : "Type your username first."; render(); };
   ACTS.forgotToggle = () => { ui.signin.forgot = !ui.signin.forgot; render(); };
+  ACTS.pickShop = (el) => { ui.signin = { msg: "", hint: "", failed: false, forgot: false, user: "", shop: el.dataset.v || "" }; render(); };
   ACTS.custSignOut = () => {
-    if (gateRole() === "customer") return ACTS.gateOut(); ui.custLogin = ""; store.set("dk-cust-login", ""); ui.signin = { msg: "You're signed out.", hint: "", failed: false, forgot: false, user: "" }; if (ui.cart) delete ui.cart.shop; render(); };
+    ui.custLogin = ""; store.set("dk-cust-login", ""); ui.signin = { msg: "You're signed out. Pick a shop to sign in again.", hint: "", failed: false, forgot: false, user: "", shop: "" }; if (ui.cart) delete ui.cart.shop; ui.page = "shop"; render(); };
   function passwordSection() {
     const isC = ui.role === "customer", lg = isC ? myLogin() : null;
     const pwReq = isC ? "" : "required";
@@ -7405,7 +7418,11 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
   Object.assign(FORMS, {
     custSignIn: (o) => {
       ui.signin.user = String(o.username || "").trim();
-      try { ui.custLogin = DK.signIn(S, o.username, o.password); store.set("dk-cust-login", ui.custLogin); ui.signin = { msg: "", hint: "", failed: false, forgot: false, user: "" }; ui.page = "shop"; toast(`Signed in as ${myLogin()?.name || ""}`); }
+      try {
+        const id = DK.signIn(S, o.username, o.password), lg = portal(S).logins.find((x) => x.id === id), shop = cust(ui.signin.shop);
+        if (!shop || lg.customerId !== shop.id) throw new DK.UserError(`That login isn't for ${shop ? shop.name : "this shop"}. Each shop signs in with its own login.`);
+        ui.custLogin = id; store.set("dk-cust-login", ui.custLogin); ui.signin = { msg: "", hint: "", failed: false, forgot: false, user: "", shop: "" }; ui.page = "shop"; toast(`Signed in for ${shop.name}`);
+      }
       catch (e) { ui.signin.msg = e.message; ui.signin.failed = true; ui.signin.hint = ""; }
       render();
     },
@@ -7413,7 +7430,7 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
   });
   Object.assign(FORMS, {
     changePw: (o) => commit("changePassword", o, { msg: ui.role === "customer" && !o.next ? "Hint saved." : "Password changed." }),
-    useReset: (o) => commit("useReset", { username: o.username, next: o.next, again: o.again }, { after: () => { ui.signin = { msg: "Password changed. Sign in with the new one.", hint: "", failed: false, forgot: false, user: String(o.username || "") }; }, msg: "Password changed." }),
+    useReset: (o) => commit("useReset", { username: o.username, next: o.next, again: o.again }, { after: () => { ui.signin = { msg: "Password changed. Sign in with the new one.", hint: "", failed: false, forgot: false, user: String(o.username || ""), shop: ui.signin.shop || "" }; }, msg: "Password changed." }),
     savePrintouts: (o) => {
       const t = (k) => String(o[k] || "").trim(), b = (k) => o[k] === "on" || o[k] === true || o[k] === "true";
       commit("savePrintouts", { cfg: {
