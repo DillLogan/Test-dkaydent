@@ -496,7 +496,8 @@ await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not aut
 await as(admin);
 await db.exec(`grant usage on schema public to authenticated;
   grant select, insert, update, delete on all tables in schema public to authenticated;
-  grant usage on all sequences in schema public to authenticated;`);
+  grant usage on all sequences in schema public to authenticated;
+  grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
 await as(sales);
 await db.exec(`set role authenticated`);
 ok((await q(`select id from products`)).length === 9, "sales can read products");
@@ -889,6 +890,44 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await q(`select 1 from signature_docs`)).length === 0, "customers can't see documents to sign");
   await db.exec(`reset role`);
   await expectErr(`insert into signature_requests (token, recipient_email) values ('tok-2','not-an-email')`, [], "check", "recipient must be an email");
+}
+
+
+// ---- knowledge base articles ----
+{
+  await q(`update profiles set active=true, role='sales' where id=$1`, [sales]);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  const a = await one(`insert into kb_articles (category, title, body) values ('Orders', ' Rush orders ', array[' Call the cooler first. ', '', 'Then mark MUST CHECK.']) returning id, title, body, author_id`);
+  ok(a.title === "Rush orders" && a.body.length === 2 && a.author_id === sales, "staff add an article; text tidied");
+  await expectErr(`insert into kb_articles (builtin_id, category, title) values ('labels-faq','Stock','Mine now')`, [], "row-level security", "staff can't change a built-in article");
+  await expectErr(`insert into kb_articles (category, title, hidden) values ('Stock','x', true)`, [], "row-level security", "staff can't hide articles");
+  await q(`update kb_articles set title='Rush orders (cooler first)' where id=$1`, [a.id]);
+  ok((await one(`select title from kb_articles where id=$1`, [a.id])).title === "Rush orders (cooler first)", "author edits their article");
+  await db.exec(`reset role`);
+  await as(admin);
+  await db.exec(`set role authenticated`);
+  await q(`update kb_articles set body=array['Edited by admin'] where id=$1`, [a.id]);
+  const e = await one(`select body, author_id, updated_by from kb_articles where id=$1`, [a.id]);
+  ok(e.body[0] === "Edited by admin" && e.author_id === sales && e.updated_by === admin, "admin edits anyone's article; author kept");
+  await q(`insert into kb_articles (builtin_id, category, title, hidden) values ('labels-faq','Stock','Label printing', true)`);
+  ok((await q(`select 1 from kb_articles where builtin_id='labels-faq' and hidden`)).length === 1, "admin hides a built-in article");
+  await db.exec(`reset role`);
+  const w = "00000000-0000-0000-0000-0000000000a9";
+  await q(`insert into auth.users (id, email) values ($1, 'wes@example.com') on conflict do nothing`, [w]);
+  await q(`insert into profiles (id, email, role, active) values ($1, 'wes@example.com', 'warehouse', true) on conflict (id) do update set role='warehouse', active=true`, [w]);
+  await as(w);
+  await db.exec(`set role authenticated`);
+  const up = await db.query(`update kb_articles set title='hijack' where id=$1 returning id`, [a.id]);
+  ok(up.rows.length === 0, "someone else can't edit an article");
+  const dl = await db.query(`delete from kb_articles where id=$1 returning id`, [a.id]);
+  ok(dl.rows.length === 0, "or remove it");
+  await db.exec(`reset role`);
+  const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
+  await as(cu);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from kb_articles`)).length === 0, "customers can't read the knowledge base");
+  await db.exec(`reset role`);
 }
 
 console.log(`\n${pass} checks passed`);

@@ -372,7 +372,9 @@ export const ARTICLES: Article[] = [
   { id: "help-guide", category: "Settings", title: "Using Tutorials and the Knowledge base", body: [
     "Settings → Tutorials has step-by-step guides for the main jobs. Each step has a picture with an orange box and arrow showing what to tap or fill in.",
     "Tap a name at the top of the page to jump to a guide. Links beside a step open the right page.",
-    "Settings → Knowledge base explains how things work. Search by any word, or pick a category. Tap an article to open it.",
+    "Settings → Knowledge base explains how things work. Search finds articles and tutorials, best match first, and marks the matching words; it understands plurals and word endings (shelves finds shelf). Pick a category to narrow it.",
+    "Anyone on the team can tap + Write an article to add what they know: a title, a category (or a new one) and the text, one paragraph per point. You can edit or remove your own articles.",
+    "Admin can edit or remove any article, hide one (Show hidden brings it back into view for admin), and reword a built-in article. Restore original puts a built-in article back the way it shipped.",
     "Tutorials show the demo's screens, so colours and fonts may differ slightly from yours.",
   ], images: ["Tutorials and Knowledge base are in the Help part of Settings.", "Every step has a picture with an arrow.", "Search the Knowledge base by any word."] },
   { id: "phone", category: "Settings", title: "Using the app on a phone", body: [
