@@ -10,6 +10,8 @@ export type SectionDraft = { id?: string; locationId: string; newLocation?: stri
  */
 export function SectionEditor(props: {
   mode: "new" | "edit" | "rename";
+  layoutName: string;
+  wholeId: string | null; // the location that stands for the whole layout, if made already
   locations: { id: string; name: string }[];
   initial: { id?: string; locationId?: string; name?: string; shelves?: string[] };
   error: string | null;
@@ -20,7 +22,9 @@ export function SectionEditor(props: {
   onClose: () => void;
 }) {
   const { mode, locations, initial } = props;
-  const [loc, setLoc] = useState(initial.locationId || locations[0]?.id || "__new");
+  const others = locations.filter((l) => l.id !== props.wholeId);
+  // the layout itself is offered first; a section already in it shows that choice
+  const [loc, setLoc] = useState(initial.locationId && initial.locationId !== props.wholeId ? initial.locationId : initial.locationId === props.wholeId && initial.locationId ? "__layout" : others[0]?.id || "__layout");
   const first = useRef<HTMLInputElement>(null);
   useEffect(() => {
     first.current?.focus();
@@ -69,7 +73,8 @@ export function SectionEditor(props: {
             <label className="block">
               <span className="label">Location</span>
               <select name="locationId" className="input" value={loc} onChange={(e) => setLoc(e.target.value)} data-testid="section-location">
-                {locations.map((l) => (
+                <option value="__layout">{props.layoutName} (whole space)</option>
+                {others.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
                   </option>

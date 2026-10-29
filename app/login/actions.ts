@@ -12,8 +12,11 @@ export async function signIn(fd: FormData) {
     email: loginEmail(typed),
     password: String(fd.get("password") ?? ""),
   });
-  if (error) fail(`/login?u=${encodeURIComponent(typed.slice(0, 200))}`, error.message);
-  redirect("/");
+  const next = String(fd.get("next") ?? "");
+  // only a path on this site (e.g. a signing link), never another address
+  const safeNext = /^\/(?!\/)[\w\-./?=&%]*$/.test(next) ? next : "/";
+  if (error) fail(`/login?u=${encodeURIComponent(typed.slice(0, 200))}${safeNext !== "/" ? `&next=${encodeURIComponent(safeNext)}` : ""}`, error.message);
+  redirect(safeNext);
 }
 
 export async function signUp(fd: FormData) {

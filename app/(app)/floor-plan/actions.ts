@@ -279,7 +279,23 @@ export async function saveSection(input: SectionInput): Promise<Result & { id?: 
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
   if (!name || name.length > 40) return { error: "Name the section (up to 40 characters)." };
   let locationId = input.locationId;
-  if (locationId === "__new") {
+  if (locationId === "__layout") {
+    // the layout itself: a location named after it that covers the whole space (never drawn as an area)
+    const { data: lay } = await supabase.from("shop_layouts").select("id, name").eq("id", input.layoutId).single();
+    if (!lay) return { error: "Layout not found." };
+    const { data: here } = await supabase.from("locations").select("id, name, whole_layout").eq("layout_id", lay.id);
+    let whole = (here ?? []).find((l) => l.whole_layout) ?? (here ?? []).find((l) => l.name.toLowerCase() === lay.name.toLowerCase());
+    if (!whole) {
+      const { data: taken } = await supabase.from("locations").select("id").ilike("name", lay.name.replace(/[%_\\]/g, "\\$&")).limit(1);
+      const name = taken?.length ? `${lay.name} (whole space)` : lay.name;
+      const { data: made, error } = await supabase.from("locations").insert({ name, kind: "other", layout_id: lay.id, whole_layout: true }).select("id, name, whole_layout").single();
+      if (error || !made) return { error: error ? dbMessage(error) : "Couldn't add the location." };
+      whole = made;
+    } else if (!whole.whole_layout) {
+      await supabase.from("locations").update({ whole_layout: true }).eq("id", whole.id);
+    }
+    locationId = whole.id;
+  } else if (locationId === "__new") {
     const ln = String(input.newLocation ?? "").trim().replace(/\s+/g, " ");
     if (!ln) return { error: "Name the new location." };
     const { data: loc, error } = await supabase.from("locations").insert({ name: ln, kind: "other", layout_id: input.layoutId }).select("id").single();

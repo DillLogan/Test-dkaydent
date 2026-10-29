@@ -31,6 +31,9 @@ export async function middleware(request: NextRequest) {
   // The Valor and web store endpoints authenticate with their own shared secrets.
   const isPublic =
     request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/sign/") || // signing links: the page and its API check the link and the signer themselves
+    request.nextUrl.pathname.startsWith("/api/sign/") ||
+    request.nextUrl.pathname === "/pdf.worker.v6.min.js" ||
     request.nextUrl.pathname === "/api/valor/webhook" ||
     request.nextUrl.pathname.startsWith("/api/web-store/"); // signed webhook and the scheduled sync check their own secrets
   if (!user && !isPublic) {

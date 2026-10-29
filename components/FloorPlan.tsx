@@ -30,7 +30,7 @@ import { SectionEditor, type SectionDraft } from "./SectionEditor";
 
 /** A location's area, or a section's (parent = the section's location). */
 export type PlanArea = MapArea & { parent?: string };
-export type PlanLocation = { id: string; name: string; kind: string; active: boolean };
+export type PlanLocation = { id: string; name: string; kind: string; active: boolean; whole_layout?: boolean };
 export type PlanItem = {
   id: string;
   sku: string;
@@ -155,7 +155,8 @@ export function FloorPlan(props: {
 
   const locName = (id: string | null) => props.locations.find((l) => l.id === id)?.name ?? "—";
   const placedIds = new Set(areas.map((a) => a.id));
-  const unplaced = props.locations.filter((l) => l.active && !placedIds.has(l.id));
+  const unplaced = props.locations.filter((l) => l.active && !l.whole_layout && !placedIds.has(l.id));
+  const wholeLoc = props.locations.find((l) => l.whole_layout) ?? null;
   const unplacedSections = props.sections.filter((x) => !placedIds.has(x.id));
   const sectionOf = (id: string | null) => props.sections.find((x) => x.id === id) ?? null;
   const item = items.find((i) => i.id === found) ?? null;
@@ -372,7 +373,7 @@ export function FloorPlan(props: {
         newLocation: d.newLocation,
         name: d.name,
         shelves: d.shelves,
-        place: !d.id && d.place ? spotFor(d.locationId === "__new" ? undefined : d.locationId) : null,
+        place: !d.id && d.place ? spotFor(d.locationId === "__new" || d.locationId === "__layout" ? undefined : d.locationId) : null,
       });
       if (r.error) return setSecError(r.error);
       setSecForm(null);
@@ -1399,6 +1400,8 @@ export function FloorPlan(props: {
         <SectionEditor
           key={JSON.stringify(secForm)}
           mode={secForm.mode}
+          layoutName={props.layout.name}
+          wholeId={wholeLoc?.id ?? null}
           locations={props.locations.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name }))}
           initial={
             secForm.mode === "new"
