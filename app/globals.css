@@ -952,3 +952,22 @@ html.mobile body { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
 .tabbar .tab-badge { position: absolute; top: -4px; left: 14px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; line-height: 18px; text-align: center; }
 @media print { .tabbar { display: none !important; } html.mobile body { padding-bottom: 0; } }
 @media (prefers-reduced-motion: reduce) { .tabbar .tab::before, .tabbar .tab-ic { transition: none; } }
+
+/* ---------- Smooth interactions (see components/Motion.tsx for things that appear and totals that change) ---------- */
+:root { interpolate-size: allow-keywords; }
+.input, input, select, textarea { transition: border-color .18s var(--ease-out), box-shadow .18s var(--ease-out), background-color .18s var(--ease-out); }
+input[type="checkbox"], input[type="radio"] { transition: transform .15s var(--ease-out); }
+input[type="checkbox"]:active, input[type="radio"]:active { transform: scale(.88); }
+a, .link { transition: color .15s var(--ease-out), opacity .15s var(--ease-out); }
+tbody tr { transition: background-color .15s var(--ease-out); }
+[role="tab"], [role="tablist"] button { transition: background-color .18s var(--ease-out), color .18s var(--ease-out), border-color .18s var(--ease-out), transform .12s var(--ease-out); }
+[role="tab"]:active { transform: scale(.97); }
+details::details-content { block-size: 0; overflow: clip; transition: block-size .3s var(--ease-out), content-visibility .3s allow-discrete; }
+details[open]::details-content { block-size: auto; }
+[role="alert"], [role="status"] { transition: opacity .28s var(--ease-out), translate .28s var(--ease-out); @starting-style { opacity: 0; translate: 0 -6px; } }
+.val-flash { animation: val-flash .9s var(--ease-out); border-radius: 4px; }
+@keyframes val-flash { 0% { background: color-mix(in srgb, var(--color-brand-500, #2f7d4f) 22%, transparent); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .input, input, select, textarea, a, .link, tbody tr, [role="tab"], [role="tablist"] button, details::details-content, [role="alert"], [role="status"] { transition: none !important; }
+  .val-flash { animation: none !important; }
+}

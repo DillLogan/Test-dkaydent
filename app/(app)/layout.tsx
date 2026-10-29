@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Nav } from "@/components/Nav";
+import { Motion } from "@/components/Motion";
 import { getSession } from "@/lib/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Nav profile={profile} />
       <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8 print:p-0">
         <div className="mx-auto max-w-6xl">{children}</div>
+        <Motion />
       </main>
     </div>
   );
