@@ -1009,4 +1009,31 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+// ---- receiving puts stock on a section and shelf ----
+{
+  await as(admin);
+  const c1 = await one(`select id, layout_id from locations where name='Cooler 1'`);
+  const c2 = (await one(`select id from locations where name='Cooler 2'`)).id;
+  const sec = (await one(`insert into location_sections (location_id, name, shelves) values ($1, 'Rack R', array['1','2','3']) returning id`, [c1.id])).id;
+  const rU = (await one(`select u.id from product_units u join products p on p.id=u.product_id where p.sku='RO-FRE-60' and u.name='bunch'`)).id;
+  const rP = (await one(`select id from products where sku='RO-FRE-60'`)).id;
+  const v = (await one(`select id from vendors limit 1`)).id;
+  const po = (await one(`insert into purchase_orders (vendor_id) values ($1) returning id`, [v])).id;
+  const lA = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,5,10) returning id`, [po, rP, rU])).id;
+  await q(`update purchase_orders set status='ordered', order_date=current_date where id=$1`, [po]);
+  await q(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: lA, qty: 1, location_id: c1.id, section_id: sec, shelf: " 2 " }])]);
+  let lot = await one(`select section_id, shelf from lots where po_line_id=$1 order by created_at desc, lot_code desc limit 1`, [lA]);
+  ok(lot.section_id === sec && lot.shelf === "2", "receiving saves the chosen section and shelf");
+  await expectErr(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: lA, qty: 1, location_id: c2, section_id: sec, shelf: "1" }])], "isn't in this lot's location", "section must be in the chosen location");
+  await q(`select set_home_location($1,$2,$3)`, [rP, c1.layout_id, c1.id]);
+  await q(`select set_home_spot($1,$2,$3,'3')`, [rP, c1.layout_id, sec]);
+  await q(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: lA, qty: 1, location_id: c1.id }])]);
+  lot = await one(`select section_id, shelf from lots where po_line_id=$1 and shelf='3'`, [lA]);
+  ok(lot && lot.section_id === sec, "no spot chosen: the item's usual spot is used in its home location");
+  await q(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: lA, qty: 1, location_id: c2 }])]);
+  lot = await one(`select section_id from lots where po_line_id=$1 and location_id=$2`, [lA, c2]);
+  ok(lot.section_id === null, "outside its home location no spot is guessed");
+  await q(`select set_home_location($1,$2,null)`, [rP, c1.layout_id]);
+}
+
 console.log(`\n${pass} checks passed`);

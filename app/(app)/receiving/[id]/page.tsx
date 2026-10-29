@@ -13,6 +13,7 @@ import {
 } from "../actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ItemThumb } from "@/components/ItemThumb";
+import { ReceiveSpot } from "@/components/ReceiveSpot";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
@@ -22,13 +23,13 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
   const { error, message } = await searchParams;
   const { supabase, profile } = await getSession();
 
-  const [{ data: s }, { data: pos }, { data: locations }, { data: addable }] = await Promise.all([
+  const [{ data: s }, { data: pos }, { data: locations }, { data: addable }, { data: sections }] = await Promise.all([
     supabase.from("v_shipments").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("purchase_orders")
       .select(
         "id, po_number, status, order_date, expected_date, freight_cost, other_cost, standing_order_id, customized, vendors(name), standing_orders(id, name), " +
-          "purchase_order_lines(id, qty, unit_cost, qty_received_base, created_at, products(id, sku, name, base_unit, shelf_life_days, image_path, product_homes(location_id)), product_units(name, factor))",
+          "purchase_order_lines(id, qty, unit_cost, qty_received_base, created_at, products(id, sku, name, base_unit, shelf_life_days, image_path, product_homes(location_id, section_id, shelf)), product_units(name, factor))",
       )
       .eq("shipment_id", id)
       .order("po_number"),
@@ -40,6 +41,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
       .in("status", ["draft", "ordered", "partially_received"])
       .order("po_number")
       .limit(200),
+    supabase.from("location_sections").select("id, location_id, name, shelves").order("name"),
   ]);
   if (!s) notFound();
 
@@ -259,7 +261,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                     <th>Product</th>
                     <th className="num">Due</th>
                     <th>Receive qty</th>
-                    <th>Location</th>
+                    <th>Location · section · shelf</th>
                     <th>Expires</th>
                     <th>Lot / farm code</th>
                   </tr>
@@ -291,13 +293,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                           />
                         </td>
                         <td>
-                          <select name={`loc_${l.id}`} className="input w-auto" defaultValue={home} aria-label={`Location for ${l.products.name}`}>
-                            {locs.map((x) => (
-                              <option key={x.id} value={x.id}>
-                                {x.name}
-                              </option>
-                            ))}
-                          </select>
+                          <ReceiveSpot lineId={l.id} name={l.products.name} locations={locs} sections={sections ?? []} homes={l.products.product_homes ?? []} defaultLoc={home} />
                         </td>
                         <td>
                           <input

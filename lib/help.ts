@@ -321,6 +321,7 @@ export const ARTICLES: Article[] = [
     "A location (Cooler 1) can hold sections (Rack A, Bucket row), and each section can have shelves (1, 2, 3 or Top, Middle, Bottom).",
     "Add one: Location in shop → Edit layout → + Add section. Pick the location, or + New location…, name the section and list its shelves. 1-4 makes shelves 1 to 4. It appears on the plan inside its location; drag and resize it like any area.",
     "Tap a section to edit, rename or delete it. Tap a location to rename it or add a section to it.",
+    "Receiving: next to each line's location, pick the section and shelf. It starts at the item's usual spot in that location; changing the location changes the choices. Left on No section, the usual spot is used when the stock goes into its home location.",
     "Where stock sits: on a lot's page, set Section and shelf. Moving stock to another location clears it.",
     "An item's usual spot: on the item's page, under its home area, set Usual section and shelf.",
     "Pull tickets show Section · Shelf for each line: the stock's own spot, else the item's usual spot when the stock is in its home location. Lines are sorted by section, then shelf.",

@@ -1,5 +1,6 @@
 "use server";
 
+import { splitSpot } from "@/lib/spots";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
@@ -114,6 +115,7 @@ export async function receivePO(id: string, lineIds: string[], fd: FormData) {
       line_id: lineId,
       qty: num(fd, `qty_${lineId}`) ?? 0,
       location_id: str(fd, `loc_${lineId}`) ?? defaultLocation,
+      ...(({ sectionId, shelf }) => ({ section_id: sectionId, shelf }))(splitSpot(fd.get(`spot_${lineId}`))),
       expires_at: str(fd, `exp_${lineId}`),
       lot_code: str(fd, `lot_${lineId}`),
     }))
