@@ -25,8 +25,11 @@ import {
   type Pt,
 } from "@/lib/shapes";
 import type { MapArea } from "./MiniMap";
+import type { PlanSection } from "@/lib/plan";
+import { SectionEditor, type SectionDraft } from "./SectionEditor";
 
-export type PlanArea = MapArea;
+/** A location's area, or a section's (parent = the section's location). */
+export type PlanArea = MapArea & { parent?: string };
 export type PlanLocation = { id: string; name: string; kind: string; active: boolean };
 export type PlanItem = {
   id: string;
@@ -37,6 +40,7 @@ export type PlanItem = {
   baseUnit: string;
   home: string | null;
   stock: Record<string, number>; // location id → base qty
+  sectionStock?: Record<string, number>; // section id → base qty recorded there
 };
 type Result = { error?: string } | void;
 type Created = { error?: string; id?: string };
@@ -69,6 +73,7 @@ export function FloorPlan(props: {
   heightFt: number | null;
   backgroundUrl: string | null;
   areas: PlanArea[];
+  sections: PlanSection[];
   locations: PlanLocation[];
   items: PlanItem[];
   canEdit: boolean;
@@ -87,12 +92,26 @@ export function FloorPlan(props: {
     addDoor: (layoutId: string, d: { kind: string; label: string; side: string; pos: number }) => Promise<Created>;
     saveDoor: (id: string, d: { kind?: string; label?: string; side?: string; pos?: number }) => Promise<Result>;
     removeDoor: (id: string) => Promise<Result>;
+    saveSection: (d: {
+      id?: string;
+      layoutId: string;
+      locationId: string;
+      newLocation?: string;
+      name: string;
+      shelves: string;
+      place?: { points: Pt[]; color?: string } | null;
+    }) => Promise<{ error?: string; id?: string; locationId?: string }>;
+    deleteSection: (id: string) => Promise<Result>;
+    renameLocation: (id: string, name: string) => Promise<Result>;
   };
 }) {
   const { actions, canEdit, canAssign } = props;
   const layoutId = props.layout.id;
   const router = useRouter();
-  const [areas, setAreas] = useState<PlanArea[]>(props.areas);
+  const withSections = (a: PlanArea[], secs: PlanSection[]): PlanArea[] => [...a, ...secs.filter((x) => x.area).map((x) => ({ ...x.area!, parent: x.locationId }))];
+  const [areas, setAreas] = useState<PlanArea[]>(() => withSections(props.areas, props.sections));
+  const [secForm, setSecForm] = useState<null | { mode: "new"; locationId?: string } | { mode: "edit"; id: string } | { mode: "rename"; id: string }>(null);
+  const [secError, setSecError] = useState<string | null>(null);
   const [doors, setDoors] = useState<PlanDoor[]>(props.doors);
   const [selectedDoor, setSelectedDoor] = useState<string | null>(null);
   const [layoutForm, setLayoutForm] = useState<null | "new" | "rename" | "delete">(null);
@@ -137,6 +156,8 @@ export function FloorPlan(props: {
   const locName = (id: string | null) => props.locations.find((l) => l.id === id)?.name ?? "—";
   const placedIds = new Set(areas.map((a) => a.id));
   const unplaced = props.locations.filter((l) => l.active && !placedIds.has(l.id));
+  const unplacedSections = props.sections.filter((x) => !placedIds.has(x.id));
+  const sectionOf = (id: string | null) => props.sections.find((x) => x.id === id) ?? null;
   const item = items.find((i) => i.id === found) ?? null;
   const area = areas.find((a) => a.id === selected) ?? null;
   const door = doors.find((d) => d.id === selectedDoor) ?? null;
@@ -316,14 +337,23 @@ export function FloorPlan(props: {
     saveShape(a, removePoint(a.points, i));
   }
 
-  function place(loc: PlanLocation) {
-    const color = AREA_COLORS[areas.length % AREA_COLORS.length];
-    // a 10 × 8 ft area when the floor size is known, else a fifth of the plan
-    const w = scale ? Math.min(60, 10 / scale.x) : 20;
-    const h = scale ? Math.min(60, 8 / scale.y) : 16;
-    const points = clampPts(rectPoints(snapX(50 - w / 2), snapY(50 - h / 2), snapX(w), snapY(h)));
+  /** Where a new area goes: inside its location's area for a section, else a 10 × 8 ft (or fifth of the plan) box in the middle. */
+  function spotFor(parent?: string) {
+    const pa = parent ? areas.find((x) => x.id === parent) : null;
+    if (pa) {
+      const pb = bbox(pa.points);
+      const w = Math.max(stepX * 4, pb.w * 0.4);
+      const h = Math.max(stepY * 4, pb.h * 0.5);
+      return { points: clampPts(rectPoints(snapX(pb.x + pb.w / 2 - w / 2), snapY(pb.y + pb.h / 2 - h / 2), snapX(w), snapY(h))), color: pa.color };
+    }
+    const w = parent ? (scale ? Math.min(40, 6 / scale.x) : 14) : scale ? Math.min(60, 10 / scale.x) : 20;
+    const h = parent ? (scale ? Math.min(40, 4 / scale.y) : 10) : scale ? Math.min(60, 8 / scale.y) : 16;
+    return { points: clampPts(rectPoints(snapX(50 - w / 2), snapY(50 - h / 2), snapX(w), snapY(h))), color: AREA_COLORS[areas.length % AREA_COLORS.length] };
+  }
+  function place(loc: { id: string; name: string; parent?: string }) {
+    const { points, color } = spotFor(loc.parent);
     const b = bbox(points);
-    const a: PlanArea = { id: loc.id, name: loc.name, x: b.x, y: b.y, w: b.w, h: b.h, color, points };
+    const a: PlanArea = { id: loc.id, name: loc.name, x: b.x, y: b.y, w: b.w, h: b.h, color, points, parent: loc.parent };
     setAreas((all) => [...all, a]);
     setSelected(loc.id);
     setVertex(null);
@@ -331,6 +361,46 @@ export function FloorPlan(props: {
       () => actions.saveArea(loc.id, { points, color }),
       () => setAreas((all) => all.filter((x) => x.id !== loc.id)),
     );
+  }
+  function saveSectionDraft(d: SectionDraft) {
+    setSecError(null);
+    start(async () => {
+      const r = await actions.saveSection({
+        id: d.id,
+        layoutId,
+        locationId: d.locationId,
+        newLocation: d.newLocation,
+        name: d.name,
+        shelves: d.shelves,
+        place: !d.id && d.place ? spotFor(d.locationId === "__new" ? undefined : d.locationId) : null,
+      });
+      if (r.error) return setSecError(r.error);
+      setSecForm(null);
+      if (r.id) setSelected(r.id);
+      setSelectedDoor(null);
+      router.refresh();
+    });
+  }
+  function renameLoc(id: string, name: string) {
+    setSecError(null);
+    start(async () => {
+      const r = await actions.renameLocation(id, name);
+      if (r && r.error) return setSecError(r.error);
+      setSecForm(null);
+      router.refresh();
+    });
+  }
+  function dropSection(id: string) {
+    if (!window.confirm("Delete this section? Stock and items that used it keep their location but lose this section and shelf.")) return;
+    setSecError(null);
+    start(async () => {
+      const r = await actions.deleteSection(id);
+      if (r && r.error) return setSecError(r.error);
+      setSecForm(null);
+      setSelected(null);
+      setAreas((all) => all.filter((x) => x.id !== id));
+      router.refresh();
+    });
   }
   function recolor(a: PlanArea, color: string) {
     setAreas((all) => all.map((x) => (x.id === a.id ? { ...x, color } : x)));
@@ -365,10 +435,10 @@ export function FloorPlan(props: {
   }
   // the server re-reads shapes after a floor size change
   useEffect(() => {
-    setAreas(props.areas);
+    setAreas(withSections(props.areas, props.sections));
     setAspect(props.aspect);
     setFeet(props.widthFt && props.heightFt ? { w: props.widthFt, h: props.heightFt } : null);
-  }, [props.areas, props.aspect, props.widthFt, props.heightFt]);
+  }, [props.areas, props.sections, props.aspect, props.widthFt, props.heightFt]); // eslint-disable-line react-hooks/exhaustive-deps
   function setHome(it: PlanItem, locId: string | null) {
     const prev = it.home;
     setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: locId } : x)));
@@ -578,6 +648,11 @@ export function FloorPlan(props: {
               Clear “{item.name}”
             </button>
           )}
+          {canEdit && editing && (
+            <button type="button" className="btn" onClick={() => { setSecError(null); setSecForm({ mode: "new", locationId: area && !area.parent ? area.id : undefined }); }} data-testid="add-section">
+              + Add section
+            </button>
+          )}
           {canEdit && (
             <button type="button" className={`btn ${editing ? "btn-primary" : ""}`} onClick={() => setEditing((v) => !v)} aria-pressed={editing}>
               {editing ? "Done editing" : "Edit layout"}
@@ -658,6 +733,16 @@ export function FloorPlan(props: {
                 ))}
               </div>
             )}
+            {unplacedSections.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="label mb-0">Place section</span>
+                {unplacedSections.map((x) => (
+                  <button key={x.id} type="button" className="btn btn-sm" onClick={() => place({ id: x.id, name: x.name, parent: x.locationId })}>
+                    + {x.name} <span className="text-stone-500">({locName(x.locationId)})</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <form
               className="flex flex-wrap items-center gap-1"
               onSubmit={(e) => {
@@ -725,23 +810,24 @@ export function FloorPlan(props: {
             }}
           >
             {areas.map((a) => {
-              const mark = markFor(a);
+              const mark = a.parent ? null : markFor(a);
               const dim = item && !mark;
               const isSel = selected === a.id;
               const count = stockIn[a.id]?.length ?? 0;
               return (
                 <polygon
+                  strokeDasharray={a.parent ? "5 3" : undefined}
                   key={a.id}
                   data-area={a.id}
                   points={toSvg(a.points, aspect)}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${a.name}${count ? `, ${count} items stored` : ""}`}
+                  aria-label={a.parent ? `${a.name}, section in ${locName(a.parent)}` : `${a.name}${count ? `, ${count} items stored` : ""}`}
                   aria-pressed={isSel}
                   className={`plan-shape ${editing ? "cursor-move" : "cursor-pointer"} ${mark?.kind === "home" || mark?.kind === "home-stock" ? "shape-pulse" : ""}`}
                   style={{
                     fill: a.color,
-                    fillOpacity: mark ? 0.36 : isSel ? 0.28 : 0.18,
+                    fillOpacity: a.parent ? (isSel ? 0.42 : 0.3) : mark ? 0.36 : isSel ? 0.28 : 0.18,
                     stroke: mark?.kind === "away" ? "var(--color-amber-700)" : a.color,
                     strokeWidth: isSel ? 3 : 2,
                     opacity: dim ? 0.35 : 1,
@@ -867,10 +953,28 @@ export function FloorPlan(props: {
               })()}
           </svg>
           {areas.map((a) => {
-            const mark = markFor(a);
+            const mark = a.parent ? null : markFor(a);
             const count = stockIn[a.id]?.length ?? 0;
             const [cx, cy] = centroid(a.points, aspect);
             const isSel = selected === a.id;
+            if (a.parent) {
+              const sec = sectionOf(a.id);
+              const n = items.filter((i) => (i.sectionStock?.[a.id] ?? 0) > 0).length;
+              const shelves = sec?.shelves.length ?? 0;
+              return (
+                <div
+                  key={a.id}
+                  className={`pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center ${item ? "opacity-35" : ""}`}
+                  style={{ left: `${cx}%`, top: `${cy}%` }}
+                  aria-hidden="true"
+                >
+                  <span className="text-[11px] leading-tight font-semibold whitespace-nowrap text-stone-900">{a.name}</span>
+                  <span className="text-[10px] whitespace-nowrap text-stone-700">
+                    {editing && isSel ? sizeText(bbox(a.points)) : `${shelves ? `${shelves} shel${shelves === 1 ? "f" : "ves"}` : "No shelves"}${n ? ` · ${n} item${n === 1 ? "" : "s"}` : ""}`}
+                  </span>
+                </div>
+              );
+            }
             return (
               <div
                 key={a.id}
@@ -927,7 +1031,7 @@ export function FloorPlan(props: {
           })}
           {areas.length === 0 && (
             <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-stone-600">
-              {canEdit ? "Click Edit layout, then place your locations on the plan." : "No areas placed yet. Ask Warehouse or Admin to set up the plan."}
+              {canEdit ? (editing ? "Tap + Add section to put the first section on the plan." : "Click Edit layout, then tap + Add section.") : "No areas placed yet. Ask Warehouse or Admin to set up the plan."}
             </div>
           )}
         </div>
@@ -1033,11 +1137,59 @@ export function FloorPlan(props: {
             </div>
           </div>
         ) : area ? (
-          <div className="card space-y-3">
+          <div className="card space-y-3" data-testid={area.parent ? "section-panel" : "area-panel"}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold">{area.name}</h3>
               <span className="h-3 w-3 rounded-full" style={{ background: area.color }} aria-hidden="true" />
             </div>
+            {area.parent ? (
+              <>
+                <p className="text-sm text-stone-500">
+                  Section in <b className="text-stone-800">{locName(area.parent)}</b>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(sectionOf(area.id)?.shelves ?? []).length ? (
+                    sectionOf(area.id)!.shelves.map((x) => (
+                      <span key={x} className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-700">
+                        Shelf {x}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-stone-500">No shelves yet.</span>
+                  )}
+                </div>
+                {canEdit && (
+                  <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setSecForm({ mode: "edit", id: area.id }); }} data-testid="edit-section">
+                    Edit section
+                  </button>
+                )}
+              </>
+            ) : (
+              canEdit && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setSecForm({ mode: "rename", id: area.id }); }} data-testid="rename-location">
+                      Rename
+                    </button>
+                    <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setEditing(true); setSecForm({ mode: "new", locationId: area.id }); }}>
+                      + Add section here
+                    </button>
+                  </div>
+                  {props.sections.some((x) => x.locationId === area.id) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="label mb-0">Sections</span>
+                      {props.sections
+                        .filter((x) => x.locationId === area.id)
+                        .map((x) => (
+                          <button key={x.id} type="button" className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-700 hover:bg-stone-200" onClick={() => setSelected(x.id)}>
+                            {x.name}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
             {editing && (
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Area color">
@@ -1117,6 +1269,31 @@ export function FloorPlan(props: {
                 <p className="text-xs text-stone-500">{area.points.length} corners · {sizeText(bbox(area.points))}</p>
               </div>
             )}
+            {area.parent ? (
+              <div>
+                <div className="label">Recorded here</div>
+                {items.filter((i) => (i.sectionStock?.[area.id] ?? 0) > 0).length === 0 ? (
+                  <p className="text-sm text-stone-500">No stock recorded in this section. Set a lot&apos;s section and shelf on its page.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {items
+                      .filter((i) => (i.sectionStock?.[area.id] ?? 0) > 0)
+                      .map((it) => (
+                        <li key={it.id} className="flex items-center gap-2 text-sm">
+                          <ItemThumb path={it.image} name={it.name} category={it.category} size={28} />
+                          <button type="button" className="link min-w-0 flex-1 truncate text-left" onClick={() => setFound(it.id)}>
+                            {it.name}
+                          </button>
+                          <span className="tabular-nums">
+                            {fmt(it.sectionStock![area.id])} {it.baseUnit}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+            <>
             <div>
               <div className="label">Stored here now</div>
               {(stockIn[area.id] ?? []).length === 0 ? (
@@ -1162,6 +1339,8 @@ export function FloorPlan(props: {
                 </ul>
               )}
             </div>
+            </>
+            )}
           </div>
         ) : (
           <div className="card space-y-3 text-sm">
@@ -1216,6 +1395,26 @@ export function FloorPlan(props: {
           </div>
         )}
       </aside>
+      {secForm && (
+        <SectionEditor
+          key={JSON.stringify(secForm)}
+          mode={secForm.mode}
+          locations={props.locations.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name }))}
+          initial={
+            secForm.mode === "new"
+              ? { locationId: secForm.locationId }
+              : secForm.mode === "rename"
+                ? { id: secForm.id, name: locName(secForm.id) }
+                : { id: secForm.id, locationId: sectionOf(secForm.id)?.locationId, name: sectionOf(secForm.id)?.name, shelves: sectionOf(secForm.id)?.shelves }
+          }
+          error={secError}
+          pending={pending}
+          onSave={saveSectionDraft}
+          onRename={renameLoc}
+          onDelete={secForm.mode === "edit" ? () => dropSection(secForm.id) : undefined}
+          onClose={() => setSecForm(null)}
+        />
+      )}
     </div>
   );
 }

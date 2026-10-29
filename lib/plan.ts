@@ -7,6 +7,9 @@ export const AREA_COLORS = ["#2e5234", "#3d6b8f", "#8a6d3b", "#7a5c99", "#9a4d6b
 export type Layout = { id: string; name: string; aspect: number; background: string | null; widthFt: number | null; heightFt: number | null };
 export type DoorSide = "top" | "right" | "bottom" | "left";
 export type PlanDoor = { id: string; kind: "entry" | "exit"; label: string; side: DoorSide; pos: number };
+/** A section inside a location (Rack A in Cooler 1), with its shelves and, when placed, its outline on the plan. */
+export type PlanSection = { id: string; name: string; locationId: string; shelves: string[]; area: MapArea | null };
+type SecRow = { id: string; name: string; location_id: string; shelves: string[] | null; map_x: number | null; map_y: number | null; map_w: number | null; map_h: number | null; map_color: string | null; map_shape: unknown };
 export type PlanLocationRow = { id: string; name: string; kind: string; temp_c: number | null; active: boolean; layout_id: string };
 
 type LocRow = PlanLocationRow & {
@@ -35,14 +38,16 @@ function toAreas(rows: LocRow[]): MapArea[] {
 
 /** Every shop's floor plan: shape, background, its sections and entries/exits. */
 export async function loadPlans(supabase: SupabaseClient) {
-  const [{ data: layouts }, { data: locations }, { data: doors }] = await Promise.all([
+  const [{ data: layouts }, { data: locations }, { data: doors }, { data: sections }] = await Promise.all([
     supabase.from("shop_layouts").select("id, name, aspect, background_path, width_ft, height_ft").order("created_at").order("id"),
     supabase
       .from("locations")
       .select("id, name, kind, temp_c, active, layout_id, map_x, map_y, map_w, map_h, map_color, map_shape")
       .order("name"),
     supabase.from("plan_doors").select("id, layout_id, kind, label, side, pos").order("created_at"),
+    supabase.from("location_sections").select("id, name, location_id, shelves, map_x, map_y, map_w, map_h, map_color, map_shape").order("name"),
   ]);
+  const secs = (sections ?? []) as SecRow[];
   const locs = (locations ?? []) as LocRow[];
   return (layouts ?? []).map((l) => {
     const mine = locs.filter((x) => x.layout_id === l.id);
@@ -56,6 +61,13 @@ export async function loadPlans(supabase: SupabaseClient) {
         heightFt: l.height_ft === null ? null : Number(l.height_ft),
       } as Layout,
       areas: toAreas(mine),
+      sections: secs
+        .filter((x) => mine.some((m) => m.id === x.location_id))
+        .map((x): PlanSection => {
+          const parentColor = mine.find((m) => m.id === x.location_id)?.map_color ?? null;
+          const [area] = toAreas([{ ...x, kind: "", temp_c: null, active: true, layout_id: l.id, map_color: x.map_color ?? parentColor } as LocRow]);
+          return { id: x.id, name: x.name, locationId: x.location_id, shelves: x.shelves ?? [], area: area ?? null };
+        }),
       locations: mine.map(({ id, name, kind, temp_c, active, layout_id }) => ({ id, name, kind, temp_c, active, layout_id })),
       doors: (doors ?? [])
         .filter((d) => d.layout_id === l.id)

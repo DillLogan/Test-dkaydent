@@ -8,8 +8,11 @@ import {
   addDoor,
   createLayout,
   deleteLayout,
+  deleteSection,
   removeArea,
   removeDoor,
+  renameLocation,
+  saveSection,
   removePlanBackground,
   renameLayout,
   saveArea,
@@ -27,13 +30,22 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
   const plan = await loadPlan(supabase, layoutParam);
   const layoutId = plan.layout.id;
   const locIds = plan.locations.map((l) => l.id);
-  const [{ data: products }, { data: lots }, { data: homes }] = await Promise.all([
+  const secIds = plan.sections.map((x) => x.id);
+  const [{ data: products }, { data: lots }, { data: homes }, { data: secLots }] = await Promise.all([
     supabase.from("products").select("id, sku, name, category, image_path, base_unit").eq("active", true).order("name"),
     locIds.length
       ? supabase.from("v_lot_aging").select("product_id, location_id, qty_on_hand_base").in("location_id", locIds)
       : Promise.resolve({ data: [] as { product_id: string; location_id: string; qty_on_hand_base: number }[] }),
     supabase.from("product_homes").select("product_id, location_id").eq("layout_id", layoutId),
+    secIds.length
+      ? supabase.from("lots").select("product_id, section_id, qty_on_hand_base").in("section_id", secIds).gt("qty_on_hand_base", 0)
+      : Promise.resolve({ data: [] as { product_id: string; section_id: string; qty_on_hand_base: number }[] }),
   ]);
+  const secStock: Record<string, Record<string, number>> = {};
+  for (const l of secLots ?? []) {
+    const s = (secStock[l.product_id] ||= {});
+    s[l.section_id as string] = (s[l.section_id as string] ?? 0) + Number(l.qty_on_hand_base);
+  }
 
   // Stock and homes in this shop only
   const stock: Record<string, Record<string, number>> = {};
@@ -51,6 +63,7 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
     baseUnit: p.base_unit,
     home: homeOf.get(p.id) ?? null,
     stock: stock[p.id] ?? {},
+    sectionStock: secStock[p.id] ?? {},
   }));
 
   return (
@@ -68,6 +81,7 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
         heightFt={plan.layout.heightFt}
         backgroundUrl={imageUrl(plan.layout.background)}
         areas={plan.areas}
+        sections={plan.sections}
         doors={plan.doors}
         locations={plan.locations.map((l) => ({ id: l.id, name: l.name, kind: l.kind, active: l.active }))}
         items={items}
@@ -87,6 +101,9 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
           addDoor,
           saveDoor,
           removeDoor,
+          saveSection,
+          deleteSection,
+          renameLocation,
         }}
       />
     </>

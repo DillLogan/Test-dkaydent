@@ -12,7 +12,8 @@ import { MiniMap, type MapMark } from "@/components/MiniMap";
 import { imageUrl } from "@/lib/images";
 import { loadPlans } from "@/lib/plan";
 import { removeProductPhoto, uploadProductPhoto } from "../../photos/actions";
-import { setHomeArea } from "../../floor-plan/actions";
+import { setHomeArea, setHomeSpot } from "../../floor-plan/actions";
+import { spotOptions, spotText } from "@/lib/spots";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -50,11 +51,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const onHand = sum(lots, (l) => l.qty_on_hand_base);
   const [plans, { data: homes }] = await Promise.all([
     loadPlans(supabase),
-    supabase.from("product_homes").select("layout_id, location_id").eq("product_id", id),
+    supabase.from("product_homes").select("layout_id, location_id, section_id, shelf").eq("product_id", id),
   ]);
   // One map per shop: its home area and the stock sitting there
   const shops = plans.map((plan) => {
-    const home = (homes ?? []).find((h) => h.layout_id === plan.layout.id)?.location_id ?? null;
+    const homeRow = (homes ?? []).find((h) => h.layout_id === plan.layout.id) ?? null;
+    const home = homeRow?.location_id ?? null;
+    const homeSections = plan.sections.filter((x) => x.locationId === home);
     const ids = new Set(plan.locations.map((l) => l.id));
     const here = [...byLocation.keys()].filter((l) => ids.has(l));
     const marks: Record<string, MapMark> = {};
@@ -63,6 +66,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
     return {
       plan,
       home,
+      homeSections,
+      spotNow: homeRow?.section_id ? `${homeRow.section_id}::${homeRow.shelf ?? ""}` : "",
+      spotLabel: homeRow?.section_id ? spotText(homeSections.find((x) => x.id === homeRow.section_id)?.name, homeRow.shelf) : "",
       marks,
       homeName: plan.locations.find((l) => l.id === home)?.name,
       stockNames: here.map((l) => byLocation.get(l)!.name),
@@ -128,7 +134,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </Section>
         <Section title="Location in shop">
           <div className="space-y-6">
-            {shops.map(({ plan, home, marks, homeName, stockNames, misplaced }) => (
+            {shops.map(({ plan, home, homeSections, spotNow, spotLabel, marks, homeName, stockNames, misplaced }) => (
               <div key={plan.layout.id} className="space-y-3">
                 {shops.length > 1 && <h3 className="text-sm font-semibold">{plan.layout.name}</h3>}
                 <MiniMap
@@ -169,6 +175,33 @@ export default async function ProductPage({ params, searchParams }: Props) {
                     <SubmitButton className="btn">Save home area</SubmitButton>
                   </form>
                 )}
+                {home &&
+                  (canPlace ? (
+                    homeSections.length ? (
+                      <form action={setHomeSpot.bind(null, id, plan.layout.id)} className="flex flex-wrap items-end gap-2" data-testid="home-spot">
+                        <label className="min-w-48 flex-1">
+                          <span className="label">Usual section and shelf</span>
+                          <select name="spot" defaultValue={spotNow} className="input">
+                            <option value="">Not set</option>
+                            {spotOptions(homeSections).map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <SubmitButton className="btn">Save spot</SubmitButton>
+                      </form>
+                    ) : (
+                      <p className="text-xs text-stone-500">{homeName} has no sections yet. Add them on Location in shop.</p>
+                    )
+                  ) : (
+                    spotLabel && (
+                      <p className="text-sm">
+                        Usual spot: <b>{spotLabel}</b>
+                      </p>
+                    )
+                  ))}
               </div>
             ))}
           </div>

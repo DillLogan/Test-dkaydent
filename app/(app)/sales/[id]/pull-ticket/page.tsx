@@ -33,6 +33,11 @@ export default async function PullTicketPage({ params }: Props) {
         .in("product_id", productIds)
         .gt("qty_on_hand_base", 0)
     : { data: [] as any[] };
+  const lotIds = (lots ?? []).map((l: any) => l.id as string);
+  const { data: spots } = lotIds.length
+    ? await supabase.from("v_lot_spot").select("lot_id, section_name, shelf").in("lot_id", lotIds)
+    : { data: [] as { lot_id: string; section_name: string | null; shelf: string | null }[] };
+  const spotOf = new Map((spots ?? []).map((s) => [s.lot_id, s]));
 
   const ticket = buildPullTicket(
     (lines ?? []).map((l: any) => ({
@@ -57,6 +62,8 @@ export default async function PullTicketPage({ params }: Props) {
         createdAt: l.created_at,
         expiresAt: l.expires_at,
         onHandBase: Number(l.qty_on_hand_base),
+        section: spotOf.get(l.id)?.section_name ?? null,
+        shelf: spotOf.get(l.id)?.shelf ?? null,
       }),
     ),
     layouts ?? [],
@@ -144,12 +151,14 @@ export default async function PullTicketPage({ params }: Props) {
 
 function TicketTable({ rows, short, pc }: { rows: ReturnType<typeof buildPullTicket>["short"]; short?: boolean; pc: { showSku: boolean; showLot: boolean } }) {
   return (
-    <table className="w-full table-fixed border-collapse text-sm">
+    <div className="overflow-x-auto print:overflow-visible">
+    <table className="w-full min-w-[34rem] table-fixed border-collapse text-sm print:min-w-0">
       <colgroup>
         <col className="w-8" />
         <col />
-        <col className="w-32" />
-        <col className="w-40" />
+        <col className="w-24" />
+        <col className="w-28" />
+        <col className="w-36" />
         <col className="w-[4.5rem]" />
         <col className="w-[4.5rem]" />
       </colgroup>
@@ -157,6 +166,7 @@ function TicketTable({ rows, short, pc }: { rows: ReturnType<typeof buildPullTic
         <tr className="border-b border-[#a8a29e] text-left text-xs text-[#57534e]">
           <th className="w-8 py-1" aria-label="Pulled" />
           <th className="py-1">Item</th>
+          <th className="py-1">{short ? "" : "Section · Shelf"}</th>
           <th className="py-1">{short || !pc.showLot ? "" : "Lot"}</th>
           <th className="py-1 text-right">{short ? "Short by" : "Pull"}</th>
           <th className="py-1 pl-3">Pulled</th>
@@ -173,6 +183,16 @@ function TicketTable({ rows, short, pc }: { rows: ReturnType<typeof buildPullTic
               <div className="font-medium">{r.name}</div>
               {pc.showSku && <div className="font-mono text-xs text-[#57534e]">{r.sku}</div>}
             </td>
+            <td className="py-1.5 text-xs" data-testid="pt-spot">
+              {short ? "" : r.section ? (
+                <>
+                  <div className="font-semibold">{r.section}</div>
+                  {r.shelf && <div className="text-[#44403c]">Shelf {r.shelf}</div>}
+                </>
+              ) : (
+                <span className="text-[#a8a29e]">—</span>
+              )}
+            </td>
             <td className="py-1.5 font-mono text-xs">
               {short || !pc.showLot ? "" : r.lotCode ?? "—"}
               {pc.showLot && r.expiresAt && <div className="font-sans text-[#57534e]">exp {date(r.expiresAt)}</div>}
@@ -188,5 +208,6 @@ function TicketTable({ rows, short, pc }: { rows: ReturnType<typeof buildPullTic
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

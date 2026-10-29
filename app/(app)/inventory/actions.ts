@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { dbMessage, fail, num, str } from "@/lib/forms";
+import { splitSpot } from "@/lib/spots";
 
 /** Quantities on the lot page are entered in a chosen unit and converted to base units here. */
 async function toBase(fd: FormData, supabase: any): Promise<number | null> {
@@ -84,4 +85,15 @@ export async function toggleLocation(id: string, active: boolean) {
   if (error) fail("/inventory/locations", dbMessage(error));
   revalidatePath("/inventory/locations");
   redirect("/inventory/locations");
+}
+
+/** Where this stock sits inside its location: a section and shelf, or "Not set". */
+export async function setLotSpot(lotId: string, fd: FormData) {
+  const { supabase } = await requireRole("warehouse");
+  const path = `/inventory/lots/${lotId}`;
+  const { sectionId, shelf } = splitSpot(fd.get("spot"));
+  const { error } = await supabase.rpc("set_lot_spot", { p_lot_id: lotId, p_section_id: sectionId, p_shelf: shelf });
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(path);
+  redirect(`${path}?message=${encodeURIComponent("Section and shelf saved.")}`);
 }
