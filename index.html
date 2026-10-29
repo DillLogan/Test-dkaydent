@@ -766,6 +766,17 @@ details[open] > :not(summary) { animation: rise-in 320ms var(--ease) both; }
   .btn-p:not(:disabled):hover, .theme-opt:hover, .theme-opt:active { transform: none; }
 }
 
+.plabel .pl-d { text-align: center; color: #555; line-height: 1; white-space: nowrap; }
+.pt-spot { font-size: 12px; line-height: 1.3; } .pt-spot b { font-weight: 700; } .pt-spot div { color: #44403c; } .pt-none { color: #a8a29e; }
+/* sections drawn inside locations on the floor plan */
+.shape.sec { fill-opacity: .32; stroke-dasharray: 5 3; }
+.sec-lbl b { font-size: 12px; } .sec-lbl .ct { font-size: 11px; }
+[hidden] { display: none !important; }
+.pt-tw { overflow-x: auto; }
+@media screen and (max-width: 640px) { .pt { padding: 16px; } .pt-table { min-width: 560px; } .pt-head { flex-wrap: wrap; } }
+@media print { .pt-tw { overflow: visible; } .pt-table { min-width: 0 !important; } }
+.gate-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+
 </style>
 
 </head>
@@ -2885,15 +2896,17 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         const loc = s.locations.find((l) => l.id === lot.locationId);
         const lay = DK.locLayout(s, loc);
         const sec = ((tree[lay] ||= {})[loc?.name || "—"] ||= []);
-        const same = sec.find((r) => r.lineId === line.id && r.lot === lot.code && r.expires === (lot.expires || null));
+        const sp = DK.spotOf ? DK.spotOf(s, lot) : null;
+        const spot = sp ? { section: sp.section, shelf: sp.shelf } : { section: "", shelf: "" };
+        const same = sec.find((r) => r.lineId === line.id && r.lot === lot.code && r.expires === (lot.expires || null) && r.section === spot.section && r.shelf === spot.shelf);
         if (same) same.base += take;
-        else sec.push({ ...base, lot: lot.code, expires: lot.expires || null, base: take });
+        else sec.push({ ...base, lot: lot.code, expires: lot.expires || null, base: take, ...spot });
       }
       if (needQ > 1e-9) short.push({ ...base, lot: null, expires: null, base: needQ });
     }
     const shops = DK.layoutsOf(s).filter((l) => tree[l.id]).map((l) => ({
       id: l.id, name: l.name,
-      sections: Object.keys(tree[l.id]).sort(byText).map((name) => ({ name, rows: tree[l.id][name].sort((a, b) => byText(a.name, b.name)) })),
+      sections: Object.keys(tree[l.id]).sort(byText).map((name) => ({ name, rows: tree[l.id][name].sort((a, b) => (!a.section - !b.section) || byText(a.section, b.section) || byText(a.shelf, b.shelf) || byText(a.name, b.name)) })),
     }));
     short.sort((a, b) => byText(a.name, b.name));
     return { shops, short };
@@ -3475,6 +3488,206 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
   };
 })(typeof window !== "undefined" ? window : globalThis);
 
+/* DKaydent Wholesale demo — engine part 5: sections inside locations, and shelves inside sections.
+ * Location (Cooler 1) → Section (Rack A, drawn on the floor plan) → Shelf (1, 2, Top…).
+ * Stock records its own section and shelf; when it has none, the item's home spot is used. Mirrors the real app. */
+(function (root) {
+  "use strict";
+  const DK = root.DK;
+  const { uid, fail, need, byId } = DK._;
+  const OPS = DK.OPS;
+  const clean = (v) => String(v ?? "").trim();
+  const secs = (s) => (s.sections ||= []);
+  DK.sectionsOf = (s, locationId) => secs(s).filter((x) => x.locationId === locationId).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  DK.sectionById = (s, id) => (id ? secs(s).find((x) => x.id === id) || null : null);
+
+  /** Shelves typed as "1, 2, 3" or one per line; "1-4" expands to 1, 2, 3, 4. */
+  DK.parseShelves = (text) => {
+    const out = [];
+    for (const raw of String(text || "").split(/[\n,]+/)) {
+      const t = raw.trim();
+      if (!t) continue;
+      const m = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(t);
+      if (m && Number(m[2]) >= Number(m[1]) && Number(m[2]) - Number(m[1]) < 50) for (let i = Number(m[1]); i <= Number(m[2]); i++) out.push(String(i));
+      else out.push(t.slice(0, 30));
+    }
+    const seen = new Set();
+    return out.filter((x) => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 60);
+  };
+
+  /** Where an item sits inside its location: the stock's own spot, else the item's home spot in that location. */
+  DK.spotOf = (s, lot) => {
+    if (!lot) return null;
+    const own = DK.sectionById(s, lot.sectionId);
+    if (own && own.locationId === lot.locationId) return { section: own.name, shelf: lot.shelf || "", from: "stock" };
+    const p = s.products.find((x) => x.id === lot.productId);
+    const loc = s.locations.find((l) => l.id === lot.locationId);
+    if (!p || !loc) return null;
+    const lay = DK.locLayout(s, loc);
+    if (DK.homeOf(s, p, lay) !== loc.id) return null;
+    const hs = (p.homeSpots || {})[lay];
+    const sec = hs && DK.sectionById(s, hs.sectionId);
+    return sec && sec.locationId === loc.id ? { section: sec.name, shelf: hs.shelf || "", from: "home" } : null;
+  };
+  DK.spotText = (sp) => (sp ? [sp.section, sp.shelf ? `Shelf ${sp.shelf}` : ""].filter(Boolean).join(" · ") : "");
+
+  function checkShelf(sec, shelf) {
+    const sh = clean(shelf);
+    if (sh && !sec.shelves.some((x) => x.toLowerCase() === sh.toLowerCase())) fail(`${sec.name} has no shelf "${sh}"`);
+    return sh ? sec.shelves.find((x) => x.toLowerCase() === sh.toLowerCase()) : "";
+  }
+
+  OPS.saveSection = (s, ctx, a) => {
+    need(ctx, "warehouse");
+    DK.ensureLayouts(s);
+    const name = clean(a.name);
+    if (!name || name.length > 40) fail("Name the section (up to 40 characters)");
+    let locationId = a.locationId;
+    if (locationId === "__new") {
+      const ln = clean(a.newLocation);
+      if (!ln) fail("Name the new location");
+      if (s.locations.some((l) => l.name.toLowerCase() === ln.toLowerCase())) fail("A location with that name already exists. Choose it from the list");
+      locationId = OPS.createLocation(s, ctx, { name: ln, kind: a.kind || "other", layoutId: a.layoutId }) || s.locations[s.locations.length - 1].id;
+    }
+    const loc = byId(s.locations, locationId, "Location");
+    const shelves = DK.parseShelves(a.shelves);
+    if (secs(s).some((x) => x.locationId === loc.id && x.id !== a.id && x.name.toLowerCase() === name.toLowerCase())) fail(`${loc.name} already has a section called ${name}`);
+    if (a.id) {
+      const sec = byId(secs(s), a.id, "Section");
+      const moved = sec.locationId !== loc.id;
+      Object.assign(sec, { name, locationId: loc.id, shelves });
+      for (const l of s.lots) if (l.sectionId === sec.id) {
+        if (moved) { l.sectionId = null; l.shelf = ""; }
+        else if (l.shelf && !shelves.some((x) => x.toLowerCase() === l.shelf.toLowerCase())) l.shelf = "";
+      }
+      for (const p of s.products) for (const k of Object.keys(p.homeSpots || {})) {
+        const hs = p.homeSpots[k];
+        if (hs.sectionId !== sec.id) continue;
+        if (moved) delete p.homeSpots[k];
+        else if (hs.shelf && !shelves.some((x) => x.toLowerCase() === hs.shelf.toLowerCase())) hs.shelf = "";
+      }
+      if (moved && DK.locLayout(s, loc) !== sec.layoutId) { sec.layoutId = DK.locLayout(s, loc); delete sec.map; }
+      return sec.id;
+    }
+    const sec = { id: uid("sec"), name, locationId: loc.id, layoutId: DK.locLayout(s, loc), shelves, active: true };
+    secs(s).push(sec);
+    return sec.id;
+  };
+  OPS.removeSection = (s, ctx, a) => {
+    need(ctx, "warehouse");
+    const sec = byId(secs(s), a.id, "Section");
+    s.sections = secs(s).filter((x) => x.id !== sec.id);
+    for (const l of s.lots) if (l.sectionId === sec.id) { l.sectionId = null; l.shelf = ""; }
+    for (const p of s.products) for (const k of Object.keys(p.homeSpots || {})) if (p.homeSpots[k].sectionId === sec.id) delete p.homeSpots[k];
+  };
+  OPS.renameLocation = (s, ctx, a) => {
+    need(ctx, "warehouse");
+    const l = byId(s.locations, a.id, "Location");
+    const name = clean(a.name);
+    if (!name || name.length > 60) fail("Name the location (up to 60 characters)");
+    if (s.locations.some((x) => x.id !== l.id && x.name.toLowerCase() === name.toLowerCase())) fail("Another location already has that name");
+    l.name = name;
+  };
+  /** Where this stock sits inside its location. */
+  OPS.setLotSpot = (s, ctx, a) => {
+    need(ctx, "warehouse");
+    const lot = byId(s.lots, a.lotId, "Lot");
+    if (!a.sectionId) { lot.sectionId = null; lot.shelf = ""; return; }
+    const sec = byId(secs(s), a.sectionId, "Section");
+    if (sec.locationId !== lot.locationId) fail("That section isn't in this lot's location");
+    lot.sectionId = sec.id;
+    lot.shelf = checkShelf(sec, a.shelf);
+  };
+  /** The item's usual section and shelf inside its home location. */
+  OPS.setHomeSpot = (s, ctx, a) => {
+    need(ctx, "buyer", "warehouse");
+    const p = byId(s.products, a.productId, "Product");
+    const lay = a.layoutId || DK.layoutsOf(s)[0].id;
+    p.homeSpots ||= {};
+    if (!a.sectionId) { delete p.homeSpots[lay]; return; }
+    const home = DK.homeOf(s, p, lay);
+    if (!home) fail("Set the home area first");
+    const sec = byId(secs(s), a.sectionId, "Section");
+    if (sec.locationId !== home) fail("That section isn't in the item's home area");
+    p.homeSpots[lay] = { sectionId: sec.id, shelf: checkShelf(sec, a.shelf) };
+  };
+
+  // Sections are drawn on the plan like locations: the same shape ops accept either.
+  const saveArea0 = OPS.saveArea, removeArea0 = OPS.removeArea;
+  const asSectionCall = (s, a, fn) => {
+    const sec = secs(s).find((x) => x.id === a.id);
+    if (!sec) return null;
+    const tmp = { id: sec.id, name: sec.name, map: sec.map, layoutId: sec.layoutId };
+    s.locations.push(tmp);
+    try { fn(); } finally { s.locations.pop(); }
+    if (tmp.map) sec.map = tmp.map; else delete sec.map;
+    return true;
+  };
+  OPS.saveArea = (s, ctx, a) => { if (!asSectionCall(s, a, () => saveArea0(s, ctx, a))) return saveArea0(s, ctx, a); };
+  OPS.removeArea = (s, ctx, a) => { if (!asSectionCall(s, a, () => removeArea0(s, ctx, a))) return removeArea0(s, ctx, a); };
+  const setFloor0 = OPS.setFloorSize;
+  OPS.setFloorSize = (s, ctx, a) => {
+    const mine = secs(s).filter((x) => x.layoutId === a.layoutId && x.map);
+    const tmp = mine.map((x) => ({ id: x.id, name: x.name, map: x.map, layoutId: x.layoutId }));
+    s.locations.push(...tmp);
+    try { setFloor0(s, ctx, a); } finally { s.locations.splice(s.locations.length - tmp.length, tmp.length); }
+    tmp.forEach((t, i) => (mine[i].map = t.map));
+  };
+  // A location moved to another shop takes its sections along, off the plan; stock leaving a location loses its spot.
+  const moveShop0 = OPS.moveLocationShop;
+  OPS.moveLocationShop = (s, ctx, a) => { moveShop0(s, ctx, a); for (const x of secs(s)) if (x.locationId === a.id) { x.layoutId = a.layoutId; delete x.map; } };
+  const transfer0 = OPS.transfer;
+  OPS.transfer = (s, ctx, a) => {
+    const lot = byId(s.lots, a.lotId, "Lot");
+    const from = lot.locationId, keep = { sectionId: lot.sectionId, shelf: lot.shelf };
+    const destId = transfer0(s, ctx, a);
+    const dest = s.lots.find((l) => l.id === destId);
+    if (dest && dest.locationId !== from) {
+      dest.sectionId = null; dest.shelf = "";
+      if (a.toSectionId) OPS.setLotSpot(s, ctx, { lotId: dest.id, sectionId: a.toSectionId, shelf: a.toShelf });
+    }
+    if (lot !== dest && lot.locationId === from) Object.assign(lot, keep);
+    return destId;
+  };
+  const setHome0 = OPS.setHome;
+  OPS.setHome = (s, ctx, a) => {
+    const p = s.products.find((x) => x.id === a.productId);
+    const lay = a.layoutId || DK.layoutsOf(s)[0].id;
+    const before = p ? DK.homeOf(s, p, lay) : null;
+    setHome0(s, ctx, a);
+    if (p && p.homeSpots && DK.homeOf(s, p, lay) !== before) delete p.homeSpots[lay];
+  };
+
+  /** Sample sections: two racks in each cooler with shelves, and spots for some stock. */
+  DK.sampleSections = (s) => {
+    if (s.sections) return;
+    s.sections = [];
+    const add = (locName, name, shelves) => {
+      const loc = s.locations.find((l) => l.name === locName);
+      if (!loc) return null;
+      const sec = { id: uid("sec"), name, locationId: loc.id, layoutId: DK.locLayout(s, loc), shelves, active: true };
+      const a = loc.map && DK.areaPts(loc) ? DK.shapes.bbox(DK.areaPts(loc)) : null;
+      if (a) {
+        const i = s.sections.filter((x) => x.locationId === loc.id).length;
+        const w = a.w / 2 - 1.5, h = a.h - 6;
+        if (w > 2 && h > 2) { const x = a.x + 1 + i * (a.w / 2), y = a.y + 3; sec.map = { x, y, w, h, pts: DK.shapes.rect(x, y, w, h), c: loc.map.c }; }
+      }
+      s.sections.push(sec);
+      return sec;
+    };
+    const made = [add("Cooler 1", "Rack A", ["1", "2", "3", "4"]), add("Cooler 1", "Rack B", ["1", "2", "3", "4"]), add("Cooler 2", "Bucket row", ["Floor", "Top"]), add("Cooler 2", "Rack C", ["1", "2", "3"])].filter(Boolean);
+    let i = 0;
+    for (const lot of s.lots) {
+      const mine = made.filter((x) => x.locationId === lot.locationId);
+      if (!mine.length || lot.qty <= 0) continue;
+      const sec = mine[i % mine.length];
+      if (i % 4 !== 3) { lot.sectionId = sec.id; lot.shelf = sec.shelves[i % sec.shelves.length]; }
+      i++;
+    }
+  };
+  DK.hooks.afterSample.push((s) => DK.sampleSections(s));
+})(typeof window !== "undefined" ? window : globalThis);
+
 </script>
 <script>
 /* DKaydent Wholesale demo — UI. Shared data lives in the artifact's db at demo/state. */
@@ -3571,7 +3784,7 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
   // ---------- lookups ----------
   const P = (id) => S.products.find((x) => x.id === id);
   const unitOf = (p, uid) => p && p.units.find((u) => u.id === uid);
-  const loc = (id) => S.locations.find((x) => x.id === id);
+  const loc = (id) => S.locations.find((x) => x.id === id) || (S.sections || []).find((x) => x.id === id);
   const vendor = (id) => S.vendors.find((x) => x.id === id);
   const cust = (id) => S.customers.find((x) => x.id === id);
   const tier = (id) => S.tiers.find((x) => x.id === id);
@@ -3726,7 +3939,22 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
     if (!document.querySelector(".busy-bar")) document.body.insertAdjacentHTML("beforeend", `<div class="busy-bar" aria-hidden="true"></div>`);
   }
   let lastView = "";
+  // ---------- sign-in for the whole demo (a screen on a public page, not real security: the files are public) ----------
+  const GATE = "327c06e191e9ebaccffdd990301ccf0d9209b654ca7a2b9979707f0990676cbb"; // SHA-256 of the demo username and password
+  const gateOk = () => store.get("dk-gate", "") === GATE;
+  ui.gateMsg = "";
+  function renderGate() {
+    document.title = "Sign in · DKaydent";
+    app.innerHTML = `<div class="gate-wrap"><form class="card signin pop-in" data-form="gate" data-testid="demo-signin">
+      <div class="signin-brand"><b>DKaydent</b><div class="small">Wholesale flowers &amp; goods</div></div>
+      <h1 style="font-size:22px;margin:14px 0 4px">Sign in</h1><p class="small" style="margin:0 0 12px">This demo is private. Sign in to continue.</p>
+      ${ui.gateMsg ? `<div class="banner banner-bad" role="alert" style="margin-bottom:10px">${esc(ui.gateMsg)}</div>` : ""}
+      <div class="form-stack"><label class="f"><span>Username</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus data-testid="gate-user"></label>
+      <label class="f"><span>Password</span><input name="password" type="password" autocomplete="current-password" required data-testid="gate-pw"></label>
+      <button class="btn btn-p" style="width:100%" data-testid="gate-go">Sign in</button></div></form></div>`;
+  }
   function render() {
+    if (!gateOk()) return renderGate();
     const view = `${ui.page}:${ui.id || ""}`;
     const enter = view !== lastView;
     lastView = view;
@@ -3745,6 +3973,7 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         <button type="button" class="brand" data-go="dashboard"><b>DKaydent</b><small>Wholesale flowers &amp; goods</small></button>
         <span class="chip chip-demo">Demo · sample data</span>
         ${status}
+        <button type="button" class="btn btn-s" data-act="gateOut" data-testid="gate-out">Sign out</button>
         <label class="role" for="role">Viewing as
           <select id="role" data-role>${Object.entries(DK.ROLES).map(([k, v]) => `<option value="${k}" ${k === ui.role ? "selected" : ""}>${v}</option>`).join("")}</select>
         </label>
@@ -4236,6 +4465,9 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         `<button type="button" class="btn" data-go="labels" data-q='${esc(JSON.stringify({ lot: l.id }))}'>Label</button>`, ["inventory", "Inventory", null])}
       <div class="stats">${stat("On hand", inUnits(l.qty, p), `${qty(l.qty)} of ${qty(l.qtyReceived)} ${esc(p.baseUnit)}`)}${stat("Landed cost", money4(l.cost), `per ${esc(p.baseUnit)} · value ${money(l.qty * l.cost)}`)}
         ${stat("Received", fdate(l.receivedAt))}${stat("Expires", fdate(l.expires), expiry(daysTo(l.expires)))}</div>
+      ${(() => { const sp = DK.spotOf(S, l), opts = DK.ui_spotOptions(l.locationId), cur = l.sectionId ? `${l.sectionId}::${l.shelf || ""}` : "";
+        return section("Section and shelf", `<div class="card section" data-testid="lot-spot"><p style="margin:0">${sp ? `<b>${esc(DK.spotText(sp))}</b> in ${esc(loc(l.locationId)?.name)}${sp.from === "home" ? ` <span class="small">(the item's usual spot; this stock has none of its own)</span>` : ""}` : `<span class="small">Not recorded. Pull tickets show only ${esc(loc(l.locationId)?.name)} for this stock.</span>`}</p>
+          ${can("warehouse") && writable() ? (opts.length ? `<form class="row" data-form="lotSpot" style="align-items:flex-end"><label class="f"><span>Where this stock sits</span>${sel("spot", [["", "Not set"], ...opts], cur, 'class="w-auto" data-testid="lot-spot-select"')}</label><button class="btn">Save</button></form>` : `<p class="small" style="margin:0">${esc(loc(l.locationId)?.name)} has no sections yet. Add them on Location in shop.</p>`) : ""}</div>`); })()}
       ${work ? `<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))">
         <form class="card section" data-form="transfer"><h3>Move stock</h3><div class="row"><input name="qty" type="number" min="0" step="any" required placeholder="Qty" style="flex:1">${unitSel}</div>
           ${sel("toLocationId", [["", "To location…"], ...S.locations.filter((x) => x.active && x.id !== l.locationId).map((x) => [x.id, x.name])], "", "required")}<button class="btn">Move stock</button></form>
@@ -5100,10 +5332,17 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
       return `<div class="stack" data-shop="${lay.id}">${many ? `<h3 style="margin:0;font-size:14px">${esc(lay.name)}</h3>` : ""}${miniMap(lay, homeId, here)}
         <div class="small"><span class="key home"></span> Home area${here.length ? ` · <span class="key away"></span> Stock is here` : ""}</div>
         ${can("buyer", "warehouse") ? `<form class="row" data-form="setHome"><input type="hidden" name="layoutId" value="${lay.id}"><label class="f"><span>Home area${many ? ` in ${esc(lay.name)}` : ""}</span>${sel("locationId", [["", "Not set"], ...locsIn(lay.id).filter((l) => l.active).map((l) => [l.id, l.name])], homeId || "", 'class="w-auto"')}</label><button class="btn" ${dis("buyer", "warehouse")}>Save</button></form>` : `<p class="small" style="margin:0">Home area: <b>${esc(home?.name || "Not set")}</b></p>`}
+        ${home ? (() => { const hs = (p.homeSpots || {})[lay.id], opts = spotOptions(home.id); const cur = hs ? `${hs.sectionId}::${hs.shelf || ""}` : ""; return can("buyer", "warehouse") ? (opts.length ? `<form class="row" data-form="setHomeSpot" data-testid="home-spot"><input type="hidden" name="layoutId" value="${lay.id}"><label class="f"><span>Usual section and shelf</span>${sel("spot", [["", "Not set"], ...opts], cur, 'class="w-auto"')}</label><button class="btn" ${dis("buyer", "warehouse")}>Save</button></form>` : `<p class="small" style="margin:0">${esc(home.name)} has no sections yet. Add them on Location in shop.</p>`) : hs ? `<p class="small" style="margin:0">Usual spot: <b>${esc(DK.spotText({ section: DK.sectionById(S, hs.sectionId)?.name, shelf: hs.shelf }))}</b></p>` : ""; })() : ""}
         ${misplaced ? `<p class="t-warn small" style="margin:0">Some stock is outside its home area.</p>` : ""}</div>`;
     }).join("");
     return section("Location in shop", `<div class="card section">${body}</div>`, `<button type="button" class="btn btn-s" data-go="floorplan" data-q='${esc(JSON.stringify({ find: p.id }))}'>Open plan</button>`);
   }
+  /** Choices for a section and shelf inside one location: "Rack A · Shelf 2", value "sectionId::shelf". */
+  const spotOptions = (locationId) => DK.sectionsOf(S, locationId).flatMap((x) => [[`${x.id}::`, x.shelves.length ? `${x.name} (any shelf)` : x.name], ...x.shelves.map((sh) => [`${x.id}::${sh}`, `${x.name} · Shelf ${sh}`])]);
+  const splitSpot = (v) => { const [sectionId, shelf] = String(v || "").split("::"); return { sectionId: sectionId || null, shelf: shelf || "" }; };
+  FORMS.setHomeSpot = (o) => commit("setHomeSpot", { productId: ui.page === "lot" ? lot(ui.id).productId : ui.id, layoutId: o.layoutId, ...splitSpot(o.spot) }, { msg: "Usual spot saved" });
+  FORMS.lotSpot = (o) => commit("setLotSpot", { lotId: ui.id, ...splitSpot(o.spot) }, { msg: "Section and shelf saved" });
+  DK.ui_spotOptions = spotOptions;
   FORMS.setHome = (o) => commit("setHome", { productId: ui.page === "lot" ? lot(ui.id).productId : ui.id, layoutId: o.layoutId, locationId: o.locationId || null }, { msg: "Home area saved" });
 
   // ---------- Location in shop ----------
@@ -5150,8 +5389,14 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
     const findHome = find ? homeIn(find, lay.id) : null;
     const placed = mine.filter((l) => l.map && l.active);
     const unplaced = mine.filter((l) => !l.map && l.active);
+    const secsHere = (S.sections || []).filter((x) => mineIds.has(x.locationId)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    const secIds = new Set(secsHere.map((x) => x.id));
+    const placedSecs = secsHere.filter((x) => x.map), unplacedSecs = secsHere.filter((x) => !x.map);
+    const secStock = {};
+    for (const l of lots) if (l.sectionId && secIds.has(l.sectionId)) ((secStock[l.sectionId] ||= {})[l.productId] = ((secStock[l.sectionId] || {})[l.productId] || 0) + l.qty);
     const doors = DK.doorsOf(S, lay.id);
-    const selL = fp.sel && mineIds.has(fp.sel) && loc(fp.sel);
+    const selL = fp.sel && (mineIds.has(fp.sel) || secIds.has(fp.sel)) && loc(fp.sel);
+    const isSec = !!(selL && selL.locationId);
     const selD = fp.door && doors.find((d) => d.id === fp.door);
     const canEdit = can("warehouse") && writable();
     const others = layouts().filter((l) => l.id !== lay.id);
@@ -5176,6 +5421,11 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
       return `<div class="shape-lbl ${find && !isHome && !isHere ? "faint" : ""}" data-lbl="${l.id}" style="left:${cx}%;top:${cy}%"><b>${esc(l.name)}</b><span class="ct">${fp.edit && fp.sel === l.id ? sizeText(lay, SH.bbox(pts)) : n ? `${n} item${n === 1 ? "" : "s"}` : "empty"}</span>
         ${isHome ? `<span class="tag t-home">Home</span>` : ""}${isHere ? `<span class="tag ${isHome ? "t-home" : "t-away"}">${isHome ? "Stock here" : "Stock is here"}</span>` : ""}</div>`;
     };
+    const secSvg = (x) => `<polygon class="shape sec ${fp.sel === x.id ? "sel" : ""} ${find ? "faint" : ""}" data-area="${x.id}" tabindex="0" role="button" aria-label="${esc(x.name)}, section in ${esc(loc(x.locationId)?.name || "")}" points="${SH.svg(DK.areaPts(x), lay.aspect)}" style="--c:${x.map.c || loc(x.locationId)?.map?.c || DK.AREA_COLORS[0]}" vector-effect="non-scaling-stroke"/>`;
+    const secLabel = (x) => {
+      const [cx, cy] = SH.centroid(DK.areaPts(x), lay.aspect), n = Object.keys(secStock[x.id] || {}).length;
+      return `<div class="shape-lbl sec-lbl ${find ? "faint" : ""}" data-lbl="${x.id}" style="left:${cx}%;top:${cy}%"><b>${esc(x.name)}</b><span class="ct">${fp.edit && fp.sel === x.id ? sizeText(lay, SH.bbox(DK.areaPts(x))) : `${x.shelves.length ? `${x.shelves.length} shel${x.shelves.length === 1 ? "f" : "ves"}` : "no shelves"}${n ? ` · ${n} item${n === 1 ? "" : "s"}` : ""}`}</span></div>`;
+    };
     const door = (d) => {
       const pos = d.side === "top" ? `left:${d.pos}%;top:2px;transform:translateX(-50%)` : d.side === "bottom" ? `left:${d.pos}%;bottom:2px;transform:translateX(-50%)` : d.side === "left" ? `top:${d.pos}%;left:2px;transform:translateY(-50%)` : `top:${d.pos}%;right:2px;transform:translateY(-50%)`;
       return `<button type="button" class="door door-${d.kind} ${fp.door === d.id ? "sel" : ""}" data-door="${d.id}" style="${pos}" aria-label="${d.kind === "entry" ? "Entry" : "Exit"}: ${esc(d.label)}" aria-pressed="${fp.door === d.id}"><span aria-hidden="true">${ARROW[d.kind][d.side]}</span><span class="dl">${esc(d.label)}</span></button>`;
@@ -5186,10 +5436,16 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
           <div class="row"><button class="btn btn-p btn-s">Save</button><button type="button" class="btn btn-s btn-d" data-act="fpDoorRemove">Remove</button></div></form>` : canEdit ? `<p class="small" style="margin:0">Click Edit layout to move, relabel or remove it.</p>` : ""}
         <div><button type="button" class="btn btn-s" data-act="fpDoor" data-v="">Close</button></div></div>`
       : selL ? (() => {
-      const items = Object.entries(stockAt[selL.id] || {}).map(([pid, q2]) => ({ p: P(pid), q: q2 }));
-      const belongs = S.products.filter((p) => homeIn(p, lay.id) === selL.id);
-      return `<div class="card section"><div class="head"><h2 style="margin:0">${esc(selL.name)}</h2><button type="button" class="btn btn-s" data-act="fpSel" data-v="">Close</button></div>
-        ${fp.edit ? `<div class="row">${DK.AREA_COLORS.map((c) => `<button type="button" class="swatch ${selL.map?.c === c ? "on" : ""}" style="--c:${c}" data-act="fpColor" data-v="${c}" aria-label="Color ${c}"></button>`).join("")}</div>
+      const items = Object.entries((isSec ? secStock : stockAt)[selL.id] || {}).map(([pid, q2]) => ({ p: P(pid), q: q2 }));
+      const belongs = isSec ? S.products.filter((p) => (p.homeSpots || {})[lay.id]?.sectionId === selL.id) : S.products.filter((p) => homeIn(p, lay.id) === selL.id);
+      const shelfLots = isSec ? lots.filter((l) => l.sectionId === selL.id) : [];
+      return `<div class="card section" data-testid="${isSec ? "section-panel" : "area-panel"}"><div class="head"><h2 style="margin:0">${esc(selL.name)}</h2><button type="button" class="btn btn-s" data-act="fpSel" data-v="">Close</button></div>
+        ${isSec ? `<p class="small" style="margin:0">Section in <b>${esc(loc(selL.locationId)?.name || "")}</b></p>
+          <div class="row" style="gap:6px">${selL.shelves.length ? selL.shelves.map((x) => `<span class="chip">Shelf ${esc(x)}</span>`).join("") : `<span class="small">No shelves yet.</span>`}</div>
+          ${canEdit ? `<div class="row"><button type="button" class="btn btn-s" data-act="secEdit" data-v="${selL.id}" data-testid="edit-section">Edit section</button></div>` : ""}`
+        : canEdit ? `<div class="row"><button type="button" class="btn btn-s" data-act="locRename" data-v="${selL.id}" data-testid="rename-location">Rename</button><button type="button" class="btn btn-s" data-act="secNew" data-v="${selL.id}">+ Add section here</button></div>
+          ${(() => { const ss = secsHere.filter((x) => x.locationId === selL.id); return ss.length ? `<span class="lbl">Sections</span><div class="row" style="gap:6px">${ss.map((x) => `<button type="button" class="chip" data-act="fpSel" data-v="${x.id}">${esc(x.name)}</button>`).join("")}</div>` : ""; })()}` : ""}
+        ${fp.edit && selL.map ? `<div class="row">${DK.AREA_COLORS.map((c) => `<button type="button" class="swatch ${selL.map?.c === c ? "on" : ""}" style="--c:${c}" data-act="fpColor" data-v="${c}" aria-label="Color ${c}"></button>`).join("")}</div>
           ${(() => { const b = SH.bbox(DK.areaPts(selL)), f = feetOf(lay); return `<form class="row" data-form="fpSize" style="align-items:flex-end">
             <label class="f"><span>Width ${f ? "(ft)" : "(%)"}</span>${inp("w", Math.round(b.w * (f ? f.x : 1) * 2) / 2, 'type="number" step="0.5" min="0.5" class="w-24"')}</label>
             <label class="f"><span>Depth ${f ? "(ft)" : "(%)"}</span>${inp("h", Math.round(b.h * (f ? f.y : 1) * 2) / 2, 'type="number" step="0.5" min="0.5" class="w-24"')}</label>
@@ -5197,7 +5453,8 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
           <div class="row"><span class="small">Rotate</span>${[-90, -15, 15, 90].map((d) => `<button type="button" class="btn btn-s" data-act="fpRot" data-v="${d}" aria-label="Rotate ${d}°">${d < 0 ? "↺" : "↻"} ${Math.abs(d)}°</button>`).join("")}</div>
           <div class="row"><button type="button" class="btn btn-s" data-act="fpRect">Make rectangle</button>${fp.vtx != null && DK.areaPts(selL).length > 3 ? `<button type="button" class="btn btn-s" data-act="fpDelV">Remove corner</button>` : ""}<button type="button" class="btn btn-s btn-d" data-act="fpRemove">Remove from plan</button></div>
           <p class="small" style="margin:0">${DK.areaPts(selL).length} corners · ${sizeText(lay, SH.bbox(DK.areaPts(selL)))}</p>` : ""}
-        <span class="lbl">Stored here now</span>${items.length ? `<ul class="plain">${items.map(({ p, q: q2 }) => { const h = homeIn(p, lay.id); return `<li>${thumb(p.name, p.img, 24)} ${link("product", p.id, esc(p.name))} <span class="small">${inUnits(q2, p)}</span>${h && h !== selL.id ? ` <span class="t-warn small">· belongs in ${esc(loc(h)?.name)}</span>` : ""}</li>`; }).join("")}</ul>` : `<p class="small" style="margin:0">Nothing here.</p>`}
+        <span class="lbl">Stored here now</span>${isSec ? (shelfLots.length ? `<ul class="plain">${shelfLots.map((l) => { const p = P(l.productId); return `<li>${thumb(p.name, p.img, 24)} ${link("lot", l.id, esc(p.name))} <span class="small">${inUnits(l.qty, p)}${l.shelf ? ` · Shelf ${esc(l.shelf)}` : ""}</span></li>`; }).join("")}</ul>` : `<p class="small" style="margin:0">Nothing recorded here. Set a lot's section and shelf on its page.</p>`)
+          : items.length ? `<ul class="plain">${items.map(({ p, q: q2 }) => { const h = homeIn(p, lay.id); return `<li>${thumb(p.name, p.img, 24)} ${link("product", p.id, esc(p.name))} <span class="small">${inUnits(q2, p)}</span>${h && h !== selL.id ? ` <span class="t-warn small">· belongs in ${esc(loc(h)?.name)}</span>` : ""}</li>`; }).join("")}</ul>` : `<p class="small" style="margin:0">Nothing here.</p>`}
         <span class="lbl">Belongs here</span>${belongs.length ? `<ul class="plain">${belongs.map((p) => `<li>${thumb(p.name, p.img, 24)} ${link("product", p.id, esc(p.name))}</li>`).join("")}</ul>` : `<p class="small" style="margin:0">No items call this home.</p>`}</div>`;
     })() : "";
     const layoutForm = canEdit && fp.form ? `<form class="card row" data-form="layoutForm" style="margin-bottom:12px">
@@ -5206,7 +5463,7 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         : `<label class="f" style="flex:1;min-width:200px"><span>${fp.form === "new" ? "New layout name" : "Layout name"}</span>${inp("name", fp.form === "rename" ? lay.name : "", 'required maxlength="60" placeholder="e.g. North shop" autofocus')}</label><button class="btn btn-p">${fp.form === "new" ? "Create layout" : "Save name"}</button>`}
         <button type="button" class="btn" data-act="fpForm" data-v="">Cancel</button></form>` : "";
     return `${head("Location in shop", "Where every item lives on the floor. Find an item to see its home area and where its stock is right now.",
-        canEdit ? `<button type="button" class="btn ${fp.edit ? "btn-p" : ""}" data-act="fpEdit">${fp.edit ? "Done editing" : "Edit layout"}</button>` : "")}
+        canEdit ? `${fp.edit ? `<button type="button" class="btn" data-act="secNew" data-v="">+ Add section</button>` : ""}<button type="button" class="btn ${fp.edit ? "btn-p" : ""}" data-act="fpEdit">${fp.edit ? "Done editing" : "Edit layout"}</button>` : "")}
       <div class="row" data-testid="layout-bar" style="margin-bottom:10px"><label class="f" style="flex-direction:row;align-items:center;gap:8px"><span>Layout</span>${sel("fpLayout", layouts().map((l) => [l.id, l.name]), lay.id, 'class="w-auto" aria-label="Choose a layout" data-fp-layout')}</label>
         ${canEdit ? `<button type="button" class="btn btn-s" data-act="fpForm" data-v="new">+ New layout</button><button type="button" class="btn btn-s" data-act="fpForm" data-v="rename">Rename</button>${others.length ? `<button type="button" class="btn btn-s btn-d" data-act="fpForm" data-v="delete">Delete layout</button>` : ""}` : ""}</div>
       ${layoutForm}
@@ -5218,11 +5475,11 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
         <div>
           <div class="plan ${fp.edit ? "editing" : ""}" id="plan" style="aspect-ratio:${lay.aspect}">
             <div class="plan-clip">${lay.bg ? `<img class="plan-bg" src="${imgUrl(lay.bg)}" alt="Floor plan">` : lay.wFt && lay.hFt ? feetGrid(lay) : `<div class="plan-grid"></div>`}</div>
-            <svg class="plan-svg" id="plan-svg" viewBox="0 0 ${100 * lay.aspect} 100" preserveAspectRatio="none">${placed.map(shapeSvg).join("")}</svg>
-            ${placed.map(shapeLabel).join("")}
+            <svg class="plan-svg" id="plan-svg" viewBox="0 0 ${100 * lay.aspect} 100" preserveAspectRatio="none">${placed.map(shapeSvg).join("")}${placedSecs.map(secSvg).join("")}</svg>
+            ${placed.map(shapeLabel).join("")}${placedSecs.map(secLabel).join("")}
             <div id="plan-h">${fp.edit && selL && selL.map ? handlesHtml(lay, DK.areaPts(selL)) : ""}</div>
             ${doors.map(door).join("")}
-            ${!placed.length ? `<div class="plan-empty small">${canEdit ? "Click Edit layout, then place this shop's sections on the plan." : "No areas placed yet."}</div>` : ""}
+            ${!placed.length && !placedSecs.length ? `<div class="plan-empty small">${canEdit ? (fp.edit ? "Tap + Add section to put the first section on the plan." : "Click Edit layout, then tap + Add section.") : "No areas placed yet."}</div>` : ""}
           </div>
           <p class="small" style="margin:6px 0 0">Green pills are entries, amber pills are exits.</p>
           ${fp.edit ? `<div class="card section" style="margin-top:12px">
@@ -5231,15 +5488,60 @@ root.ThemeGen = { buildTheme, swatches, suggestSeeds, isHex, contrast, GENERATED
             <div class="row">
               ${assets ? `<label class="btn btn-s">${lay.bg ? "Replace" : "Upload"} floor plan image<input type="file" accept="image/*" hidden data-photo="plan"></label>` : ""}
               ${lay.bg ? `<button type="button" class="btn btn-s btn-d" data-act="removePhoto" data-kind="plan">Remove image</button>` : ""}</div>
-            ${unplaced.length ? `<div class="row"><span class="small">Not on the plan:</span>${unplaced.map((l) => `<button type="button" class="btn btn-s" data-act="fpPlace" data-v="${l.id}">+ ${esc(l.name)}</button>`).join("")}</div>` : ""}
+            <div class="row"><button type="button" class="btn btn-p btn-s" data-act="secNew" data-v="" data-testid="add-section">+ Add section</button><span class="small">Sections sit inside a location, like Rack A in Cooler 1, and hold numbered or named shelves.</span></div>
+            ${unplaced.length || unplacedSecs.length ? `<div class="row"><span class="small">Not on the plan:</span>${unplaced.map((l) => `<button type="button" class="btn btn-s" data-act="fpPlace" data-v="${l.id}">+ ${esc(l.name)}</button>`).join("")}${unplacedSecs.map((x) => `<button type="button" class="btn btn-s" data-act="fpPlace" data-v="${x.id}">+ ${esc(x.name)} <span class="small">(${esc(loc(x.locationId)?.name || "")})</span></button>`).join("")}</div>` : ""}
             <form class="row" data-form="addDoor"><span class="small">Add</span>${sel("kind", [["entry", "Entry"], ["exit", "Exit"]], "entry", 'class="w-auto" aria-label="Entry or exit"')}${inp("label", "", 'required maxlength="60" placeholder="Label, e.g. Front door" aria-label="Entry or exit label" style="max-width:220px"')}<button class="btn btn-s">+ Add</button></form></div>` : ""}
         </div>
+        ${canEdit ? secModal(lay, mine) : ""}
         <aside class="fp-side">${panel || `<div class="card section"><span class="lbl">Out of place</span>${away.length ? `<ul class="plain">${away.slice(0, 12).map(({ p, at, home }) => `<li>${link("product", p.id, esc(p.name))} <span class="small">in ${esc(loc(at)?.name)}, belongs in ${esc(loc(home)?.name)}</span></li>`).join("")}</ul>` : `<p class="small" style="margin:0">Everything is where it belongs.</p>`}
           <span class="lbl">No home area</span>${noHome.length ? `<ul class="plain">${noHome.slice(0, 12).map((p) => `<li>${link("product", p.id, esc(p.name))}${can("buyer", "warehouse") ? ` ${sel("home_" + p.id, [["", "Assign…"], ...placed.map((l) => [l.id, l.name])], "", `class="w-auto" data-assign="${p.id}" data-layout="${lay.id}" ${dis("buyer", "warehouse")}`)}` : ""}</li>`).join("")}</ul>` : `<p class="small" style="margin:0">Every item in stock has a home.</p>`}
           <p class="small" style="margin:0">Tap an area to see what's in it.</p></div>`}</aside>
       </div>`;
   };
-  ACTS.fpEdit = () => { ui.fp.edit = !ui.fp.edit; render(); };
+  ACTS.fpEdit = () => { ui.fp.edit = !ui.fp.edit; ui.fp.secForm = null; render(); };
+  /** The pop-up editor for a section (add or edit) or a location's name. */
+  function secModal(lay, mine) {
+    const f = ui.fp.secForm;
+    if (!f) return "";
+    if (f.kind === "loc") {
+      const l = loc(f.id);
+      return `<div class="modal-bg" data-act="secClose"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="sec-t" data-form="locRename" data-testid="location-editor">
+        <h2 id="sec-t" style="margin:0">Rename location</h2>${ui.error ? `<div class="banner banner-bad" role="alert">${esc(ui.error)}</div>` : ""}<input type="hidden" name="id" value="${l.id}">
+        <label class="f"><span>Location name</span>${inp("name", l.name, 'required maxlength="60" autofocus')}</label>
+        <div class="actions" style="justify-content:flex-end"><button type="button" class="btn" data-act="secClose">Cancel</button><button class="btn btn-p">Save</button></div></form></div>`;
+    }
+    const x = f.id ? loc(f.id) : null;
+    const locId = x ? x.locationId : f.locationId || (mine.find((l) => l.active) || {}).id || "__new";
+    return `<div class="modal-bg" data-act="secClose"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="sec-t" data-form="secSave" data-testid="section-editor">
+      <h2 id="sec-t" style="margin:0">${x ? "Edit section" : "Add section"}</h2>${ui.error ? `<div class="banner banner-bad" role="alert" data-testid="section-error">${esc(ui.error)}</div>` : ""}${x ? `<input type="hidden" name="id" value="${x.id}">` : ""}<input type="hidden" name="layoutId" value="${lay.id}">
+      <label class="f"><span>Location</span><select name="locationId" data-sec-loc data-testid="section-location">${mine.filter((l) => l.active).map((l) => `<option value="${l.id}" ${l.id === locId ? "selected" : ""}>${esc(l.name)}</option>`).join("")}<option value="__new" ${locId === "__new" ? "selected" : ""}>+ New location…</option></select></label>
+      <label class="f" data-new-loc ${locId === "__new" ? "" : "hidden"}><span>New location name</span>${inp("newLocation", "", 'maxlength="60" placeholder="e.g. Cooler 3" data-testid="section-new-location"')}</label>
+      <label class="f"><span>Section name</span>${inp("name", x ? x.name : "", 'required maxlength="40" placeholder="e.g. Rack A" data-testid="section-name" autofocus')}</label>
+      <label class="f"><span>Shelves</span>${inp("shelves", x ? x.shelves.join(", ") : "", 'placeholder="1-4, or Top, Middle, Bottom" data-testid="section-shelves"')}<span class="small">Separate with commas. 1-4 makes shelves 1, 2, 3 and 4. Leave empty if it has none.</span></label>
+      ${x ? "" : `<label class="row" style="gap:8px;align-items:center"><input type="checkbox" name="place" checked style="width:auto"> Put it on the plan now</label>`}
+      <div class="actions" style="justify-content:space-between">${x ? `<button type="button" class="btn btn-d" data-act="secDelete" data-v="${x.id}">Delete section</button>` : "<span></span>"}<span class="row" style="gap:8px"><button type="button" class="btn" data-act="secClose">Cancel</button><button class="btn btn-p" data-testid="section-save">${x ? "Save" : "Add section"}</button></span></div></form></div>`;
+  }
+  ACTS.secNew = (el) => { ui.fp.edit = true; ui.fp.secForm = { kind: "sec", locationId: el.dataset.v || (ui.fp.sel && !loc(ui.fp.sel)?.locationId ? ui.fp.sel : "") }; render(); };
+  ACTS.secEdit = (el) => { ui.fp.secForm = { kind: "sec", id: el.dataset.v }; render(); };
+  ACTS.locRename = (el) => { ui.fp.secForm = { kind: "loc", id: el.dataset.v }; render(); };
+  ACTS.secClose = () => { ui.fp.secForm = null; render(); };
+  ACTS.secDelete = (el) => ask("Delete this section?", "Stock and items that used it keep their location but lose this section and shelf.", "Delete section", () => { ui.fp.secForm = null; ui.fp.sel = null; return commit("removeSection", { id: el.dataset.v }, { msg: "Section deleted" }); });
+  FORMS.locRename = (o) => commit("renameLocation", { id: o.id, name: o.name }, { after: () => { ui.fp.secForm = null; }, msg: "Renamed" });
+  FORMS.secSave = async (o) => {
+    const isNew = !o.id;
+    let id = null;
+    await commit("saveSection", { id: o.id || undefined, locationId: o.locationId, newLocation: o.newLocation, name: o.name, shelves: o.shelves, layoutId: o.layoutId }, {
+      after: (r) => { id = r; ui.fp.secForm = null; ui.fp.sel = r; ui.fp.door = null; },
+      msg: isNew ? "Section added" : "Section saved",
+    });
+    if (!id || !isNew || !(o.place === "on" || o.place === true)) return;
+    const parent = loc(loc(id).locationId), lay = curLayout(), f = feetOf(lay), [sx, sy] = steps(lay), snap = (v, st) => Math.round(v / st) * st;
+    const pb = parent && parent.map ? DK.shapes.bbox(DK.areaPts(parent)) : null;
+    const w = pb ? Math.max(4, pb.w * 0.4) : f ? Math.min(40, 6 / f.x) : 14, h = pb ? Math.max(4, pb.h * 0.5) : f ? Math.min(40, 4 / f.y) : 10;
+    const cx = pb ? pb.x + pb.w / 2 : 50, cy = pb ? pb.y + pb.h / 2 : 50;
+    await commit("saveArea", { id, pts: DK.shapes.rect(snap(cx - w / 2, sx), snap(cy - h / 2, sy), snap(w, sx), snap(h, sy)), c: parent?.map?.c || DK.AREA_COLORS[(S.sections || []).length % DK.AREA_COLORS.length] }, { msg: "Section added. Drag it where it goes." });
+  };
+  app.addEventListener("change", (ev) => { const t = ev.target; if (t.matches && t.matches("[data-sec-loc]")) { const box = t.form.querySelector("[data-new-loc]"); if (box) box.hidden = t.value !== "__new"; } });
   ACTS.fpSel = (el) => { ui.fp.sel = el.dataset.v || null; ui.fp.door = null; render(); };
   ACTS.fpDoor = (el) => { ui.fp.door = el.dataset.v || null; render(); };
   ACTS.fpForm = (el) => { ui.fp.form = el.dataset.v && ui.fp.form !== el.dataset.v ? el.dataset.v : null; render(); };
@@ -5980,6 +6282,7 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
       <div class="pl-t" style="font-size:${base * (it.title.length > 22 ? 0.125 : 0.15)}in;-webkit-line-clamp:${h < 1.05 ? 1 : 2}">${esc(it.title)}${w >= 1.8 && it.sku !== it.code ? ` <span class="pl-sku" style="font-size:${base * 0.09}in">${esc(it.sku)}</span>` : ""}</div>
       <svg class="bc pl-bc" data-code="${esc(it.code)}" style="height:${barH}in" preserveAspectRatio="none" role="img" aria-label="Barcode ${esc(it.code)}"></svg>
       <div class="pl-c" style="font-size:${base * 0.12}in">${esc(it.code)}</div>
+      <div class="pl-d" style="font-size:${base * 0.08}in" data-testid="label-printed">Printed ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
       ${lines.map((m) => `<div class="pl-m" style="font-size:${base * 0.095}in">${esc(m)}</div>`).join("")}</div>`;
   }
   function labelSheet(items) {
@@ -6096,9 +6399,9 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
     const showShop = DK.layoutsOf(S).length > 1;
     const c = S.customers.find((x) => x.id === so.customerId);
     const pc = DK.printCfg(S);
-    const rows = (list, short) => `<table class="pt-table"><colgroup><col style="width:28px"><col><col style="width:120px"><col style="width:150px"><col style="width:72px"><col style="width:72px"></colgroup>
-      <thead><tr><th aria-label="Pulled"></th><th>Item</th><th>${short || !pc.pull.showLot ? "" : "Lot"}</th><th class="n">${short ? "Short by" : "Pull"}</th><th class="pt-pp">Pulled</th><th class="pt-pp">Packed</th></tr></thead>
-      <tbody>${list.map((r) => `<tr><td><span class="pt-box" aria-hidden="true"></span></td><td><b>${esc(r.name)}</b>${pc.pull.showSku ? `<div class="pt-sku">${esc(r.sku)}</div>` : ""}</td><td class="pt-lot">${short || !pc.pull.showLot ? "" : esc(r.lot || "—")}${pc.pull.showLot && r.expires ? `<div>exp ${fdate(r.expires)}</div>` : ""}</td><td class="n"><b>${esc(DK.ticketQty(r))}</b></td><td class="pt-pp"><span class="pt-line" aria-label="Pulled"></span></td><td class="pt-pp"><span class="pt-line" aria-label="Packed"></span></td></tr>`).join("")}</tbody></table>`;
+    const rows = (list, short) => `<div class="pt-tw"><table class="pt-table"><colgroup><col style="width:28px"><col><col style="width:96px"><col style="width:112px"><col style="width:130px"><col style="width:64px"><col style="width:64px"></colgroup>
+      <thead><tr><th aria-label="Pulled"></th><th>Item</th><th>${short ? "" : "Section · Shelf"}</th><th>${short || !pc.pull.showLot ? "" : "Lot"}</th><th class="n">${short ? "Short by" : "Pull"}</th><th class="pt-pp">Pulled</th><th class="pt-pp">Packed</th></tr></thead>
+      <tbody>${list.map((r) => `<tr><td><span class="pt-box" aria-hidden="true"></span></td><td><b>${esc(r.name)}</b>${pc.pull.showSku ? `<div class="pt-sku">${esc(r.sku)}</div>` : ""}</td><td class="pt-spot" data-testid="pt-spot">${short ? "" : r.section ? `<b>${esc(r.section)}</b>${r.shelf ? `<div>Shelf ${esc(r.shelf)}</div>` : ""}` : `<span class="pt-none">—</span>`}</td><td class="pt-lot">${short || !pc.pull.showLot ? "" : esc(r.lot || "—")}${pc.pull.showLot && r.expires ? `<div>exp ${fdate(r.expires)}</div>` : ""}</td><td class="n"><b>${esc(DK.ticketQty(r))}</b></td><td class="pt-pp"><span class="pt-line" aria-label="Pulled"></span></td><td class="pt-pp"><span class="pt-line" aria-label="Packed"></span></td></tr>`).join("")}</tbody></table></div>`;
     const printCss = `<style>@media print { .topbar, .side, .toast, .pending, .busy-bar, body::before, .wrap > :not(.print-area) { display: none !important; } .shell { display: block !important; min-height: 0 !important; } .main { padding: 0 !important; min-height: 0 !important; } #app { min-height: 0 !important; } .wrap { display: block !important; max-width: none !important; animation: none !important; transform: none !important; } html, body { background: #fff !important; height: auto !important; margin: 0 !important; padding: 0 !important; } .pt { border: 0 !important; box-shadow: none !important; padding: 0 !important; max-width: none !important; } } @page { size: letter; margin: 0.5in; }</style>`;
     const done = so.status !== "draft" && so.status !== "confirmed";
     return `${printCss}${head(`Pull ticket · ${esc(so.number)}`, "Items grouped by section, A to Z", `<button type="button" class="btn btn-p" data-act="printNow">Print / PDF</button>`, ["so", so.number, so.id])}
@@ -6509,6 +6812,17 @@ VAL-${Date.now().toString(36).slice(-5).toUpperCase()}4,${today()},11:00,$5.00,0
     loginSetUp: (o) => commit("portalSetUp", o, { msg: "Login set up. A different person now needs to verify it." }),
   });
   // Password, printouts link, and the customer-only view of Settings
+  // Sign-in for the whole demo (see renderGate in ui.js)
+  FORMS.gate = async (o) => {
+    let h = "";
+    try {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`dkaydent-demo|${String(o.username || "").trim().toLowerCase()}|${String(o.password || "")}`));
+      h = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch { ui.gateMsg = "This browser can't check the password here. Open the demo over https."; return render(); }
+    if (h !== GATE) { ui.gateMsg = "That username and password don't match."; return render(); }
+    store.set("dk-gate", GATE); ui.gateMsg = ""; document.title = "DKaydent Wholesale Demo"; render();
+  };
+  ACTS.gateOut = () => { store.set("dk-gate", ""); ui.gateMsg = ""; render(); };
   // Customer sign-in: the customer view asks for a username and password first (test login: testcustomer / 1234)
   const portal = (s) => DK.portal(s);
   const myLogin = () => { if (!S) return null; const l = portal(S).logins.find((x) => x.id === ui.custLogin); return l && l.customerId && l.verifiedBy ? l : null; };
