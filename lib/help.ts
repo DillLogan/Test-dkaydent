@@ -344,12 +344,12 @@ export const ARTICLES: Article[] = [
     "New chat starts a direct chat or a group. A number beside a chat, and beside Messages in the menu, is what you haven't read.",
   ], images: ["New chat starts a direct chat or a group.", "GIF opens the GIF search (or asks for a link if no key is set up)."] },
   { id: "appearance", category: "Settings", title: "Appearance and printing settings", body: [
-    "Settings → Appearance sets the colour palette and light, dark or follow-my-device. There are 10 ready-made palettes, including High contrast (stronger borders and extra-dark text). It is saved on that device.",
+    "Settings → Customize page sets the colour palette and light, dark or follow-my-device. There are 10 ready-made palettes, including High contrast (stronger borders and extra-dark text). It is saved on that device.",
     "Make your own: pick one colour, type a hex code, or choose a photo and tap one of the colours found in it. The rest of the theme is worked out for you, with text kept easy to read in light and dark. The photo is read in your browser and is not uploaded or kept. Your theme is saved on that device only; Go back to the default colours clears it.",
     "Font: pick any of 12 open-source typefaces for yourself, including OpenDyslexic (made to help people with dyslexia), Lexend and Atkinson Hyperlegible (both made for easier reading). Choose Palette default to go back. Each person's choice is saved on their own device.",
     "Invoices, labels and pull tickets always print in black and white whatever palette is chosen.",
     "Printing settings (label or regular printer) are saved per computer.",
-  ], images: ["The Font section of Settings → Appearance. Tap a font to use it right away."] },
+  ], images: ["The Font section of Settings → Customize page. Tap a font to use it right away."] },
   { id: "help-guide", category: "Settings", title: "Using Tutorials and the Knowledge base", body: [
     "Settings → Tutorials has step-by-step guides for the main jobs. Each step has a picture with an orange box and arrow showing what to tap or fill in.",
     "Tap a name at the top of the page to jump to a guide. Links beside a step open the right page.",
