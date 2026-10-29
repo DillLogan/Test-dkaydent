@@ -10,7 +10,7 @@ type SP = Promise<Record<string, string | undefined>>;
 
 /** The rep's cart for a customer, with the live order summary to read back to them or print. */
 export default async function CustomerCartPage({ searchParams }: { searchParams: SP }) {
-  const { c, error, placed } = await searchParams;
+  const { c, error, placed, so } = await searchParams;
   if (!c) redirect("/customer-shop");
   const { supabase, profile } = await requireRole("sales");
   const d = await loadRepShop(supabase, profile.id, c);
@@ -29,6 +29,7 @@ export default async function CustomerCartPage({ searchParams }: { searchParams:
         payment={d.payment}
         notes={d.notes}
         placed={placed}
+        placedId={so}
         error={error}
         actions={{ setCartQty: repSetCartQty.bind(null, c), saveCartDetails: repSaveCartDetails.bind(null, c), placeOrder: repPlaceOrder.bind(null, c) }}
         mode={{ shopHref: `/customer-shop?c=${c}`, cartHref: `/customer-shop/cart?c=${c}`, rep: { onlineCount: d.onlineCount, pullOnline: repPullOnline.bind(null, c) } }}

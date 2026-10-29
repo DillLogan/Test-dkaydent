@@ -36,5 +36,5 @@ export async function repPlaceOrder(customerId: string) {
   const { data: so } = await supabase.from("sales_orders").select("so_number").eq("id", id as string).single();
   revalidatePath("/customer-shop");
   revalidatePath("/sales");
-  redirect(`${back}&placed=${encodeURIComponent(so?.so_number ?? "")}`);
+  redirect(`${back}&placed=${encodeURIComponent(so?.so_number ?? "")}&so=${encodeURIComponent(String(id))}`);
 }

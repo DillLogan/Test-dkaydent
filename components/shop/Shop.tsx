@@ -344,7 +344,7 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
 }
 
 /** The cart page: change amounts, save for later, and a live order summary they can check and print before placing the order. */
-export function CartView({ me, catalog, cart, payment, notes, actions, placed, error, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; cart: CartRow[]; payment: string | null; notes: string; actions: Actions; placed?: string; error?: string; mode?: ShopMode }) {
+export function CartView({ me, catalog, cart, payment, notes, actions, placed, placedId, error, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; cart: CartRow[]; payment: string | null; notes: string; actions: Actions; placed?: string; placedId?: string; error?: string; mode?: ShopMode }) {
   const c = useCart(cart, actions);
   const [pay, setPay] = useState<string>(payment ?? me.default_payment ?? "");
   const [note, setNote] = useState(notes);
@@ -388,9 +388,16 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, e
             It has gone to {me.rep ? me.rep : "your sales rep"} for approval. You can follow it under Your orders on the Shop page. The invoice comes after delivery.
           </p>
         )}
-        <Link href={mode.shopHref} className="btn btn-primary">
-          {mode.rep ? `Keep shopping for ${me.name}` : "Keep shopping"}
-        </Link>
+        <div className="flex flex-wrap justify-center gap-2">
+          {mode.rep && placedId && (
+            <Link href={`/sales/${placedId}`} className="btn btn-primary" data-testid="go-invoice">
+              Go to invoice
+            </Link>
+          )}
+          <Link href={mode.shopHref} className={mode.rep && placedId ? "btn" : "btn btn-primary"}>
+            {mode.rep ? `Keep shopping for ${me.name}` : "Keep shopping"}
+          </Link>
+        </div>
       </div>
     );
   }
