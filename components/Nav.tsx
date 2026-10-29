@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 const GROUPS: NavGroup[] = [
   { title: "", links: [{ href: "/", label: "Dashboard" }] },
   { title: "", links: [{ href: "/messages", label: "Messages" }] },
+  { title: "", links: [{ href: "/documents", label: "Documents" }] },
   {
     title: "Buying",
     links: [
@@ -62,10 +63,15 @@ export async function Nav({ profile }: { profile: Profile }) {
   let unread = 0;
   let waiting = 0;
   let resetWaiting = 0;
+  let toSign = 0;
   try {
     const supabase = await createClient();
     const { data } = await supabase.rpc("chat_unread");
     unread = (data ?? []).reduce((n: number, r: { unread: number }) => n + Number(r.unread), 0);
+    if (profile.email) {
+      const { count } = await supabase.from("signature_requests").select("id", { count: "exact", head: true }).eq("status", "sent").ilike("recipient_email", profile.email.replace(/[%_\\]/g, "\\$&"));
+      toSign = count ?? 0;
+    }
     if (can(profile, "sales")) {
       // customer orders waiting on this person, as their assigned rep
       const { data: mine } = await supabase.from("sales_orders").select("id, customers!inner(rep_id)").eq("source", "portal").eq("status", "draft").eq("customers.rep_id", profile.id);
@@ -100,7 +106,7 @@ export async function Nav({ profile }: { profile: Profile }) {
       };
   return (
     <NavShell
-      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l.href === "/admin/logins" && resetWaiting ? { ...l, label: `Customer logins (${resetWaiting})` } : l)) }))}
+      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/documents" && toSign ? { ...l, label: `Documents (${toSign} to sign)` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l.href === "/admin/logins" && resetWaiting ? { ...l, label: `Customer logins (${resetWaiting})` } : l)) }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}

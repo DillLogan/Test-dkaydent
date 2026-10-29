@@ -311,6 +311,15 @@ export const ARTICLES: Article[] = [
     "An item's usual spot: on the item's page, under its home area, set Usual section and shelf.",
     "Pull tickets show Section · Shelf for each line: the stock's own spot, else the item's usual spot when the stock is in its home location. Lines are sorted by section, then shelf.",
   ] },
+  { id: "documents", category: "Settings", title: "Documents: Word editor and signing", body: [
+    "Documents (in the menu) has three tabs: Word editor, Send for signing, and To sign. Every staff role can use them; customers only sign what they're sent.",
+    "Word editor: write with headings, fonts, sizes, colours, lists and links. It saves as you type. Import .docx brings in a Word file and Export .docx gives one back. Your documents are private: nobody else can see them.",
+    "Writing diary: text is tagged with the day you wrote it. Start new day begins a fresh count; edits to older text keep their original day, but the word change counts for today.",
+    "Send for signing: + Add PDF, then Mark fields to place Signature, Initials, Text and Checkbox boxes on the pages (common ones like Signature: and Date: are suggested for you). Send to… emails a signing link from your account; replies come to your account email.",
+    "Who can sign: if the email belongs to a DKaydent login, that person signs while signed in to that account (it appears under their To sign). Anyone else types the email the link was sent to before it opens.",
+    "Signing: type or draw a signature and initials, tap each box to fill it, fill text boxes, then Submit. The signed PDF gets a certificate page (who, how they were checked, sender, IP, device and time). The sender is emailed when it's signed, and Sent shows it with a Download button.",
+    "Email uses the same Resend setup as password resets (RESEND_API_KEY). Without it, Send to… shows the link to copy and send yourself.",
+  ] },
   { id: "labels-faq", category: "Stock", title: "Label printing", body: [
     "Choose Label printer for a roll or thermal printer, or Regular printer for plain paper, in Settings → Printing.",
     "That choice is saved on the computer you are using, so each workstation can use its own printer.",

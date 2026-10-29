@@ -6,7 +6,7 @@ import { HintButton } from "@/components/HintButton";
 type SP = Promise<Record<string, string | undefined>>;
 
 export default async function LoginPage({ searchParams }: { searchParams: SP }) {
-  const { error, message, mode, inactive, u } = await searchParams;
+  const { error, message, mode, inactive, u, next } = await searchParams;
   const isSignup = mode === "signup";
 
   return (
@@ -30,6 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
         <Notice message={message} />
 
         <form action={isSignup ? signUp : signIn} className="space-y-4">
+          {!isSignup && next && <input type="hidden" name="next" value={next} />}
           {isSignup && (
             <label className="block">
               <span className="label">Full name</span>

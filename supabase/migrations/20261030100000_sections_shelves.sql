@@ -6,6 +6,10 @@
 --   Pull tickets use the stock's spot, else the item's home spot in that location.
 -- =====================================================================
 
+-- A layout can hold sections directly: they go in a location named after the layout that covers the whole space
+-- and is never drawn as an area of its own.
+alter table locations add column whole_layout boolean not null default false;
+
 create table location_sections (
   id          uuid primary key default gen_random_uuid(),
   location_id uuid not null references locations(id) on delete cascade,

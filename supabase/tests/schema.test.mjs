@@ -863,4 +863,32 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+
+// ---- documents and signing ----
+{
+  await as(admin);
+  await db.exec(`set role authenticated`);
+  const d = (await one(`insert into wordsmith_docs (title) values ('Notes') returning id, owner_id`));
+  ok(d.owner_id === admin, "a document belongs to whoever made it");
+  await db.exec(`reset role`);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from wordsmith_docs where id=$1`, [d.id])).length === 0, "nobody else can read someone's documents");
+  const up = await db.query(`update wordsmith_docs set title='x' where id=$1 returning id`, [d.id]);
+  ok(up.rows.length === 0, "nobody else can change them");
+  const sd = (await one(`insert into signature_docs (name) values ('Credit application') returning id`)).id;
+  ok(!!sd, "staff can add a document to sign");
+  await expectErr(`insert into signature_requests (doc_id, token, recipient_email) values ($1,'t1','a@b.co')`, [sd], "row-level security", "requests are only created by the server");
+  await db.exec(`reset role`);
+  await q(`insert into signature_requests (doc_id, token, recipient_email, sender_id, sender_email) values ($1,'tok-1','Sam@Example.com',$2,'admin@x.co')`, [sd, admin]);
+  await q(`update profiles set email='sam@example.com' where id=$1`, [sales]);
+  const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
+  await as(cu);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from signature_requests`)).length === 0, "a customer can't see requests sent to someone else");
+  ok((await q(`select 1 from signature_docs`)).length === 0, "customers can't see documents to sign");
+  await db.exec(`reset role`);
+  await expectErr(`insert into signature_requests (token, recipient_email) values ('tok-2','not-an-email')`, [], "check", "recipient must be an email");
+}
+
 console.log(`\n${pass} checks passed`);
