@@ -202,7 +202,7 @@ export const ARTICLES: Article[] = [
     "Everyone signed in and active can read orders, stock and use Messages.",
   ] },
   { id: "customer-logins", category: "Orders", title: "Customer logins, the shop and the sales catalog", body: [
-    "A customer with a login can browse your items, see their own prices and add things to a cart. Their cart becomes a draft sales order that sales approves. They cannot see anything else in the system.",
+    "A customer with a login can browse your items, see their own prices and add things to a cart. The cart is saved on their account, so it is still there next time they sign in. When they place it, it becomes a draft sales order that sales approves. See Shopping cart and order summary. They cannot see anything else in the system.",
     "Before a login can be set up the customer needs a name, an address, a phone number, a route and a sales rep. The route is one to three letters, such as NOR, and groups deliveries. The rep is the sales person who looks after that customer. Usual payment is optional: leave it on Ask on each order and the customer picks cash, card or check every time.",
     "Two discounts, kept separate. The sales discount % comes off every price. The cash discount % only applies when an order is paid in cash. Both are set on the customer page by sales or an admin.",
     "Setting up a login takes two people. Sales or an admin opens Customer logins, picks the customer, types the person's name, a username and a password, and presses Create login. Give the username and password to the customer. They sign in with just those on the login page. Staff keep signing in with their email.",
@@ -210,8 +210,22 @@ export const ARTICLES: Article[] = [
     "Prices a customer sees come from, in order: a price set just for them, otherwise the tier price (or the usual markup) less the customer's Discount %. Set the discount on the customer page. They also see the exact number available, which is stock on hand less what is already waiting on confirmed orders.",
     "The Sales catalog is the same list for staff. Pick a customer and each item shows what they would pay. Type a price under This customer only to give them a special price, or under the tier price to change it for everyone in that tier. Leave a box empty to go back to the normal price. Add items to the cart and press Create draft order.",
     "Open orders lists every order a customer sent in, with the assigned rep shown on each. The rep also sees a number beside Open orders in the menu. Press Approve to send it to be pulled, Edit to change it first, or Deny and type a reason. The customer sees Denied with your reason. Until you decide, they see Waiting for approval.",
-    "On the shop page a customer sees their orders with the items on each, and Order these again fills the cart with the same things.",
+    "On the shop page a customer sees their orders with the items on each. Buy again shows things they have ordered before, and Add these to the cart copies a past order into the cart.",
   ], images: ["Create the login here with a username and password. The customer account must already have a route, address, phone and sales rep.", "A second person presses Verify before the customer can shop.", "On the Sales catalog, type a price for this customer only, or change the tier price.", "The customer's shop shows their price and how many are available. Press Add.", "Send order turns the cart into a draft order for sales to approve.", "Open orders shows the assigned rep on each order, with Approve, Edit and Deny."] },
+  { id: "cart", category: "Orders", title: "Shopping cart and order summary", body: [
+    "Press Add on any item and it goes into the cart. A panel slides out showing what was added and the cart subtotal. Keep shopping, or press View cart.",
+    "The cart icon at the top of the shop shows how many items are in the cart. The cart is saved on the customer's account, not the device.",
+    "On the cart page, change a quantity with the - and + buttons or type it in. Save for later moves a line out of the order but keeps it on the page; Move to cart brings it back.",
+    "The order summary on the right is the live invoice: items, how much their prices save, the cash discount if they pay cash, and the estimated total. It updates as the cart changes. Print prints it.",
+    "Stock is not held while something sits in a cart. If there is not enough, the cart says Only N left and the order cannot ask for more than is there.",
+    "Pick how they will pay, add a note, and press Place order. There is no extra review step. The order goes to Open orders for sales to approve. Saved for later items stay behind.",
+  ] },
+  { id: "customer-page", category: "Orders", title: "Customer page: shopping for a customer on the phone or at the counter", body: [
+    "Sales and admins have Selling → Customer page. Pick a customer (your own customers are listed first) and you see the shop exactly as they see it, with their prices.",
+    "You build your own cart for that customer. It is separate from the customer's own online cart, and each customer has their own cart for you.",
+    "If the customer already has items in their online cart, a bar says so. Press Pull in their online cart to add those items to yours. Their own cart is left as it was.",
+    "Orders you place from the Customer page are approved right away and go straight to Ready to pull. They do not wait in Open orders.",
+  ] },
   { id: "returned-labels-routes", category: "Orders", title: "Sending an order back, box labels and route sheets", body: [
     "Pulled orders get checked before they are invoiced. If something is wrong, Delivery/Order Management types what sales needs to fix in the box on the order and presses Send back to sales. The order moves to Sent back to sales and shows the note.",
     "Sales then changes the quantity on each line to what was really pulled. A quantity can only go down. The difference goes back on the shelf, into the same lots it came from, and the cost updates. Set a line to 0 to take it off. Press Save and send to Delivery/Order Management and it returns to Pulled for the check. If sales cannot fix it, use Returns & credits instead.",
