@@ -213,8 +213,8 @@ export const ARTICLES: Article[] = [
     "On the shop page a customer sees their orders with the items on each. Buy again shows things they have ordered before, and Add these to the cart copies a past order into the cart.",
   ], images: ["Create the login here with a username and password. The customer account must already have a route, address, phone and sales rep.", "A second person presses Verify before the customer can shop.", "On the Sales catalog, type a price for this customer only, or change the tier price.", "The customer's shop shows their price and how many are available. Press Add.", "Send order turns the cart into a draft order for sales to approve.", "Open orders shows the assigned rep on each order, with Approve, Edit and Deny."] },
   { id: "cart", category: "Orders", title: "Shopping cart and order summary", body: [
-    "Press Add on any item and it goes into the cart. A panel slides out showing what was added and the cart subtotal. Keep shopping, or press View cart.",
-    "The cart icon at the top of the shop shows how many items are in the cart. The cart is saved on the customer's account, not the device.",
+    "Press Add on any item and it goes into the cart. The count on the cart button at the top of the shop goes up.",
+    "Press the cart button and the cart slides in from the right. Change amounts there, or press View cart & order summary. Close it with ✕, Keep shopping, or by tapping outside it. The cart is saved on the customer's account, not the device.",
     "On the cart page, change a quantity with the - and + buttons or type it in. Save for later moves a line out of the order but keeps it on the page; Move to cart brings it back.",
     "The order summary on the right is the live invoice: items, how much their prices save, the cash discount if they pay cash, and the estimated total. It updates as the cart changes. Print prints it.",
     "Stock is not held while something sits in a cart. If there is not enough, the cart says Only N left and the order cannot ask for more than is there.",
