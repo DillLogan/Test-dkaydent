@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { TabBar, ViewSwitch, type Tab } from "./TabBar";
 
 export type NavGroup = { title: string; links: { href: string; label: string }[] };
 const OPEN_KEY = "dk-nav-open";
@@ -17,11 +18,14 @@ export function NavShell({
   userName,
   roleLabel,
   signOut,
+  tabs = [],
 }: {
   groups: NavGroup[];
   userName: string;
   roleLabel: string;
   signOut: () => Promise<void>;
+  /** the bottom tabs in Mobile mode */
+  tabs?: Tab[];
 }) {
   const path = usePathname() || "/";
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -153,11 +157,15 @@ export function NavShell({
         <div className="border-t border-stone-200/80 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="truncate text-sm font-medium">{userName}</div>
           <div className="text-xs text-stone-500">{roleLabel}</div>
-          <form action={signOut} className="mt-2">
-            <button className="text-xs text-stone-500 hover:underline">Sign out</button>
-          </form>
+          <div className="mt-2 flex items-center gap-4">
+            <form action={signOut}>
+              <button className="text-xs text-stone-500 hover:underline">Sign out</button>
+            </form>
+            <ViewSwitch />
+          </div>
         </div>
       </aside>
+      <TabBar tabs={tabs} active={path} menuOpen={drawer} onMenu={() => setDrawer((v) => !v)} />
     </>
   );
 }
