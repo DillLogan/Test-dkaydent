@@ -394,6 +394,11 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
               Go to invoice
             </Link>
           )}
+          {mode.rep && placedId && (
+            <Link href={`/sales/${placedId}/pull-ticket`} className="btn" data-testid="go-pull">
+              Pull ticket
+            </Link>
+          )}
           <Link href={mode.shopHref} className={mode.rep && placedId ? "btn" : "btn btn-primary"}>
             {mode.rep ? `Keep shopping for ${me.name}` : "Keep shopping"}
           </Link>
