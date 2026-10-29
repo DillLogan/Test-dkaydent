@@ -177,6 +177,12 @@ export default async function InvoicePage({ params, searchParams }: Props) {
             <span className="text-stone-500">Tax ({Number(inv.tax_rate)}%)</span>
             <span className="tabular-nums">{money(inv.tax)}</span>
           </div>
+          {Number(inv.card_fee) > 0 && (
+            <div className="flex justify-between" data-testid="card-fee">
+              <span className="text-stone-500">Card processing fee ({Number(inv.card_fee_rate)}%)</span>
+              <span className="tabular-nums">{money(inv.card_fee)}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold">
             <span>{paid > 0 ? "Total" : "Total due"}</span>
             <span className="tabular-nums">{money(inv.total)}</span>

@@ -19,7 +19,7 @@ export async function loadRepShop(supabase: SupabaseClient, repId: string, custo
   ]);
   if (!c) return null;
   const rep = (c.profiles as unknown as { full_name: string | null; email: string | null } | null) ?? null;
-  const me: ShopMe = { customer_id: c.id, name: c.name, rep: rep?.full_name || rep?.email || null, default_payment: c.default_payment, cash_discount_pct: Number(c.cash_discount_pct ?? 0) };
+  const me: ShopMe = { customer_id: c.id, name: c.name, rep: rep?.full_name || rep?.email || null, default_payment: c.default_payment, cash_discount_pct: Number(c.cash_discount_pct ?? 0), card_fee_pct: Number((await supabase.rpc("card_fee_pct")).data ?? 0) };
   const hist: HistoryOrder[] = (orders ?? []).map((o: any) => ({
     so_number: o.so_number,
     status: o.status,

@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { fail } from "@/lib/forms";
+import { dbMessage, fail } from "@/lib/forms";
+import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth";
 import { hintProblem } from "@/lib/passwordHint";
 
 const PATH = "/settings";
@@ -41,4 +43,16 @@ export async function changePassword(fd: FormData) {
     if (error) fail(PATH, "Password saved, but the hint could not be saved.");
   }
   redirect(`${PATH}?message=${encodeURIComponent(hintOnly ? "Hint saved." : "Password changed.")}`);
+}
+
+/** Admin: the card processing fee added to orders paid by card (0 turns it off). */
+export async function setCardFee(fd: FormData) {
+  const { supabase } = await requireRole();
+  const raw = String(fd.get("card_fee_pct") ?? "").trim();
+  const pct = Number(raw);
+  if (raw === "" || !Number.isFinite(pct) || pct < 0 || pct > 10) fail(PATH, "Enter a card fee between 0 and 10 percent.");
+  const { error } = await supabase.from("app_settings").update({ card_fee_pct: Math.round(pct * 100) / 100, updated_at: new Date().toISOString() }).eq("id", true);
+  if (error) fail(PATH, dbMessage(error));
+  revalidatePath("/", "layout");
+  redirect(`${PATH}?message=${encodeURIComponent(pct ? `Card processing fee set to ${pct}%.` : "Card processing fee turned off.")}`);
 }

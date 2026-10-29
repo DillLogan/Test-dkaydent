@@ -33,6 +33,14 @@ export async function updateSO(id: string, fd: FormData) {
     })
     .eq("id", id);
   if (error) fail(path, dbMessage(error));
+  if (fd.has("payment_type")) {
+    const pay = str(fd, "payment_type");
+    const { data: cur } = await supabase.from("sales_orders").select("payment_type").eq("id", id).single();
+    if ((cur?.payment_type ?? null) !== pay) {
+      const { error: e2 } = await supabase.rpc("set_so_payment", { p_so_id: id, p_payment: pay });
+      if (e2) fail(path, dbMessage(e2));
+    }
+  }
   revalidatePath(path);
   redirect(`${path}?message=${encodeURIComponent("Saved.")}`);
 }

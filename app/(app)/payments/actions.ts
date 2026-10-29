@@ -143,6 +143,14 @@ export async function cancelTerminalCharge(requestId: string, back: string) {
 
 type CartLine = { product_id: string; unit_id: string; qty: number; unit_price: number };
 
+const r2 = (n: number) => Math.round(n * 100) / 100;
+/** What a card charge comes to at the counter: subtotal + tax + the card processing fee (same rounding as the invoice). */
+async function cardTotal(supabase: Awaited<ReturnType<typeof requireRole>>["supabase"], subtotal: number, tax: number) {
+  const { data: fee } = await supabase.rpc("card_fee_pct");
+  const withTax = r2(subtotal) + r2(r2(subtotal) * (tax / 100));
+  return r2(withTax + r2(withTax * (Number(fee ?? 0) / 100)));
+}
+
 export async function counterCheckout(fd: FormData) {
   const { supabase } = await requireRole("sales");
   let cart: CartLine[] = [];
@@ -163,7 +171,7 @@ export async function counterCheckout(fd: FormData) {
   if (method === "terminal") {
     const terminal = str(fd, "terminal_id");
     const subtotal = cart.reduce((t, l) => t + l.qty * l.unit_price, 0);
-    const total = Math.round(Math.round(subtotal * 100) / 100 * (1 + tax / 100) * 100) / 100;
+    const total = await cardTotal(supabase, subtotal, tax);
     const { data: reqId, error: e2 } = await supabase.rpc("create_terminal_request", {
       p_terminal_id: terminal,
       p_purpose: "counter",
@@ -204,7 +212,7 @@ export async function counterRetry(soId: string, fd: FormData) {
     const { data: lines } = await supabase.from("sales_order_lines").select("qty, unit_price").eq("so_id", soId);
     const subtotal = Math.round((lines ?? []).reduce((t, l) => t + Number(l.qty) * Number(l.unit_price), 0) * 100) / 100;
     const { data: paid } = await supabase.rpc("so_paid", { p_so_id: soId });
-    const due = Math.round((subtotal * (1 + tax / 100) - Number(paid ?? 0)) * 100) / 100;
+    const due = r2((await cardTotal(supabase, subtotal, tax)) - Number(paid ?? 0));
     const { data: reqId, error } = await supabase.rpc("create_terminal_request", {
       p_terminal_id: str(fd, "terminal_id"),
       p_purpose: "counter",

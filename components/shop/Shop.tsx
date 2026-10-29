@@ -358,7 +358,11 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
   const list = lines.reduce((n, { r, i }) => n + r.qty * Number(i.list_price ?? i.price), 0);
   const yours = lines.reduce((n, { r, i }) => n + r.qty * i.price, 0);
   const cashOff = pay === "cash" && cashPct ? Math.round(lines.reduce((n, { r, i }) => n + r.qty * (i.price - priceFor(i, cashPct, "cash")), 0) * 100) / 100 : 0;
-  const total = Math.round((yours - cashOff) * 100) / 100;
+  const feePct = Number(me.card_fee_pct ?? 0);
+  const goods = Math.round((yours - cashOff) * 100) / 100;
+  // paying by card adds the processing fee; the invoice works it out again on the subtotal plus any tax
+  const cardFee = pay === "card" && feePct > 0 ? Math.round(goods * feePct) / 100 : 0;
+  const total = Math.round((goods + cardFee) * 100) / 100;
   const count = lines.reduce((n, { r }) => n + r.qty, 0);
   const short = lines.filter(({ r, i }) => i.available !== null && r.qty > Number(i.available));
   const stamp = new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -530,13 +534,22 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
                 <dd className="tabular-nums">−{money(cashOff)}</dd>
               </div>
             )}
+            {cardFee > 0 && (
+              <div className="flex justify-between" data-testid="summary-card-fee">
+                <dt>Card processing fee ({feePct}%)</dt>
+                <dd className="tabular-nums">{money(cardFee)}</dd>
+              </div>
+            )}
             <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold">
               <dt>Estimated total</dt>
               <dd className="tabular-nums" data-testid="summary-total">
                 {money(total)}
               </dd>
             </div>
-            <p className="text-xs text-stone-500">Tax, if any, and delivery are added on the invoice. Prices are checked again when your rep approves the order.</p>
+            <p className="text-xs text-stone-500">
+              Tax, if any, and delivery are added on the invoice{cardFee > 0 ? `, and the card fee is worked out on the total with tax` : ""}.
+              {" Prices are checked again when your rep approves the order."}
+            </p>
           </dl>
           <div className="space-y-2 print:hidden">
             <label className="block text-sm">
@@ -544,7 +557,7 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
               <select className="input" value={pay} onChange={(e) => setPay(e.target.value)} data-testid="cart-payment">
                 <option value="">Choose…</option>
                 <option value="cash">Cash{cashPct ? ` (${cashPct}% off)` : ""}</option>
-                <option value="card">Card</option>
+                <option value="card">Card{feePct > 0 ? ` (+${feePct}% processing fee)` : ""}</option>
                 <option value="check">Check</option>
               </select>
             </label>

@@ -93,8 +93,8 @@ export const TUTORIALS: Tutorial[] = [
     who: "Sales",
     steps: [
       { text: "Open Counter sale. Walk-in is the default customer.", href: "/counter", linkLabel: "Counter sale" },
-      { text: "Scan or search for products and set quantities." },
-      { text: "Choose how the customer pays: cash, card or check. For a card terminal, send the amount to the terminal." },
+      { text: "Scan or search for products, or press Inventory to browse the stock by category and tap a unit (stem, bunch, box) to add it. Set quantities on the lines." },
+      { text: "Choose how the customer pays: cash, card or check. For a card terminal, send the amount to the terminal. Card adds the card processing fee; the panel shows the total by card." },
       { text: "Finish the sale. Stock is pulled, the order is completed and an invoice is created and marked paid in one step." },
     ],
   },
@@ -345,6 +345,14 @@ export const ARTICLES: Article[] = [
     "Terms come from the customer (Net 30 by default) and set the due date.",
     "Sales tax is typed when you create the invoice. Leave 0 for resale-exempt customers; the resale certificate number is kept on the customer and printed on the invoice.",
     "Void an open invoice to correct the order; it goes back to Completed so you can invoice again. Paid invoices, or invoices with payments, can't be voided until the payments are voided.",
+  ] },
+  { id: "card-fee", category: "Money", title: "Card processing fee", body: [
+    "Orders paid by card get a card processing fee, 2.5% unless an admin changes it under Settings → Card processing fee. 0 turns it off.",
+    "The fee is worked out on the subtotal plus tax and shows as its own line on the invoice. Cash and check orders don't get it.",
+    "How an order is paid comes from the cart (Pay by), or from Pays by under Details on the order page. It can change until the order is invoiced; after that, void the invoice to change it.",
+    "Before invoicing, the order page and cart show the fee on the subtotal; the invoice works it out again once tax is added.",
+    "Counter sales charged on a terminal include the fee. Paying cash or check at the counter doesn't.",
+    "Each invoice keeps the rate it was made with, so changing the setting doesn't change old invoices.",
   ] },
   { id: "payments-faq", category: "Money", title: "Deposits, partial payments and terminals", body: [
     "Money taken before invoicing is a deposit and is applied to the invoice when it is created.",
