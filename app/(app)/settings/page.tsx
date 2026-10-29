@@ -5,10 +5,19 @@ import { PrintSettingsForm } from "@/components/PrintSettingsForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
 import { changePassword } from "./actions";
+import { createClient } from "@/lib/supabase/server";
+import { HINT_MAX } from "@/lib/passwordHint";
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { error, message } = await searchParams;
   const { profile } = await getSession();
+  const isCustomer = profile.role === "customer";
+  let hint = "";
+  if (isCustomer) {
+    const supabase = await createClient();
+    const { data } = await supabase.from("password_hints").select("hint").eq("profile_id", profile.id).maybeSingle();
+    hint = data?.hint ?? "";
+  }
   return (
     <>
       <PageHeader title="Settings" subtitle="Preferences for this browser" />
@@ -22,14 +31,24 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </label>
           <label>
             <span className="label">New password</span>
-            <input name="next" type="password" className="input" required minLength={8} autoComplete="new-password" />
+            <input name="next" type="password" className="input" required={!isCustomer} minLength={8} autoComplete="new-password" />
           </label>
           <label>
             <span className="label">Type it again</span>
-            <input name="again" type="password" className="input" required minLength={8} autoComplete="new-password" />
+            <input name="again" type="password" className="input" required={!isCustomer} minLength={8} autoComplete="new-password" />
           </label>
+          {isCustomer && (
+            <label className="sm:col-span-3">
+              <span className="label">Password hint (optional)</span>
+              <input name="hint" className="input" maxLength={HINT_MAX} defaultValue={hint} placeholder="Something only you would understand" data-testid="password-hint" />
+              <span className="mt-1 block text-xs text-stone-500">
+                Shown on the sign-in page to anyone who types your username, so never put your password in it. To change only the hint, enter your
+                current password and leave the new password blank. Clear it to remove it.
+              </span>
+            </label>
+          )}
           <div className="sm:col-span-3">
-            <SubmitButton>Change password</SubmitButton>
+            <SubmitButton>{isCustomer ? "Save" : "Change password"}</SubmitButton>
           </div>
         </form>
       </Section>

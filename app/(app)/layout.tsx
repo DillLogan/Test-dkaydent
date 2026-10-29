@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.role === "customer") {
     // Convenience only: the database already hides everything but the shop from customer logins.
     const path = (await headers()).get("x-pathname") ?? "";
-    if (!(path === "/shop" || path.startsWith("/shop/") || path === "/settings")) redirect("/shop");
+    if (!(path === "/shop" || path.startsWith("/shop/") || path === "/settings" || path === "/settings/customize")) redirect("/shop");
   }
   return (
     <div className="min-h-screen md:flex">

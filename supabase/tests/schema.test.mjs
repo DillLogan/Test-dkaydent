@@ -796,4 +796,27 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+
+// ---- password hints ----
+{
+  await as(admin);
+  const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
+  await db.exec(`select set_config('app.via_rpc','1',false)`);
+  await q(`update profiles set active=true where id=$1`, [cu]);
+  await db.exec(`select set_config('app.via_rpc','',false)`);
+  await as(cu);
+  await db.exec(`set role authenticated`);
+  await q(`insert into password_hints (profile_id, hint) values ($1, 'my first dog')`, [cu]);
+  ok((await one(`select hint from password_hints`)).hint === "my first dog", "customer sets and reads own hint");
+  await q(`update password_hints set hint='street I grew up on' where profile_id=$1`, [cu]);
+  await expectErr(`insert into password_hints (profile_id, hint) values ($1, 'x')`, [admin], "row-level security", "customer can't set someone else's hint");
+  await expectErr(`update password_hints set hint=$2 where profile_id=$1`, [cu, "x".repeat(101)], "check", "hint is 100 characters or fewer");
+  await db.exec(`reset role`);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from password_hints`)).length === 0, "staff can't read customer hints");
+  await expectErr(`insert into password_hints (profile_id, hint) values ($1, 'x')`, [sales], "row-level security", "staff can't set a hint");
+  await db.exec(`reset role`);
+}
+
 console.log(`\n${pass} checks passed`);

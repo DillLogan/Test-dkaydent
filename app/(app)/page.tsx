@@ -57,7 +57,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       </PageHeader>
       <ErrorBanner error={error} />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="stagger mb-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Stat label="Inventory value" value={money(stockValue)} hint={`${lotRows.length} lots on hand`} href="/inventory" />
         <Stat
           label="Expiring ≤ 3 days"

@@ -750,3 +750,63 @@ html.theme-anim *::after {
     --color-brand-500: #72a4fa;
   }
 }
+
+/* ---------- Motion: staggered entrances, press feedback, pop-ins (all off with reduce motion) ---------- */
+.page-in > *,
+.page-in > * > section,
+.stagger > * {
+  animation: rise-in 460ms var(--ease-out) both;
+}
+.page-in > *:nth-child(2), .page-in > * > section:nth-child(2), .stagger > *:nth-child(2) { animation-delay: 40ms; }
+.page-in > *:nth-child(3), .page-in > * > section:nth-child(3), .stagger > *:nth-child(3) { animation-delay: 80ms; }
+.page-in > *:nth-child(4), .page-in > * > section:nth-child(4), .stagger > *:nth-child(4) { animation-delay: 120ms; }
+.page-in > *:nth-child(5), .page-in > * > section:nth-child(5), .stagger > *:nth-child(5) { animation-delay: 160ms; }
+.page-in > *:nth-child(n + 6), .page-in > * > section:nth-child(n + 6), .stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
+.page-in .table tbody tr { animation: row-in 380ms var(--ease-out) both; }
+.page-in .table tbody tr:nth-child(2) { animation-delay: 25ms; }
+.page-in .table tbody tr:nth-child(3) { animation-delay: 50ms; }
+.page-in .table tbody tr:nth-child(4) { animation-delay: 75ms; }
+.page-in .table tbody tr:nth-child(5) { animation-delay: 100ms; }
+.page-in .table tbody tr:nth-child(6) { animation-delay: 125ms; }
+.page-in .table tbody tr:nth-child(7) { animation-delay: 150ms; }
+.page-in .table tbody tr:nth-child(n + 8) { animation-delay: 175ms; }
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes row-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.btn-primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--color-brand-700) 75%, transparent);
+}
+.btn-primary:not(:disabled):active { transform: translateY(0) scale(0.97); }
+.pop-in { animation: pop-in 320ms var(--ease-out) both; }
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.modal-bg { animation: fade-in 220ms ease both; }
+.modal-bg > * { animation: pop-in 320ms var(--ease-out) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.shake { animation: shake 360ms ease both; }
+@keyframes shake {
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+/* loading placeholders while a page fetches */
+.skeleton {
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--color-stone-100) 25%, var(--color-stone-50) 50%, var(--color-stone-100) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media print {
+  .page-in > *, .page-in > * > section, .stagger > *, .page-in .table tbody tr { animation: none !important; opacity: 1 !important; transform: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in > *, .page-in > * > section, .stagger > *, .page-in .table tbody tr, .pop-in, .modal-bg, .modal-bg > *, .shake, .skeleton { animation: none !important; }
+  .btn-primary:not(:disabled):hover { transform: none; }
+}
