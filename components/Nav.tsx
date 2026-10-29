@@ -1,6 +1,7 @@
 import { signOut } from "@/app/login/actions";
 import { can, ROLES, type Profile } from "@/lib/roles";
 import { NavShell, type NavGroup } from "./NavLinks";
+import type { Tab } from "./TabBar";
 import { createClient } from "@/lib/supabase/server";
 
 const GROUPS: NavGroup[] = [
@@ -52,8 +53,21 @@ const GROUPS: NavGroup[] = [
 
 export async function Nav({ profile }: { profile: Profile }) {
   if (profile.role === "customer") {
+    let inCart = 0;
+    try {
+      const supabase = await createClient();
+      const { data } = await supabase.from("portal_cart_items").select("qty").eq("saved_for_later", false);
+      inCart = (data ?? []).reduce((n: number, r: { qty: number }) => n + Number(r.qty), 0);
+    } catch {
+      /* the badge is optional */
+    }
     return (
       <NavShell
+        tabs={[
+          { href: "/shop", label: "Shop", icon: "shop" },
+          { href: "/shop/cart", label: "Cart", icon: "cart", badge: inCart },
+          { href: "/settings", label: "Account", icon: "user" },
+        ]}
         groups={[{ title: "", links: [{ href: "/shop", label: "Shop" }, { href: "/settings", label: "Settings" }, { href: "/settings/customize", label: "Customize page" }] }]}
         userName={profile.full_name || profile.email || ""}
         roleLabel="Customer"
@@ -107,10 +121,40 @@ export async function Nav({ profile }: { profile: Profile }) {
       };
   return (
     <NavShell
+      tabs={staffTabs(profile.role, unread)}
       groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/documents" && toSign ? { ...l, label: `Documents (${toSign} to sign)` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l.href === "/admin/logins" && resetWaiting ? { ...l, label: `Customer logins (${resetWaiting})` } : l)) }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}
     />
   );
+}
+
+/** Bottom tabs in Mobile mode: Home, two pages for the role, Messages (and Menu, added by the tab bar). */
+function staffTabs(role: string, unread: number): Tab[] {
+  const home: Tab = { href: "/", label: "Home", icon: "home" };
+  const msgs: Tab = { href: "/messages", label: "Messages", icon: "messages", badge: unread };
+  const mid: Record<string, Tab[]> = {
+    admin: [
+      { href: "/sales", label: "Orders", icon: "orders" },
+      { href: "/inventory", label: "Inventory", icon: "inventory" },
+    ],
+    sales: [
+      { href: "/counter", label: "Counter", icon: "counter" },
+      { href: "/sales", label: "Orders", icon: "orders" },
+    ],
+    warehouse: [
+      { href: "/scan", label: "Scan", icon: "scan" },
+      { href: "/inventory", label: "Inventory", icon: "inventory" },
+    ],
+    orders_manager: [
+      { href: "/sales", label: "Orders", icon: "orders" },
+      { href: "/routing", label: "Routing", icon: "routing" },
+    ],
+    buyer: [
+      { href: "/purchasing", label: "Buying", icon: "purchasing" },
+      { href: "/receiving", label: "Receiving", icon: "receiving" },
+    ],
+  };
+  return [home, ...(mid[role] ?? mid.buyer), msgs];
 }

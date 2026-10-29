@@ -18,6 +18,9 @@ import {
 } from "./diary";
 import { exportDocx, importDocxHtml } from "./docxio";
 
+/** Phone-sized layout: a narrow window, or Mobile mode (lib/viewMode.ts). */
+const narrow = () => window.innerWidth < 900 || document.documentElement.classList.contains("mobile");
+
 const FONTS = [
   ["", "Default"], ["Calibri, Carlito, sans-serif", "Calibri"], ["Arial, Helvetica, sans-serif", "Arial"],
   ["Georgia, serif", "Georgia"], ["'Times New Roman', Times, serif", "Times New Roman"],
@@ -83,7 +86,7 @@ export default function Wordsmith() {
 
   useEffect(() => {
     loadList().then((list) => { if (list.length) setActiveId(list[0].id); });
-    if (typeof window !== "undefined" && window.innerWidth < 900) setListOpen(false);
+    if (typeof window !== "undefined" && narrow()) setListOpen(false);
   }, [loadList]);
 
   const createDoc = async (body) => {
@@ -92,7 +95,7 @@ export default function Wordsmith() {
     if (!r.ok || !j.doc) throw new Error(j.error || "Couldn't create the document.");
     setDocs((p) => [{ id: j.doc.id, title: j.doc.title, word_count: j.doc.word_count, updated_at: j.doc.updated_at, created_at: j.doc.created_at }, ...p]);
     setActiveId(j.doc.id);
-    if (window.innerWidth < 900) setListOpen(false);
+    if (narrow()) setListOpen(false);
   };
 
   const newDoc = async () => {
@@ -158,7 +161,7 @@ export default function Wordsmith() {
             <div className="ws-dim">No documents yet.</div>
           ) : docs.map((d) => (
             <div key={d.id} className={"ws-doc" + (d.id === activeId ? " active" : "")}>
-              <button className="ws-doc-open" onClick={() => { setActiveId(d.id); if (window.innerWidth < 900) setListOpen(false); }}>
+              <button className="ws-doc-open" onClick={() => { setActiveId(d.id); if (narrow()) setListOpen(false); }}>
                 <span className="ws-doc-name">{d.title || "Untitled document"}</span>
                 <span className="ws-doc-meta">{n(d.word_count)} words · {fmtWhen(d.updated_at)}</span>
               </button>
@@ -212,7 +215,7 @@ function DocEditor({ doc, onMeta, listOpen, onShowList }) {
   const [, bump] = useReducer((x) => x + 1, 0);
   const [title, setTitle] = useState(doc.title || "Untitled document");
   const [saveState, setSaveState] = useState("saved"); // saved | dirty | saving | error | conflict
-  const [showDiary, setShowDiary] = useState(() => readPref("ws.diary", typeof window === "undefined" || window.innerWidth >= 900));
+  const [showDiary, setShowDiary] = useState(() => readPref("ws.diary", typeof window === "undefined" || !narrow()));
   const [showMarks, setShowMarks] = useState(() => readPref("ws.marks", true));
   const [focusEntry, setFocusEntry] = useState(null);
   const [sections, setSections] = useState({});

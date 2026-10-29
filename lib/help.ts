@@ -404,6 +404,10 @@ export const ARTICLES: Article[] = [
     "Tap the menu button at the top left to open the slide-in menu. Groups (Buying, Stock, Selling, Reports & data, Settings) fold open and closed, and the app remembers which are open.",
     "Floor plans, labels and pull tickets work on a phone, but print from a computer when you can.",
     "Messages opens on the chat list on a phone. Tap a chat to open it and the arrow to go back.",
+    "There are two modes, like Amazon's app and desktop site. Phones open in Mobile mode, computers and tablets in PC mode.",
+    "Mobile mode uses the phone layout with tabs along the bottom: customers get Shop, Cart and Account; staff get Home, two pages for their job (for example Counter and Orders for sales, Scan and Inventory for the warehouse) and Messages. Menu opens the full menu.",
+    "Mobile mode works even if the phone's browser asks for the desktop site: the page is laid out at phone width, so text stays a normal size.",
+    "To see the full desktop layout on a phone, open Menu and tap Desktop site. Tap Mobile site in the menu to go back. The choice is remembered on that phone.",
   ] },
   { id: "import-export", category: "Settings", title: "Import and export data", body: [
     "Reports & data → Import data brings in products, vendors and customers from CSV files. A preview shows problems before anything is saved.",
