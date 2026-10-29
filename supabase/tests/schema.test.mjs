@@ -930,4 +930,83 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
+
+// ---- customer cart saved on the account ----
+{
+  const pa = await one(`select profile_id, customer_id from portal_accounts limit 1`);
+  const cu = pa.profile_id;
+  await as(admin);
+  await q(`select portal_set_up($1,$2)`, [cu, pa.customer_id]);
+  await q(`update profiles set active=true, role='sales' where id=$1`, [sales]);
+  await as(sales);
+  await q(`select portal_verify($1)`, [cu]);
+  ok((await one(`select verified_by from portal_accounts where profile_id=$1`, [cu])).verified_by === sales, "a verified customer login for cart tests");
+  await db.exec(`select set_config('app.via_rpc','1',false)`);
+  await q(`update profiles set active=true where id=$1`, [cu]);
+  await db.exec(`select set_config('app.via_rpc','',false)`);
+  await as(cu);
+  await db.exec(`set role authenticated`);
+  const cat = (await one(`select portal_catalog() c`)).c;
+  const item = cat.find((i) => Number(i.available) >= 2);
+  ok(!!item, "catalog has an item with stock");
+  await q(`select portal_cart_set($1, 1)`, [item.unit_id]);
+  await q(`select portal_cart_set($1, 2)`, [item.unit_id]);
+  ok(Number((await one(`select qty from portal_cart_items where unit_id=$1`, [item.unit_id])).qty) === 2, "cart is saved on the account");
+  await expectErr(`select portal_cart_set($1, $2)`, [item.unit_id, Number(item.available) + 1], "left", "can't put more in the cart than is available");
+  await expectErr(`insert into portal_cart_items (profile_id, unit_id, qty) values ($1,$2,1)`, [cu, item.unit_id], "row-level security", "cart changes only through the functions");
+  const other = cat.find((i) => i.unit_id !== item.unit_id && Number(i.available) >= 1);
+  await q(`select portal_cart_set($1, 1, true)`, [other.unit_id]);
+  ok((await one(`select saved_for_later s from portal_cart_items where unit_id=$1`, [other.unit_id])).s === true, "save for later");
+  await expectErr(`select portal_cart_details('bitcoin', null)`, [], "cash, card or check", "payment must be cash, card or check");
+  await q(`select portal_cart_details('card', 'Leave at back door')`);
+  const so = (await one(`select portal_cart_checkout() id`)).id;
+  ok(!!so, "place the order from the saved cart");
+  await db.exec(`reset role`);
+  const lines = await q(`select qty, unit_price from sales_order_lines where so_id=$1`, [so]);
+  await db.exec(`set role authenticated`);
+  ok(lines.length === 1 && Number(lines[0].qty) === 2 && Number(lines[0].unit_price) === Number(item.price), "order has the cart items at the server price");
+  ok((await q(`select 1 from portal_cart_items where not saved_for_later`)).length === 0, "cart empties after ordering");
+  ok((await q(`select 1 from portal_cart_items where saved_for_later`)).length === 1, "saved-for-later items stay");
+  await expectErr(`select portal_cart_checkout()`, [], "empty", "an empty cart can't be ordered");
+  await q(`select portal_cart_set($1, 0)`, [other.unit_id]);
+  ok((await q(`select 1 from portal_cart_items`)).length === 0, "0 takes an item out");
+  await db.exec(`reset role`);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from portal_carts`)).length === 0, "staff can't read customer carts directly");
+  await expectErr(`select portal_cart_set($1, 1)`, [item.unit_id], "not set up for shopping", "staff can't use a customer cart");
+  await db.exec(`reset role`);
+}
+
+
+// ---- rep shopping for a customer ----
+{
+  const pa = await one(`select profile_id, customer_id from portal_accounts limit 1`);
+  await as(pa.profile_id);
+  await db.exec(`set role authenticated`);
+  const cat = (await one(`select portal_catalog() c`)).c;
+  const item = cat.find((i) => Number(i.available) >= 3);
+  await q(`select portal_cart_set($1, 2)`, [item.unit_id]);
+  await db.exec(`reset role`);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  ok((await one(`select rep_customer_online_cart($1) c`, [pa.customer_id])).c.length === 1, "rep sees the customer's online cart");
+  await q(`select rep_cart_pull_online($1)`, [pa.customer_id]);
+  await q(`select rep_cart_set($1,$2,3)`, [pa.customer_id, item.unit_id]);
+  ok(Number((await one(`select qty from rep_cart_items where customer_id=$1 and unit_id=$2`, [pa.customer_id, item.unit_id])).qty) === 3, "rep's own cart for the customer");
+  await expectErr(`select rep_cart_set($1,$2,$3)`, [pa.customer_id, item.unit_id, Number(item.available) + 1], "left", "rep can't add more than is available");
+  await q(`select rep_cart_details($1,'cash',null)`, [pa.customer_id]);
+  const so = (await one(`select rep_cart_checkout($1) id`, [pa.customer_id])).id;
+  await db.exec(`reset role`);
+  const o = await one(`select status, customer_id, payment_type from sales_orders where id=$1`, [so]);
+  ok(o.status === "confirmed" && o.customer_id === pa.customer_id && o.payment_type === "cash", "rep's order is under the customer, already approved");
+  ok((await q(`select 1 from rep_cart_items where customer_id=$1 and not saved_for_later`, [pa.customer_id])).length === 0, "rep cart empties after ordering");
+  ok((await q(`select 1 from portal_cart_items where profile_id=$1`, [pa.profile_id])).length === 1, "customer's own cart is left alone");
+  await as(pa.profile_id);
+  await db.exec(`set role authenticated`);
+  await expectErr(`select rep_cart_set($1,$2,1)`, [pa.customer_id, item.unit_id], "Only sales", "customers can't use rep carts");
+  ok((await q(`select 1 from rep_cart_items`)).length === 0, "customers can't read rep carts");
+  await db.exec(`reset role`);
+}
+
 console.log(`\n${pass} checks passed`);

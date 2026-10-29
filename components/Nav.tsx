@@ -29,6 +29,7 @@ const GROUPS: NavGroup[] = [
     title: "Selling",
     links: [
       { href: "/counter", label: "Counter sale" },
+      { href: "/customer-shop", label: "Customer page" },
       { href: "/sales/open", label: "Open orders" },
       { href: "/sales", label: "Sales orders" },
       { href: "/customers", label: "Customers" },
