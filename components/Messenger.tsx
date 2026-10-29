@@ -396,7 +396,7 @@ function GifPicker({ configured, onPick, onClose }: { configured: boolean; onPic
 
   const okLink = /^https:\/\/\S{4,}$/.test(link.trim());
   return (
-    <div className="mx-3 mb-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-md" role="dialog" aria-label="Choose a GIF">
+    <div className="pop-in mx-3 mb-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-md" role="dialog" aria-label="Choose a GIF">
       <div className="mb-2 flex items-center justify-between gap-2">
         {configured ? (
           <input className="input flex-1" placeholder="Search GIPHY" value={q} onChange={(e) => setQ(e.target.value)} autoFocus aria-label="Search GIFs" />
@@ -446,7 +446,7 @@ function NewChat({ me, people, onClose, onDm, onGroup, error }: { me: string; pe
   const [picked, setPicked] = useState<string[]>([]);
   const others = people.filter((p) => p.id !== me && (p.name + (p.email ?? "")).toLowerCase().includes(q.toLowerCase()));
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="New chat">
+    <div className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="New chat">
       <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex gap-1" role="tablist">

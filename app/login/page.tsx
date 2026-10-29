@@ -1,11 +1,12 @@
 import { signIn, signOut, signUp } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice } from "@/components/ui";
+import { HintButton } from "@/components/HintButton";
 
 type SP = Promise<Record<string, string | undefined>>;
 
 export default async function LoginPage({ searchParams }: { searchParams: SP }) {
-  const { error, message, mode, inactive } = await searchParams;
+  const { error, message, mode, inactive, u } = await searchParams;
   const isSignup = mode === "signup";
 
   return (
@@ -37,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
           )}
           <label className="block">
             <span className="label">{isSignup ? "Email" : "Username or email"}</span>
-            <input name="email" type={isSignup ? "email" : "text"} className="input" required autoComplete="username" autoCapitalize="none" spellCheck={false} />
+            <input name="email" type={isSignup ? "email" : "text"} defaultValue={isSignup ? undefined : u} className="input" required autoComplete="username" autoCapitalize="none" spellCheck={false} />
           </label>
           <label className="block">
             <span className="label">Password</span>
@@ -55,6 +56,7 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
           </SubmitButton>
         </form>
 
+        {!isSignup && error && <HintButton />}
         {!isSignup && (
           <p className="mt-5 text-center text-sm text-stone-500">
             <a href="/login/forgot" className="link">

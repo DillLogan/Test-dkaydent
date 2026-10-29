@@ -1,3 +1,4 @@
+import { CountUp } from "./CountUp";
 import Link from "next/link";
 
 export function PageHeader({
@@ -136,7 +137,7 @@ export function Stat({
   const body = (
     <>
       <div className="text-sm text-stone-500">{label}</div>
-      <div className={`font-display mt-1 text-[2rem] leading-tight tabular-nums ${color}`}>{value}</div>
+      <div className={`font-display mt-1 text-[2rem] leading-tight tabular-nums ${color}`}>{typeof value === "string" || typeof value === "number" ? <CountUp text={String(value)} /> : value}</div>
       {hint && <div className="mt-1 text-xs text-stone-500">{hint}</div>}
     </>
   );

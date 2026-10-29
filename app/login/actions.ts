@@ -7,11 +7,12 @@ import { loginEmail } from "@/lib/username";
 
 export async function signIn(fd: FormData) {
   const supabase = await createClient();
+  const typed = str(fd, "email") ?? "";
   const { error } = await supabase.auth.signInWithPassword({
-    email: loginEmail(str(fd, "email") ?? ""),
+    email: loginEmail(typed),
     password: String(fd.get("password") ?? ""),
   });
-  if (error) fail("/login", error.message);
+  if (error) fail(`/login?u=${encodeURIComponent(typed.slice(0, 200))}`, error.message);
   redirect("/");
 }
 
