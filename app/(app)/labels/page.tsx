@@ -2,8 +2,9 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { searchTerm } from "@/lib/forms";
 import { date, qty } from "@/lib/format";
-import { barcodeSvg } from "@/components/Barcode";
-import { LabelPrintView } from "@/components/LabelPrintView";
+import { LabelsPdf } from "@/components/pdf/Printout";
+import { loadPrintouts } from "@/lib/pdfdocs/load";
+import { itemLabel } from "@/lib/pdfdocs/data";
 import { Empty, PageHeader } from "@/components/ui";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
@@ -174,6 +175,7 @@ export default async function LabelsPage({
     }));
   }
 
+  const { templates, business } = await loadPrintouts(supabase, ["label"]);
   return (
     <>
       <div className="print:hidden">
@@ -193,10 +195,7 @@ export default async function LabelsPage({
       {labels.length === 0 ? (
         <Empty>No labels to print.</Empty>
       ) : (
-        <LabelPrintView
-          labels={labels.map((l) => ({ ...l, svg: barcodeSvg(l.code) }))}
-          initialCopies={copies}
-        />
+        <LabelsPdf template={templates.label} labels={labels.map((l) => itemLabel(business, l))} filename={`${source}.pdf`} initialCopies={copies} />
       )}
     </>
   );

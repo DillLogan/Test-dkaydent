@@ -92,8 +92,8 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
             ))}
           </div>
           <div className="flex flex-wrap justify-center gap-2">
-            <Link href={`/invoices/${inv!.id}`} className="btn">
-              Receipt / invoice
+            <Link href={`/invoices/${inv!.id}/pdf`} className="btn" data-testid="receipt-pdf">
+              Receipt (PDF)
             </Link>
             <Link href="/counter" className="btn btn-primary">
               New sale

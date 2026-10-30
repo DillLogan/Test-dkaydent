@@ -3,6 +3,8 @@ import { loadPrintConfig } from "@/lib/printConfig";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section } from "@/components/ui";
 import { savePrintouts } from "./actions";
+import { loadPrintouts } from "@/lib/pdfdocs/load";
+import { PrintoutDesigner } from "./PrintoutDesigner";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -27,9 +29,10 @@ export default async function PrintoutsPage({ searchParams }: { searchParams: SP
   const { error, message } = await searchParams;
   const { supabase } = await requireRole("admin");
   const c = await loadPrintConfig(supabase);
+  const { templates, defaults, business } = await loadPrintouts(supabase, ["pull", "invoice", "route", "boxlabel", "label"]);
   return (
     <>
-      <PageHeader title="Customize printouts" subtitle="What invoices, pull sheets, route sheets and box labels say and show. Applies to everyone." back={{ href: "/settings", label: "Settings" }} />
+      <PageHeader title="Customize printouts" subtitle="Company details, wording, and the PDF layout of every printout. Applies to everyone." back={{ href: "/settings", label: "Settings" }} />
       <ErrorBanner error={error} />
       <Notice message={message} />
       <form action={savePrintouts} className="space-y-6" data-testid="printouts-form">
@@ -50,38 +53,16 @@ export default async function PrintoutsPage({ searchParams }: { searchParams: SP
               <Text name="i_terms" label="Terms" value={c.invoice.terms} rows={2} />
               <Text name="i_note" label="Note under the totals" value={c.invoice.note} rows={2} />
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              <Check name="i_showSku" label="Item SKU" on={c.invoice.showSku} />
-              <Check name="i_showNotes" label="Order notes" on={c.invoice.showNotes} />
-              <Check name="i_showBarcode" label="Barcode" on={c.invoice.showBarcode} />
-              <Check name="i_showResale" label="Resale certificate" on={c.invoice.showResale} />
-            </div>
           </div>
         </Section>
-        <Section title="Pull sheet">
-          <div className="card flex flex-wrap gap-x-6 gap-y-2">
-            <Check name="p_showSku" label="Item SKU" on={c.pull.showSku} />
-            <Check name="p_showLot" label="Lot and expiry" on={c.pull.showLot} />
-            <Check name="p_showNotes" label="Order notes" on={c.pull.showNotes} />
-            <Check name="p_showBarcode" label="Barcode" on={c.pull.showBarcode} />
-            <Check name="p_showLabelLine" label="“Box labels printed” line" on={c.pull.showLabelLine} />
-          </div>
-        </Section>
-        <Section title="Route sheet">
-          <div className="card flex flex-wrap gap-x-6 gap-y-2">
-            <Check name="r_showPhone" label="Customer phone" on={c.route.showPhone} />
-            <Check name="r_showBoxes" label="Expected box count" on={c.route.showBoxes} />
-          </div>
-        </Section>
-        <Section title="Box labels">
-          <div className="card flex flex-wrap gap-x-6 gap-y-2">
-            <Check name="l_showAddress" label="Ship-to address" on={c.labels.showAddress} />
-            <Check name="l_showRoute" label="Route code" on={c.labels.showRoute} />
-            <p className="w-full text-xs text-stone-500">The shop name, “Box x of y” and the barcode always print. Label size and printers are set under Settings → Printing, on each computer.</p>
-          </div>
-        </Section>
-        <SubmitButton>Save printouts</SubmitButton>
+        <SubmitButton>Save company details</SubmitButton>
       </form>
+      <Section title="PDF layouts" className="mt-10">
+        <p className="mb-3 text-sm text-stone-500">
+          Every printout is a PDF made from these layouts. Move, resize, add or hide anything; choose columns for the lists; add your logo. Preview PDF shows it with sample data.
+        </p>
+        <PrintoutDesigner initial={templates} defaults={defaults} business={business} />
+      </Section>
     </>
   );
 }

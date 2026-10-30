@@ -1,0 +1,52 @@
+/* ---------- PDF viewer ---------- */
+.pdfv { display: grid; gap: 12px; }
+.pdfv-bar { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--color-stone-200); border-radius: 14px; background: var(--color-white); }
+.pdfv-scroll { overflow: auto; border-radius: 14px; background: color-mix(in srgb, var(--color-stone-200) 70%, transparent); padding: 12px; }
+.pdfv-pages { display: grid; justify-items: center; gap: 14px; min-height: 200px; }
+.pdfv-page { display: block; background: #fff; box-shadow: 0 6px 22px -8px rgb(0 0 0 / .35); border-radius: 2px; animation: pdfv-in .35s cubic-bezier(.22,1,.36,1) both; max-width: none; }
+@keyframes pdfv-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pdfv-modal { position: fixed; inset: 0; z-index: 80; display: grid; grid-template-rows: auto 1fr; background: var(--color-stone-50); animation: pdfv-in .25s ease both; }
+.pdfv-modal-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(10px, env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid var(--color-stone-200); background: var(--color-white); }
+.pdfv-modal-body { overflow: auto; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) { .pdfv-page, .pdfv-modal { animation: none; } }
+
+/* ---------- PDF layout designer ---------- */
+.pdfd-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.pdfd-tab { position: relative; flex-shrink: 0; border: 1px solid var(--color-stone-200); background: var(--color-white); color: inherit; border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; transition: background-color .18s, color .18s, border-color .18s; }
+.pdfd-tab.on { background: var(--color-brand-700); border-color: var(--color-brand-700); color: var(--color-white); }
+.pdfd-dot { position: absolute; top: 3px; right: 5px; width: 7px; height: 7px; border-radius: 99px; background: #f59e0b; }
+.pdfd-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.pdfd-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin-top: 12px; align-items: start; }
+html.mobile .pdfd-main { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 900px) { .pdfd-main { grid-template-columns: minmax(0, 1fr); } }
+.pdfd-canvas-wrap { overflow: auto; padding: 14px; border-radius: 14px; background: color-mix(in srgb, var(--color-stone-200) 70%, transparent); display: grid; justify-items: center; }
+.pdfd-page { position: relative; background: #fff; box-shadow: 0 6px 22px -8px rgb(0 0 0 / .35); touch-action: none; user-select: none; -webkit-user-select: none; }
+.pdfd-el { position: absolute; cursor: move; outline: 1px dashed transparent; transition: outline-color .15s; }
+.pdfd-el:hover { outline-color: #94a3b8; }
+.pdfd-el.sel { outline: 1.5px solid #2563eb; z-index: 2; }
+.pdfd-el.hid { opacity: .28; }
+.pdfd-el.cond { opacity: .55; }
+.pdfd-text { overflow: hidden; height: 100%; }
+.pdfd-empty { color: #94a3b8; font-style: italic; }
+.pdfd-bars { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 3px, #111 3px 4px, #fff 4px 7px, #111 7px 10px, #fff 10px 12px); }
+.pdfd-handle { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border-radius: 99px; background: #2563eb; border: 2px solid #fff; cursor: nwse-resize; box-shadow: 0 1px 4px rgb(0 0 0 / .3); }
+.pdfd-after-guide { position: absolute; left: 0; right: 0; border-top: 1px dashed #94a3b8; pointer-events: none; }
+.pdfd-after-guide span { position: absolute; right: 6px; top: 2px; font: 10px/1.2 Helvetica, Arial, sans-serif; color: #94a3b8; }
+.pdfd-side { position: sticky; top: 12px; padding: 14px; border: 1px solid var(--color-stone-200); border-radius: 14px; background: var(--color-white); max-height: calc(100vh - 24px); overflow: auto; }
+html.mobile .pdfd-side { position: static; max-height: none; }
+.pdfd-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; }
+.pdfd-list li { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 8px; font-size: 13px; }
+.pdfd-list li.on { background: var(--color-brand-50); }
+.pdfd-eye { font-size: 11px; color: var(--color-stone-500); border: 0; background: none; cursor: pointer; }
+.pdfd-eye[aria-pressed="false"] { color: #b45309; }
+.pdfd-col { display: flex; align-items: center; gap: 4px; }
+.pdfd-col .input { padding: 4px 6px; font-size: 13px; }
+.pdfd-bar .input { width: auto; }
+.pdfd-side .input { padding: 6px 8px; min-width: 0; }
+.pdfd-list button { background: none; border: 0; padding: 3px 2px; font: inherit; color: inherit; text-align: left; cursor: pointer; box-shadow: none; min-width: 0; }
+.pdfd-list .grow { flex: 1 1 auto; }
+.pdfd-col input[type="checkbox"] { width: 16px; height: 16px; flex: none; accent-color: var(--color-brand-700); }
+.pdfd-el.rest { opacity: .2; pointer-events: none; }
+.pdfd-el.rest.sel { opacity: 1; pointer-events: auto; }
+.pdfd, .pdfv, .dk-pdf-root { min-width: 0; max-width: 100%; }
+.pdfd-tabs { max-width: 100%; }
