@@ -39,7 +39,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: [
       { text: "Open the order (it must be Draft or Ready to pull) and tap Print pull ticket.", href: "/sales", linkLabel: "Sales orders" },
       { text: "Check the header: customer, ship date, number of lines. MUST CHECK shows in red at the top right if it was set." },
-      { text: "Tap Print / PDF. Letter size, black and white." },
+      { text: "The ticket opens as a PDF (letter size, black and white). Tap Print, Download or Share." },
       { text: "Lines are grouped by the section of the shop where the stock is, and A to Z inside each section. Each line names the lot to pull from." },
       { text: "Anything short on stock appears under Not in stock with how much is missing." },
       { text: "Tick the box and fill in Pulled and Packed for each line, then sign Pulled by and Packed by at the bottom." },
@@ -226,6 +226,14 @@ export const ARTICLES: Article[] = [
     "If the customer already has items in their online cart, a bar says so. Press Pull in their online cart to add those items to yours. Their own cart is left as it was.",
     "Orders you place from the Customer page are approved right away and go straight to Ready to pull. They do not wait in Open orders.",
   ] },
+  { id: "pdf-printouts", category: "Settings", title: "PDF printouts and the layout designer", body: [
+    "Pull tickets, invoices and receipts, route sheets, box labels and item labels are all real PDFs. They open in the PDF viewer, which fits any screen, with Print, Download, Share and Open buttons. On a phone, Print opens the share sheet so you can print, save or send the PDF.",
+    "Labels are made at the label size set under Settings → Printing (or laid out on letter or A4 paper with cut lines). Print them at 100%, with no fit to page.",
+    "Admins lay out each printout under Settings → Customize printouts → PDF layouts. Pick a printout at the top, then drag anything to move it, drag its blue corner to resize, and tap it to change its words, text size, bold, colour and alignment.",
+    "+ Field adds a piece of information, like the order number or the customer. + Text, + Line, + Box, + Signature, + Barcode and + Logo / picture add the rest. Words in {curly brackets} are filled in with each order's details.",
+    "The list of lines is a table: tap it to choose its columns, their headings and widths, and the text size. Things set to Below the lines move down as the list grows, and move to a new page if they don't fit. Long lists carry on to more pages with a header and page numbers.",
+    "Show only when it has a value hides something when it's empty (for example the order note, or the MUST CHECK box when the order isn't marked). Hide it keeps it off the printout. Undo takes back changes, Preview PDF shows the printout with sample data, and Save layout uses it for everyone from then on. Back to the original layout starts that printout over.",
+  ] },
   { id: "returned-labels-routes", category: "Orders", title: "Sending an order back, box labels and route sheets", body: [
     "Pulled orders get checked before they are invoiced. If something is wrong, Delivery/Order Management types what sales needs to fix in the box on the order and presses Send back to sales. The order moves to Sent back to sales and shows the note.",
     "Sales then changes the quantity on each line to what was really pulled. A quantity can only go down. The difference goes back on the shelf, into the same lots it came from, and the cost updates. Set a line to 0 to take it off. Press Save and send to Delivery/Order Management and it returns to Pulled for the check. If sales cannot fix it, use Returns & credits instead.",
@@ -238,7 +246,7 @@ export const ARTICLES: Article[] = [
     "Forgot password: the sign-in page has a Forgot password link. The customer types their username. If the customer account has an Email, a reset link goes to that address. If it has no email, the customer's request appears for sales and admin under Customer logins (with a number beside it in the menu). Press Approve, and the customer then opens My reset was approved on the same page and chooses a new password. An approval stays valid for 24 hours and works once. The page gives the same answer whether or not the username exists.",
     "Password hint (customers): in Settings, Password, a customer can add an optional hint. After a wrong password the sign-in page offers Show password hint. Anyone who types the username can see the hint, so the app refuses hints that contain the password.",
     "Sending reset links needs the server set up with a site address and an email service key. Without them, every reset goes through approval.",
-    "Customize printouts (admin only, under Settings): set the business name, address, phone and footer that print on invoices, pull sheets and route sheets. On the invoice you can change the Customer copy and Office copy titles, add terms and a note, and show or hide SKU, order notes, barcode and resale certificate. Pull sheets can hide SKU, lot and expiry, notes, the barcode and the Box labels printed line. Route sheets can hide the phone and the expected box count. Box labels can hide the address and the route. The shop name, Box x of y and the barcode always print. There is no logo.",
+    "Customize printouts (admin only, under Settings): set the business name, address, phone and footer, and the invoice's copy titles, terms and note. Below that, PDF layouts lets you lay out each printout: see PDF printouts and the layout designer.",
     "Printers: under Settings, Printing, type the name of your label printer and your regular printer as they appear in the print dialog. Browsers cannot list or pick printers by themselves, so the name is a reminder: box labels say to choose the label printer, and other printouts show the regular printer's name on the Print button. The names are saved on that computer only, so each workstation can have its own.",
   ] },
   { id: "must-check", category: "Orders", title: "MUST CHECK", body: [
@@ -263,7 +271,7 @@ export const ARTICLES: Article[] = [
     "Tap Closest to farthest to sort the stops by distance from the shop, or use the up and down arrows to set the order yourself. Remove takes an order off the route and it moves to Not on this route, where Add puts it back.",
     "Under each stop you can see the delivery address and the miles from the stop before it. The total shows the number of stops, miles and a driving-time estimate.",
     "Open in Google Maps opens the whole route in Google Maps with every stop in order. More than 10 stops are split into several links, each one starting where the last ended.",
-    "Type the driver's name, then Save route to keep the order. Print route sheet prints a sheet with a tick box beside each stop.",
+    "Type the driver's name, then Save route to keep the order. Route sheet (PDF) makes the driver's sheet as a PDF, with a tick box and a signature line beside each stop.",
     "You can also add orders by scanning an invoice barcode. See Adding orders to a route by scanning the invoice.",
     "In the full app the first time an address is used it is looked up with Google and remembered. This needs the Google Maps key (see Setting up Google Maps for Routing). In the demo the map positions are made up.",
   ], images: ["Pick the delivery day. The orders that ship that day are listed.", "Closest to farthest sorts the stops by distance from the shop.", "Use the arrows to move a stop up or down.", "Open in Google Maps opens the whole route.", "Print route sheet prints the driver's copy."] },

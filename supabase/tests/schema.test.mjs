@@ -1094,4 +1094,20 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Number((await one(`select card_fee_pct from app_settings`)).card_fee_pct) === 2.5, "sales can't change the rate");
 }
 
+// ---- PDF layouts ----
+{
+  await as(admin);
+  await db.exec(`set role authenticated`);
+  await q(`insert into pdf_templates (doc, layout) values ('pull', '{"elements":[]}')`);
+  ok((await q(`select 1 from pdf_templates where doc='pull'`)).length === 1, "admin saves a PDF layout");
+  await expectErr(`insert into pdf_templates (doc, layout) values ('menu', '{}')`, [], "check", "unknown printout refused");
+  await db.exec(`reset role`);
+  await as(sales);
+  await db.exec(`set role authenticated`);
+  ok((await q(`select 1 from pdf_templates`)).length === 1, "staff read the layouts");
+  await q(`update pdf_templates set layout='{"x":1}'`);
+  await db.exec(`reset role`);
+  ok((await one(`select layout from pdf_templates where doc='pull'`)).layout.elements !== undefined, "staff can't change layouts");
+}
+
 console.log(`\n${pass} checks passed`);

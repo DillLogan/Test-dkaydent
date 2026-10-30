@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../components/pdf/pdf.css";
 
 /* Theme is chosen on the Settings page (light / dark / system) and applied as
    data-theme on <html> by the inline script in app/layout.tsx. */

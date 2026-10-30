@@ -4,7 +4,6 @@ import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { date, money, qty, today } from "@/lib/format";
 import { setInvoiceStatus, voidInvoice } from "../../sales/actions";
-import { PrintButton } from "@/components/PrintButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ErrorBanner, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
@@ -46,7 +45,9 @@ export default async function InvoicePage({ params, searchParams }: Props) {
   return (
     <>
       <PageHeader title={inv.invoice_number} back={{ href: "/invoices", label: "Invoices" }}>
-        <PrintButton />
+        <Link href={`/invoices/${id}/pdf`} className="btn btn-primary" data-testid="invoice-pdf">
+          PDF / Print
+        </Link>
         {canEdit && inv.status === "open" && (
           <>
             <form action={voidInvoice.bind(null, id, inv.so_id)}>

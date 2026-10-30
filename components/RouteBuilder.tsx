@@ -6,6 +6,10 @@ import { closestFirst, fmtMiles, geoKey, mapsLinks, miles, type LatLng } from "@
 import { saveGeocodes, saveRoute, scanRouteOrder } from "@/app/(app)/routing/actions";
 import type { PrintConfig } from "@/lib/printConfig";
 import { ScanInput } from "@/components/ScanInput";
+import { PdfModal } from "@/components/pdf/PdfViewer";
+import { renderDoc } from "@/lib/pdfdocs/render";
+import { routeData } from "@/lib/pdfdocs/data";
+import type { Template } from "@/lib/pdfdocs/types";
 
 export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null; route?: string | null; boxes?: number | null; phone?: string | null };
 type Shop = { id: string; name: string; address: string };
@@ -39,6 +43,8 @@ export function RouteBuilder(props: {
   canEdit: boolean;
   routeCode?: string;
   print?: PrintConfig;
+  /** the route sheet's PDF layout */
+  sheet?: Template;
 }) {
   const { date, shop, mapsKey, canEdit } = props;
   const [extra, setExtra] = useState<RouteOrder[]>([]);
@@ -50,6 +56,7 @@ export function RouteBuilder(props: {
     return props.saved ? kept : props.orders.map((o) => o.id);
   });
   const [driver, setDriver] = useState(props.saved?.driver ?? "");
+  const [pdfOpen, setPdfOpen] = useState(0);
   const [coords, setCoords] = useState(props.coords);
   const [mode, setMode] = useState<"manual" | "optimized">("manual");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -228,8 +235,8 @@ export function RouteBuilder(props: {
                 </button>
               </>
             )}
-            <button className="btn" onClick={() => window.print()}>
-              Print route sheet
+            <button className="btn" onClick={() => setPdfOpen((n) => n + 1)} disabled={!props.sheet} data-testid="route-pdf">
+              Route sheet (PDF)
             </button>
             {mapsKey && (
               <button className="btn" onClick={showMap}>
@@ -244,6 +251,30 @@ export function RouteBuilder(props: {
           )}
           {mapsKey && <div ref={mapEl} className="h-72 rounded-2xl border border-stone-200 bg-stone-100 print:hidden" aria-label="Route map" />}
 
+          {props.sheet && (
+            <PdfModal
+              open={pdfOpen > 0}
+              onClose={() => setPdfOpen(0)}
+              title={`Route sheet · ${date}`}
+              filename={`Route sheet ${date}${props.routeCode ? ` ${props.routeCode}` : ""}.pdf`}
+              buildKey={String(pdfOpen)}
+              build={() =>
+                renderDoc(
+                  props.sheet!,
+                  routeData({
+                    business: { name: props.print?.header.name ?? "", address: props.print?.header.address ?? "", phone: props.print?.header.phone ?? "", footer: props.print?.header.footer ?? "" },
+                    day: date,
+                    code: props.routeCode,
+                    shop: shop.name,
+                    driver,
+                    start: shop.address,
+                    stops: stops.map((id) => byId.get(id)!).filter(Boolean).map((o) => ({ customer: o.customer, address: o.address, order: o.number, phone: o.phone, boxes: o.boxes })),
+                  }),
+                  { title: `Route sheet ${date}` },
+                )
+              }
+            />
+          )}
           <section aria-label="Route sheet" data-testid="route-sheet" className="rounded-2xl border border-stone-200 bg-white p-5 text-stone-900 print:border-0 print:p-0">
             <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-stone-900 pb-2">
               <h2 className="text-lg font-bold">Route sheet · {date}{props.routeCode ? ` · Route ${props.routeCode}` : ""}</h2>

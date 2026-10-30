@@ -5,6 +5,7 @@ import { geoKey } from "@/lib/routing";
 import { today } from "@/lib/format";
 import { ErrorBanner, PageHeader } from "@/components/ui";
 import { loadPrintConfig } from "@/lib/printConfig";
+import { loadPrintouts } from "@/lib/pdfdocs/load";
 import { RouteBuilder, type RouteOrder } from "@/components/RouteBuilder";
 
 type SP = Promise<Record<string, string | undefined>>;
@@ -112,6 +113,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: SP }
           mapsKey={settings?.google_maps_key ?? null}
           canEdit={can(profile, "orders_manager", "warehouse")}
           print={await loadPrintConfig(supabase)}
+          sheet={(await loadPrintouts(supabase, ["route"])).templates.route}
         />
       )}
     </>
