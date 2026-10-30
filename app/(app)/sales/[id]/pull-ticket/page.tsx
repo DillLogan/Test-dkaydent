@@ -28,7 +28,7 @@ export default async function PullTicketPage({ params }: Props) {
   const { data: lots } = productIds.length
     ? await supabase
         .from("lots")
-        .select("id, lot_code, product_id, location_id, received_at, created_at, expires_at, qty_on_hand_base, locations(name, layout_id)")
+        .select("id, lot_code, product_id, location_id, received_at, created_at, expires_at, qty_on_hand_base, held_for_line, locations(name, layout_id)")
         .in("product_id", productIds)
         .gt("qty_on_hand_base", 0)
     : { data: [] as any[] };
@@ -63,6 +63,7 @@ export default async function PullTicketPage({ params }: Props) {
         onHandBase: Number(l.qty_on_hand_base),
         section: spotOf.get(l.id)?.section_name ?? null,
         shelf: spotOf.get(l.id)?.shelf ?? null,
+        heldFor: l.held_for_line ?? null,
       }),
     ),
     layouts ?? [],

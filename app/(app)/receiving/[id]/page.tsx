@@ -14,6 +14,8 @@ import {
 import { SubmitButton } from "@/components/SubmitButton";
 import { ItemThumb } from "@/components/ItemThumb";
 import { ReceiveSpot } from "@/components/ReceiveSpot";
+import { ReceiveQty, ReceiveSummary } from "@/components/ReceiveQty";
+import { DirectShipBadge } from "@/components/DirectShip";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
@@ -28,7 +30,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
     supabase
       .from("purchase_orders")
       .select(
-        "id, po_number, status, order_date, expected_date, freight_cost, other_cost, standing_order_id, customized, vendors(name), standing_orders(id, name), " +
+        "id, po_number, status, order_date, expected_date, freight_cost, other_cost, standing_order_id, customized, direct_customer_id, vendors(name), standing_orders(id, name), customers(name), " +
           "purchase_order_lines(id, qty, unit_cost, qty_received_base, created_at, products(id, sku, name, base_unit, shelf_life_days, image_path, product_homes(location_id, section_id, shelf)), product_units(name, factor))",
       )
       .eq("shipment_id", id)
@@ -67,6 +69,12 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
   const receivablePOs = poRows.filter((p) => ["draft", "ordered", "partially_received"].includes(p.status));
   const pending = receivablePOs.flatMap((p) => p.lines.filter((l: any) => l.remaining > 0).map((l: any) => ({ ...l, po: p })));
   const drafts = receivablePOs.filter((p) => p.status === "draft").length;
+  const directPOs = receivablePOs.filter((p) => p.direct_customer_id && p.lines.some((l: any) => l.remaining > 0));
+
+  // customer orders made when direct-ship POs on this shipment were received
+  const { data: made } = poRows.length
+    ? await supabase.from("sales_orders").select("id, so_number, from_po_id").in("from_po_id", poRows.map((p) => p.id)).order("created_at")
+    : { data: [] as { id: string; so_number: string; from_po_id: string }[] };
 
   // Original receipts from this shipment's POs
   const poNumbers = poRows.map((p) => p.po_number);
@@ -106,7 +114,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                 <span className="tabular-nums">{s.tracking}</span>
               </>
             )}
-            {s.received_at && ` · received ${dateTime(s.received_at)}`}
+            {s.received_at && ` · ${s.status === "arrived" ? "partly received" : "received"} ${dateTime(s.received_at)}`}
           </>
         }
         back={{ href: "/receiving", label: "Receiving" }}
@@ -178,6 +186,14 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                   </Link>
                   <span className="text-stone-600">{po.vendors?.name}</span>
                   <StatusBadge status={po.status} />
+                  <DirectShipBadge name={po.customers?.name} />
+                  {(made ?? [])
+                    .filter((o) => o.from_po_id === po.id)
+                    .map((o) => (
+                      <Link key={o.id} href={`/sales/${o.id}`} className="text-xs link" data-testid="made-order">
+                        → {o.so_number}
+                      </Link>
+                    ))}
                   {po.standing_orders && (
                     <Link href={`/receiving/standing/${po.standing_orders.id}`} className="text-xs text-stone-500 hover:underline">
                       ↻ {po.standing_orders.name}
@@ -249,8 +265,9 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
         <Section title="Receive shipment">
           <form action={receiveShipment.bind(null, id, pending.map((l) => l.id))} className="card space-y-4">
             <p className="text-sm text-stone-600">
-              Everything on the shipment, in one go. Quantities start at what&apos;s still due; change any line that came in short, or set it to 0.
-              Locations start at each item&apos;s home area.
+              Everything on the shipment, in one go. Each line starts at All; choose Some for a line that came in short, or None if it didn&apos;t come.
+              What didn&apos;t come stays open on its PO and the shipment stays open until it&apos;s received, moved or closed short. Locations start
+              at each item&apos;s home area.
               {drafts > 0 && ` ${drafts} draft PO${drafts === 1 ? " is" : "s are"} marked ordered when you receive.`}
             </p>
             <div className="table-wrap">
@@ -260,7 +277,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                     <th>PO</th>
                     <th>Product</th>
                     <th className="num">Due</th>
-                    <th>Receive qty</th>
+                    <th>What came in</th>
                     <th>Location · section · shelf</th>
                     <th>Expires</th>
                     <th>Lot / farm code</th>
@@ -282,15 +299,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                           {qty(l.remaining)} {l.product_units.name}
                         </td>
                         <td>
-                          <input
-                            name={`qty_${l.id}`}
-                            type="number"
-                            min="0"
-                            step="any"
-                            defaultValue={l.remaining}
-                            className="input w-24"
-                            aria-label={`Receive qty for ${l.products.name} on ${l.po.po_number}`}
-                          />
+                          <ReceiveQty lineId={l.id} remaining={l.remaining} unit={l.product_units.name} name={`${l.products.name} on ${l.po.po_number}`} />
                         </td>
                         <td>
                           <ReceiveSpot lineId={l.id} name={l.products.name} locations={locs} sections={sections ?? []} homes={l.products.product_homes ?? []} defaultLoc={home} />
@@ -312,7 +321,21 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                 </tbody>
               </table>
             </div>
-            <SubmitButton pendingText="Receiving…">Receive shipment into inventory</SubmitButton>
+            {directPOs.length > 0 && (
+              <fieldset className="space-y-1.5 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm">
+                <legend className="px-1 font-medium text-violet-700">Direct ship</legend>
+                {directPOs.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2">
+                    <input type="checkbox" name="to_customer" value={p.id} defaultChecked data-testid={`to-customer-${p.po_number}`} />
+                    <span>
+                      Move what came in on {p.po_number} to a new active order for <b>{p.customers?.name}</b> (held for them)
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            <ReceiveSummary />
+            <SubmitButton pendingText="Receiving…">Receive shipment</SubmitButton>
           </form>
         </Section>
       )}

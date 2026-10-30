@@ -143,6 +143,9 @@ export default async function SOPage({ params, searchParams }: Props) {
       )
       .in("product_id", productIds)
       .order("received_at");
+    // stock held for an order line (direct ship) can only be picked for that line
+    const { data: heldLots } = await supabase.from("lots").select("id, held_for_line").in("product_id", productIds).not("held_for_line", "is", null);
+    const heldFor = new Map((heldLots ?? []).map((h) => [h.id as string, h.held_for_line as string]));
     pickLines = rows.map((r) => ({
       id: r.id,
       product: r.products.name,
@@ -150,7 +153,7 @@ export default async function SOPage({ params, searchParams }: Props) {
       base_unit: r.products.base_unit,
       need: Number(r.qty) * Number(r.product_units.factor),
       lots: (avail ?? [])
-        .filter((a) => a.product_id === r.product_id)
+        .filter((a) => a.product_id === r.product_id && (!heldFor.has(a.lot_id) || heldFor.get(a.lot_id) === r.id))
         .map((a) => ({
           lot_id: a.lot_id,
           lot_code: a.lot_code,

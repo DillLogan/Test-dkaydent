@@ -5,6 +5,7 @@ import { addDays, date, money, today, oneYearFrom } from "@/lib/format";
 import { createStandingOrder } from "../actions";
 import { CADENCE_LABEL } from "@/lib/receiving";
 import { SubmitButton } from "@/components/SubmitButton";
+import { DirectShipBadge, DirectShipField } from "@/components/DirectShip";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
@@ -15,10 +16,10 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
   const canBuy = can(profile, "buyer");
   const now = today();
 
-  const [{ data: orders }, { data: vendors }, { data: upcoming }] = await Promise.all([
+  const [{ data: orders }, { data: vendors }, { data: upcoming }, { data: customers }] = await Promise.all([
     supabase
       .from("standing_orders")
-      .select("id, name, cadence, start_date, end_date, lead_days, active, vendors(name), standing_order_lines(qty, unit_cost)")
+      .select("id, name, cadence, start_date, end_date, lead_days, active, vendors(name), customers(name), standing_order_lines(qty, unit_cost)")
       .order("active", { ascending: false })
       .order("name"),
     supabase.from("vendors").select("id, name").eq("active", true).order("name"),
@@ -29,6 +30,7 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
       .in("status", ["draft", "ordered", "partially_received"])
       .gte("occurrence_date", now)
       .order("occurrence_date"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
   ]);
   const next = new Map<string, { date: string; count: number }>();
   for (const u of upcoming ?? []) {
@@ -74,7 +76,14 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
                           {o.name}
                         </Link>
                       </td>
-                      <td>{o.vendors?.name}</td>
+                      <td>
+                        {o.vendors?.name}
+                        {o.customers?.name && (
+                          <div>
+                            <DirectShipBadge name={o.customers.name} />
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {CADENCE_LABEL[o.cadence]}
                         <div className="text-xs text-stone-500">
@@ -151,6 +160,7 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
               <Field label="Notes">
                 <input name="notes" className="input" />
               </Field>
+              <DirectShipField customers={customers ?? []} />
               <div className="sm:col-span-3">
                 <SubmitButton>Create and add items</SubmitButton>
               </div>

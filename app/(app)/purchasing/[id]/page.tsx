@@ -9,6 +9,8 @@ import { skipOccurrence } from "../../receiving/actions";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ReceiveSpot } from "@/components/ReceiveSpot";
+import { ReceiveQty, ReceiveSummary } from "@/components/ReceiveQty";
+import { DirectShipBadge, DirectShipField } from "@/components/DirectShip";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
@@ -18,10 +20,10 @@ export default async function POPage({ params, searchParams }: Props) {
   const { error, message } = await searchParams;
   const { supabase, profile } = await getSession();
 
-  const [{ data: po }, { data: lines }, { data: locations }, { data: sections }] = await Promise.all([
+  const [{ data: po }, { data: lines }, { data: locations }, { data: sections }, { data: customers }, { data: madeOrders }] = await Promise.all([
     supabase
       .from("purchase_orders")
-      .select("*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name)")
+      .select("*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name), customers(id, name)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -31,6 +33,8 @@ export default async function POPage({ params, searchParams }: Props) {
       .order("created_at"),
     supabase.from("locations").select("id, name").eq("active", true).order("name"),
     supabase.from("location_sections").select("id, location_id, name, shelves").order("name"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
+    supabase.from("sales_orders").select("id, so_number, status").eq("from_po_id", id).order("created_at"),
   ]);
   if (!po) notFound();
 
@@ -87,6 +91,7 @@ export default async function POPage({ params, searchParams }: Props) {
         title={
           <span className="flex items-center gap-3">
             {po.po_number} <StatusBadge status={po.status} />
+            <DirectShipBadge name={po.customers?.name} />
           </span>
         }
         subtitle={
@@ -112,6 +117,20 @@ export default async function POPage({ params, searchParams }: Props) {
                   {po.standing_orders.name}
                 </Link>
                 {po.customized && " (edited)"}
+              </>
+            )}
+            {(madeOrders ?? []).length > 0 && (
+              <>
+                {" · customer order"}
+                {madeOrders!.length === 1 ? " " : "s "}
+                {madeOrders!.map((o, i) => (
+                  <span key={o.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/sales/${o.id}`} className="link" data-testid="made-order">
+                      {o.so_number}
+                    </Link>
+                  </span>
+                ))}
               </>
             )}
           </>
@@ -273,7 +292,7 @@ export default async function POPage({ params, searchParams }: Props) {
                   <tr>
                     <th>Product</th>
                     <th className="num">Remaining</th>
-                    <th>Receive qty</th>
+                    <th>What came in</th>
                     <th>Location · section · shelf</th>
                     <th>Expires</th>
                     <th>Lot / farm code</th>
@@ -287,14 +306,7 @@ export default async function POPage({ params, searchParams }: Props) {
                         {qty(r.remainingUnits)} {r.product_units.name}
                       </td>
                       <td>
-                        <input
-                          name={`qty_${r.id}`}
-                          type="number"
-                          min="0"
-                          step="any"
-                          defaultValue={r.remainingUnits}
-                          className="input w-24"
-                        />
+                        <ReceiveQty lineId={r.id} remaining={r.remainingUnits} unit={r.product_units.name} name={r.products.name} />
                       </td>
                       <td>
                         <ReceiveSpot lineId={r.id} name={r.products.name} locations={locations ?? []} sections={sections ?? []} homes={r.products.product_homes ?? []} defaultLoc="" defaultLabel="Default" />
@@ -315,7 +327,22 @@ export default async function POPage({ params, searchParams }: Props) {
                 </tbody>
               </table>
             </div>
-            <SubmitButton pendingText="Receiving…">Receive into inventory</SubmitButton>
+            <ReceiveSummary />
+            {po.customers ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <SubmitButton name="to" value="customer" pendingText="Receiving…">
+                  Receive to {po.customers.name}&apos;s order
+                </SubmitButton>
+                <SubmitButton name="to" value="stock" className="btn" pendingText="Receiving…">
+                  Receive into our stock instead
+                </SubmitButton>
+                <p className="w-full text-xs text-stone-500">
+                  Goes into inventory and onto a new ready-to-pull order for {po.customers.name}, held so nobody else sells it.
+                </p>
+              </div>
+            ) : (
+              <SubmitButton pendingText="Receiving…">Receive into inventory</SubmitButton>
+            )}
           </form>
         </Section>
       )}
@@ -381,6 +408,7 @@ export default async function POPage({ params, searchParams }: Props) {
             <Field label="Other charges (duties, boxes…)">
               <input name="other_cost" type="number" min="0" step="0.01" className="input" defaultValue={po.other_cost} />
             </Field>
+            <DirectShipField customers={customers ?? []} value={po.direct_customer_id} className="sm:col-span-2" />
             <Field label="Notes" className="sm:col-span-4">
               <textarea name="notes" rows={2} className="input" defaultValue={po.notes ?? ""} />
             </Field>

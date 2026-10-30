@@ -1,7 +1,8 @@
 /**
  * Pull ticket: which lots to pull for a sales order, grouped by shop and
  * section. Lots are taken oldest first, the same order "Fulfill oldest-first"
- * uses, so the ticket matches what fulfilling will take.
+ * uses, so the ticket matches what fulfilling will take. Stock held for a line
+ * (direct ship) goes to that line first and is never offered to other lines.
  */
 
 export type TicketLine = {
@@ -28,6 +29,8 @@ export type TicketLot = {
   onHandBase: number;
   section?: string | null; // where it sits inside the location (its own spot, else the item's home spot)
   shelf?: string | null;
+  /** the order line this lot is held for (direct ship), if any */
+  heldFor?: string | null;
 };
 
 export type TicketRow = {
@@ -59,9 +62,9 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
   for (const line of lines) {
     let need = line.qty * line.factor;
     const base = { lineId: line.id, name: line.name, sku: line.sku, baseUnit: line.baseUnit, unitName: line.unitName, factor: line.factor };
-    for (const lot of ordered) {
+    const mine = ordered.filter((l) => l.productId === line.productId && (!l.heldFor || l.heldFor === line.id));
+    for (const lot of [...mine.filter((l) => l.heldFor === line.id), ...mine.filter((l) => !l.heldFor)]) {
       if (need <= 1e-9) break;
-      if (lot.productId !== line.productId) continue;
       const left = lot.onHandBase - (used.get(lot.id) ?? 0);
       if (left <= 1e-9) continue;
       const take = Math.min(need, left);

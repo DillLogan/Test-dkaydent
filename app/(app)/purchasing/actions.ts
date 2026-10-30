@@ -13,7 +13,7 @@ export async function createPO(fd: FormData) {
   if (!vendor_id) fail("/purchasing", "Choose a vendor.");
   const { data, error } = await supabase
     .from("purchase_orders")
-    .insert({ vendor_id, expected_date: str(fd, "expected_date"), notes: str(fd, "notes") })
+    .insert({ vendor_id, expected_date: str(fd, "expected_date"), notes: str(fd, "notes"), direct_customer_id: str(fd, "direct_customer_id") })
     .select("id")
     .single();
   if (error) fail("/purchasing", dbMessage(error));
@@ -32,6 +32,7 @@ export async function updatePO(id: string, fd: FormData) {
       freight_cost: num(fd, "freight_cost") ?? 0,
       other_cost: num(fd, "other_cost") ?? 0,
       notes: str(fd, "notes"),
+      direct_customer_id: str(fd, "direct_customer_id"),
     })
     .eq("id", id);
   if (error) fail(path, dbMessage(error));
@@ -120,7 +121,15 @@ export async function receivePO(id: string, lineIds: string[], fd: FormData) {
       lot_code: str(fd, `lot_${lineId}`),
     }))
     .filter((l) => l.qty > 0);
-  if (lines.length === 0) fail(path, "Enter a received quantity for at least one line.");
+  if (lines.length === 0) fail(path, "Mark at least one line as received (All or Some).");
+  if (fd.get("to") === "customer") {
+    const { data: so, error } = await supabase.rpc("receive_po_to_customer", { p_po_id: id, p_lines: lines });
+    if (error) fail(path, dbMessage(error));
+    revalidatePath(path);
+    revalidatePath("/inventory");
+    revalidatePath("/sales");
+    redirect(`/sales/${so}?message=${encodeURIComponent("Received and moved to this active order. The stock is held for it.")}`);
+  }
   const { error } = await supabase.rpc("receive_po", { p_po_id: id, p_lines: lines });
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
