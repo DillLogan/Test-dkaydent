@@ -108,13 +108,23 @@ export async function receiveShipment(id: string, lineIds: string[], fd: FormDat
       lot_code: str(fd, `lot_${lineId}`),
     }))
     .filter((l) => l.qty > 0);
-  if (lines.length === 0) fail(path, "Enter a received quantity for at least one line.");
-  const { data, error } = await supabase.rpc("receive_shipment", { p_shipment_id: id, p_lines: lines });
+  if (lines.length === 0) fail(path, "Mark at least one line as received (All or Some).");
+  const toCustomer = fd.getAll("to_customer").map(String).filter(Boolean);
+  const { data, error } = await supabase.rpc("receive_shipment", { p_shipment_id: id, p_lines: lines, p_to_customer: toCustomer });
   if (error) fail(path, dbMessage(error));
   refresh();
   revalidatePath("/inventory");
-  const r = data as { pos: number; lots: number };
-  redirect(msg(path, `Received ${r.lots} lot${r.lots === 1 ? "" : "s"} from ${r.pos} purchase order${r.pos === 1 ? "" : "s"}.`));
+  revalidatePath("/sales");
+  const r = data as { pos: number; lots: number; orders: string[]; open: boolean };
+  const n = r.orders?.length ?? 0;
+  redirect(
+    msg(
+      path,
+      `Received ${r.lots} lot${r.lots === 1 ? "" : "s"} from ${r.pos} purchase order${r.pos === 1 ? "" : "s"}.` +
+        (n ? ` Made ${n} customer order${n === 1 ? "" : "s"} (linked on each PO below).` : "") +
+        (r.open ? " Some lines are still due, so the shipment stays open." : ""),
+    ),
+  );
 }
 
 // ---------------------------------------------------------- standing orders
@@ -139,6 +149,7 @@ export async function createStandingOrder(fd: FormData) {
       carrier: str(fd, "carrier"),
       freight_cost: num(fd, "freight_cost") ?? 0,
       notes: str(fd, "notes"),
+      direct_customer_id: str(fd, "direct_customer_id"),
     })
     .select("id")
     .single();
@@ -174,6 +185,7 @@ export async function updateStandingOrder(id: string, fd: FormData) {
       carrier: str(fd, "carrier"),
       freight_cost: num(fd, "freight_cost") ?? 0,
       notes: str(fd, "notes"),
+      direct_customer_id: str(fd, "direct_customer_id"),
     })
     .eq("id", id);
   if (error) fail(path, dbMessage(error));

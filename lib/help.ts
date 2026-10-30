@@ -54,10 +54,27 @@ export const TUTORIALS: Tutorial[] = [
     steps: [
       { text: "Staff: create a purchase order for the vendor, add lines and mark it Ordered.", href: "/purchasing", linkLabel: "Purchasing" },
       { text: "When the truck arrives, open Receiving and choose the order.", href: "/receiving", linkLabel: "Receiving" },
-      { text: "Enter what actually arrived for each line and the location it goes to (and an expiry date where it applies)." },
+      { text: "For each line choose what came in: All, Some (type how many) or None. Then pick the location it goes to (and an expiry date where it applies). The line under the table sums up what you're receiving." },
       { text: "Save. Each delivery becomes a lot with its own code, cost and received date." },
       { text: "Open Lot labels from the order to print a label for each lot.", href: "/labels", linkLabel: "Labels" },
       { text: "If the order is only partly delivered it stays open. Close the order when nothing more is coming." },
+      { text: "A shipment that came in short stays open (Arrived, partly received) with only the missing lines left to receive. It finishes by itself once those are received, moved to another shipment or closed short." },
+    ],
+  },
+  {
+    id: "direct-ship",
+    title: "Direct ship: receive straight to a customer's order",
+    summary: "Buy for one customer, then turn what arrives into their order.",
+    who: "Staff, warehouse",
+    steps: [
+      { text: "On a standing order, choose the customer under Direct ship for. Every delivery it plans is then a direct-ship order for that customer.", href: "/receiving/standing", linkLabel: "Standing orders" },
+      { text: "Or flag a single purchase order: choose Direct ship for when you create it, or in its Details.", href: "/purchasing", linkLabel: "Purchasing" },
+      { text: "Direct-ship orders show a purple Direct ship → customer badge in Purchasing and Receiving." },
+      { text: "When it arrives, mark each line All, Some or None as usual, then tap Receive to [customer]'s order. Or tap Receive into our stock instead." },
+      { text: "The stock is received like any other (lot, landed cost, spot), and a new Ready to pull order opens for the customer at their usual prices, with only what came in." },
+      { text: "That stock is held for the order: other orders and pull tickets won't take it. The hold ends when the order is pulled or cancelled." },
+      { text: "If the rest comes later, receiving it makes another new order. Each purchase order links to the customer orders it made." },
+      { text: "On a shipment, tick the Direct ship box for each direct-ship order you want moved to its customer, then receive the shipment." },
     ],
   },
   {

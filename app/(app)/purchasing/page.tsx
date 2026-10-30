@@ -4,6 +4,7 @@ import { can } from "@/lib/roles";
 import { date, money, sum, today } from "@/lib/format";
 import { createPO } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { DirectShipBadge } from "@/components/DirectShip";
 import { Empty, ErrorBanner, PageHeader, Section, StatusBadge, Tabs } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
@@ -24,7 +25,7 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
 
   let query = supabase
     .from("purchase_orders")
-    .select("id, po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name), purchase_order_lines(qty, unit_cost)")
+    .select("id, po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name), customers(name), purchase_order_lines(qty, unit_cost)")
     .order(status === "planned" ? "expected_date" : "created_at", { ascending: status === "planned" })
     .limit(200);
   const statuses = FILTERS[status] ?? null;
@@ -32,9 +33,10 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
   // Standing-order deliveries that haven't been placed yet live under "Planned", not in the open/draft lists.
   if (status === "planned") query = query.not("standing_order_id", "is", null);
   else if (status === "open" || status === "draft") query = query.or("standing_order_id.is.null,status.neq.draft");
-  const [{ data: pos }, { data: vendors }] = await Promise.all([
+  const [{ data: pos }, { data: vendors }, { data: customers }] = await Promise.all([
     query,
     supabase.from("vendors").select("id, name").eq("active", true).order("name"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
   ]);
 
   return (
@@ -70,6 +72,17 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
               <label>
                 <span className="label">Expected</span>
                 <input name="expected_date" type="date" className="input" min={today()} />
+              </label>
+              <label className="min-w-48">
+                <span className="label">Direct ship for</span>
+                <select name="direct_customer_id" className="input" defaultValue="">
+                  <option value="">Not direct ship</option>
+                  {(customers ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               <SubmitButton>Create draft PO</SubmitButton>
             </form>
@@ -112,7 +125,14 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
                         {po.po_number}
                       </Link>
                     </td>
-                    <td>{po.vendors?.name}</td>
+                    <td>
+                      {po.vendors?.name}
+                      {po.customers?.name && (
+                        <div>
+                          <DirectShipBadge name={po.customers.name} />
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <StatusBadge status={po.status} />
                     </td>

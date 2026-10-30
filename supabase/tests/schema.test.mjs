@@ -247,12 +247,13 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   ok(sts.map((s) => s.status).join(",") === "received,partially_received", "draft PO auto-ordered and received; short line stays partial");
   const lotLanded = await one(`select unit_cost_base from lots where po_line_id=$1`, [la]);
   ok(Math.abs(Number(lotLanded.unit_cost_base) - 0.48) < 1e-9, "landed cost via receive_po (100/250 * 1.2 = 0.48)");
-  ok((await one(`select status, received_at is not null r from shipments where id=$1`, [shp.id])).status === "received", "shipment received");
-  await expectErr(`update shipments set carrier='x' where id=$1`, [shp.id], "cannot be changed", "received shipment is locked");
+  ok(res.r.open === true && (await one(`select status from shipments where id=$1`, [shp.id])).status === "arrived", "short shipment stays open (arrived)");
   await expectErr(`select set_po_shipment($1,$2)`, [pA, shp.id], "can't be moved", "received PO can't move");
   const s2 = (await one(`insert into shipments (eta) values (current_date + 5) returning id`)).id;
   await q(`select set_po_shipment($1,$2)`, [pB, s2]);
   ok(true, "partially received PO can move to the next shipment");
+  ok((await one(`select status, received_at is not null r from shipments where id=$1`, [shp.id])).status === "received", "shipment received once nothing is left on it");
+  await expectErr(`update shipments set carrier='x' where id=$1`, [shp.id], "cannot be changed", "received shipment is locked");
   const late = (await one(`insert into shipments (eta) values (current_date - 2) returning id`)).id;
   ok((await one(`select is_late from v_shipments where id=$1`, [late])).is_late === true, "late flag");
 
@@ -1108,6 +1109,88 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await q(`update pdf_templates set layout='{"x":1}'`);
   await db.exec(`reset role`);
   ok((await one(`select layout from pdf_templates where doc='pull'`)).layout.elements !== undefined, "staff can't change layouts");
+}
+
+// ---- Direct ship ----
+{
+  await as(admin);
+  const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
+  const v = (await one(`select id from vendors limit 1`)).id;
+  const pid = (await one(`insert into products (sku, name, kind, base_unit) values ('DS-PEONY','Direct peony','flower','stem') returning id`)).id;
+  const stem = (await one(`select id from product_units where product_id=$1`, [pid])).id;
+  const bx = (await one(`insert into product_units (product_id, name, factor) values ($1,'box',10) returning id`, [pid])).id;
+  const cust = (await one(`insert into customers (name, address) values ('Direct Florist','2 Oak St') returning id`)).id;
+  const other = (await one(`insert into customers (name, address) values ('Other Shop','3 Oak St') returning id`)).id;
+  await q(`insert into customer_prices (customer_id, product_unit_id, price) values ($1,$2,55)`, [cust, bx]);
+
+  // standing order with a direct-ship customer → generated POs carry it
+  const sto = (await one(`insert into standing_orders (name, vendor_id, cadence, start_date, direct_customer_id) values ('DS weekly',$1,'weekly',current_date + 2,$2) returning id`, [v, cust])).id;
+  await q(`insert into standing_order_lines (standing_order_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,3,20)`, [sto, pid, bx]);
+  await q(`select generate_standing_orders($1)`, [sto]);
+  const gen = await q(`select id, direct_customer_id from purchase_orders where standing_order_id=$1`, [sto]);
+  ok(gen.length > 40 && gen.every((g) => g.direct_customer_id === cust), "standing order's POs are direct ship for its customer");
+  await q(`update purchase_orders set direct_customer_id=$2 where id=$1`, [gen[1].id, other]);
+  ok((await one(`select customized from purchase_orders where id=$1`, [gen[1].id])).customized === true, "changing the customer by hand customizes the PO");
+
+  // a plain PO can't go to a customer
+  const plain = (await one(`insert into purchase_orders (vendor_id, status) values ($1,'ordered') returning id`, [v])).id;
+  const pl = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,1,20) returning id`, [plain, pid, bx])).id;
+  await expectErr(`select receive_po_to_customer($1,$2::jsonb)`, [plain, JSON.stringify([{ line_id: pl, qty: 1, location_id: c1 }])], "isn't a direct-ship order", "only direct-ship POs go to a customer order");
+
+  // first PO: 3 boxes due, 2 arrive → customer order for 2 boxes at their price, stock held
+  const po = gen[0].id;
+  await q(`update purchase_orders set status='ordered' where id=$1`, [po]);
+  const line = (await one(`select id from purchase_order_lines where po_id=$1`, [po])).id;
+  const soId = (await one(`select receive_po_to_customer($1,$2::jsonb) id`, [po, JSON.stringify([{ line_id: line, qty: 2, location_id: c1 }])])).id;
+  const so = await one(`select status, customer_id, from_po_id from sales_orders where id=$1`, [soId]);
+  ok(so.status === "confirmed" && so.customer_id === cust && so.from_po_id === po, "received to an active (ready to pull) order for the customer");
+  const sl = await one(`select id, qty, unit_price, unit_id from sales_order_lines where so_id=$1`, [soId]);
+  ok(Number(sl.qty) === 2 && Number(sl.unit_price) === 55 && sl.unit_id === bx, "order line: what came in, at the customer's price");
+  ok((await one(`select status from purchase_orders where id=$1`, [po])).status === "partially_received", "the rest stays due on the PO");
+  const held = await one(`select id, held_for_line, qty_on_hand_base from lots where po_line_id=$1`, [line]);
+  ok(held.held_for_line === sl.id && Number(held.qty_on_hand_base) === 20, "received stock is held for the order");
+
+  // another order can't take held stock
+  const so2 = (await one(`insert into sales_orders (customer_id, status) values ($1,'confirmed') returning id`, [other])).id;
+  const l2 = (await one(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,5,1) returning id`, [so2, pid, stem])).id;
+  await expectErr(`select fulfill_sales_order($1)`, [so2], "Not enough stock", "oldest-first skips stock held for another order");
+  await expectErr(`select fulfill_sales_order($1,$2::jsonb)`, [so2, JSON.stringify([{ so_line_id: l2, lot_id: held.id, qty_base: 5 }])], "held for another order", "hand-picking a held lot is refused");
+
+  // the rest arrives later → always a new order
+  const soB = (await one(`select receive_po_to_customer($1,$2::jsonb) id`, [po, JSON.stringify([{ line_id: line, qty: 1, location_id: c1 }])])).id;
+  ok(soB !== soId && (await one(`select count(*)::int n from sales_orders where from_po_id=$1`, [po])).n === 2, "each receipt makes its own order");
+  ok((await one(`select status from purchase_orders where id=$1`, [po])).status === "received", "PO fully received");
+
+  // pulling the order uses its held stock and releases the hold
+  await q(`select fulfill_sales_order($1)`, [soId]);
+  ok(Number((await one(`select qty_on_hand_base from lots where id=$1`, [held.id])).qty_on_hand_base) === 0 &&
+     (await one(`select held_for_line from lots where id=$1`, [held.id])).held_for_line === null, "fulfilling takes its held lot and clears the hold");
+  // cancelling releases a hold
+  await q(`update sales_orders set status='cancelled' where id=$1`, [soB]);
+  ok((await one(`select count(*)::int n from lots where product_id=$1 and held_for_line is not null`, [pid])).n === 0, "cancelling releases held stock");
+  await q(`select fulfill_sales_order($1)`, [so2]);
+  ok(true, "released stock can be sold to others");
+
+  // shipment: one direct PO to the customer, one plain PO short
+  const shp = (await one(`insert into shipments (eta) values (current_date + 1) returning id`)).id;
+  await q(`update purchase_orders set status='ordered' where id=$1`, [gen[2].id]);
+  await q(`select set_po_shipment($1,$2)`, [gen[2].id, shp]);
+  const pB = (await one(`insert into purchase_orders (vendor_id, status) values ($1,'ordered') returning id`, [v])).id;
+  const lB = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,4,20) returning id`, [pB, pid, bx])).id;
+  await q(`select set_po_shipment($1,$2)`, [pB, shp]);
+  const lD = (await one(`select id from purchase_order_lines where po_id=$1`, [gen[2].id])).id;
+  const r = (await one(`select receive_shipment($1,$2::jsonb,$3::uuid[]) r`, [shp, JSON.stringify([{ line_id: lD, qty: 3, location_id: c1 }, { line_id: lB, qty: 1, location_id: c1 }]), [gen[2].id]])).r;
+  ok(r.orders.length === 1 && r.open === true, "shipment: direct PO made an order; short plain PO keeps the shipment open");
+  ok((await one(`select customer_id from sales_orders where id=$1`, [r.orders[0]])).customer_id === cust, "shipment order is for the direct-ship customer");
+  ok((await one(`select status from shipments where id=$1`, [shp])).status === "arrived", "shipment arrived, not received");
+  await q(`select close_po($1)`, [pB]);
+  ok((await one(`select status from shipments where id=$1`, [shp])).status === "received", "closing the short PO finishes the shipment");
+  await expectErr(`select receive_shipment($1,$2::jsonb,$3::uuid[])`, [shp, "[]", []], "already received", "finished shipment can't be received again");
+
+  // sales can't receive to a customer
+  await as(sales);
+  await expectErr(`select receive_po_to_customer($1,'[]')`, [gen[3].id], "Not authorized", "sales can't receive");
+  await as(admin);
 }
 
 console.log(`\n${pass} checks passed`);

@@ -8,6 +8,7 @@ import { CADENCE_LABEL } from "@/lib/receiving";
 import { addStandingLine, removeStandingLine, setStandingState, skipOccurrence, updateStandingOrder } from "../../actions";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
 import { SubmitButton } from "@/components/SubmitButton";
+import { DirectShipBadge, DirectShipField } from "@/components/DirectShip";
 import { Empty, ErrorBanner, Field, Notice, PageHeader, Section, StatusBadge } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> };
@@ -18,8 +19,8 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
   const { supabase, profile } = await getSession();
   const now = today();
 
-  const [{ data: so }, { data: lines }, { data: occ }] = await Promise.all([
-    supabase.from("standing_orders").select("*, vendors(id, name)").eq("id", id).maybeSingle(),
+  const [{ data: so }, { data: lines }, { data: occ }, { data: customers }] = await Promise.all([
+    supabase.from("standing_orders").select("*, vendors(id, name), customers(id, name)").eq("id", id).maybeSingle(),
     supabase
       .from("standing_order_lines")
       .select("id, qty, unit_cost, products(name, sku), product_units(name)")
@@ -33,6 +34,7 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
       .eq("standing_order_id", id)
       .gte("occurrence_date", addDays(now, -30))
       .order("occurrence_date"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
   ]);
   if (!so) notFound();
   const canBuy = can(profile, "buyer");
@@ -48,6 +50,7 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
         title={
           <span className="flex flex-wrap items-center gap-3">
             {so.name}
+            <DirectShipBadge name={so.customers?.name} />
             {so.active ? (
               <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">Active</span>
             ) : (
@@ -237,6 +240,7 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
             <Field label="Notes" className="sm:col-span-2">
               <input name="notes" className="input" defaultValue={so.notes ?? ""} />
             </Field>
+            <DirectShipField customers={customers ?? []} value={so.direct_customer_id} />
             {canBuy && !ended && (
               <div className="sm:col-span-3">
                 <SubmitButton>Save schedule</SubmitButton>
