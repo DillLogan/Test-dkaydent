@@ -17,7 +17,6 @@ export type ReturnInfo = {
   contact: string | null;
 };
 
-/** Everything a vendor needs to credit or refund one received box, as text and as a pre-filled email. */
 export function VendorReturn({ info }: { info: ReturnInfo }) {
   const [copied, setCopied] = useState(false);
   const lines = [

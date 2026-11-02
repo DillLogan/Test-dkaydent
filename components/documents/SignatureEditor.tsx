@@ -1,4 +1,4 @@
-// @ts-nocheck — ported from the BrightStar CRM handoff (PDF signature field editor)
+// @ts-nocheck
 "use client";
 import { useEffect, useRef, useState } from "react";
 

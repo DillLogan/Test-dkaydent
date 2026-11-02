@@ -25,7 +25,7 @@ function refreshAll() {
   revalidatePath("/counter");
 }
 
-// --------------------------------------------------------------- by hand
+// by hand
 
 export async function recordPayment(soId: string, back: string, fd: FormData) {
   const { supabase } = await requireRole("sales");
@@ -55,7 +55,7 @@ export async function voidPayment(paymentId: string, back: string) {
   redirect(msg(back, "Payment voided in the app. If it was a card payment, also void or refund it on the terminal or in the Valor portal."));
 }
 
-// --------------------------------------------------------------- terminal
+// terminal
 
 async function sendToTerminal(supabase: any, requestId: string) {
   const r = await loadRequest(supabase, requestId);
@@ -78,7 +78,6 @@ async function sendToTerminal(supabase: any, requestId: string) {
   }
 }
 
-/** Send an amount to a terminal for an order (deposit) or its invoice. */
 export async function startTerminalCharge(soId: string, purpose: "invoice" | "deposit", back: string, fd: FormData) {
   const { supabase } = await requireRole("sales");
   back = safe(back);
@@ -100,7 +99,7 @@ export async function startTerminalCharge(soId: string, purpose: "invoice" | "de
   redirect(withParam(back, "charge", id as string));
 }
 
-/** The simulated terminal's buttons. */
+// simulator buttons
 export async function simulateTerminal(requestId: string, outcome: "approved" | "declined" | "timeout", back: string) {
   const { supabase } = await requireRole("sales");
   back = safe(back);
@@ -139,12 +138,12 @@ export async function cancelTerminalCharge(requestId: string, back: string) {
   redirect(withParam(back, "charge", requestId));
 }
 
-// --------------------------------------------------------------- counter
+// counter
 
 type CartLine = { product_id: string; unit_id: string; qty: number; unit_price: number };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-/** What a card charge comes to at the counter: subtotal + tax + the card processing fee (same rounding as the invoice). */
+// card total = subtotal + tax + fee, rounded the same way the invoice does it
 async function cardTotal(supabase: Awaited<ReturnType<typeof requireRole>>["supabase"], subtotal: number, tax: number) {
   const { data: fee } = await supabase.rpc("card_fee_pct");
   const withTax = r2(subtotal) + r2(r2(subtotal) * (tax / 100));
@@ -202,7 +201,7 @@ export async function counterCheckout(fd: FormData) {
   );
 }
 
-/** After a declined/timed-out terminal charge: take another kind of payment, or try again. */
+// after a decline/timeout: pay another way or retry
 export async function counterRetry(soId: string, fd: FormData) {
   const { supabase } = await requireRole("sales");
   const method = str(fd, "method") ?? "cash";
@@ -246,7 +245,7 @@ export async function counterCancel(soId: string) {
   redirect(`/counter?message=${encodeURIComponent("Sale cancelled. Nothing was charged and no stock was taken.")}`);
 }
 
-// --------------------------------------------------------------- terminals (admin)
+// terminals (admin)
 
 export async function saveTerminal(id: string | null, fd: FormData) {
   const { supabase } = await requireRole();
@@ -276,7 +275,7 @@ export async function setTerminalActive(id: string, active: boolean) {
   redirect("/payments/terminals");
 }
 
-// --------------------------------------------------------------- sync from terminal
+// sync from terminal
 
 export async function importTerminalSales(fd: FormData) {
   const { supabase } = await requireRole("sales");

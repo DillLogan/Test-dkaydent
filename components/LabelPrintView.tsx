@@ -7,10 +7,9 @@ import { LabelSizeFields, ModeSwitch } from "./PrintSettingsForm";
 export type PrintLabel = { key: string; code: string; title: string; sku: string; lines: string[]; svg: string | null; short?: string };
 
 const MARGIN = 0.25;
-/** The day the label is printed, e.g. "Oct 28, 2026". */
 const printedOn = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); // regular-printer page margin, inches
 
-/** One label drawn at its real size; text and barcode scale with the label. */
+// drawn at real size, everything scales with it
 function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: boolean }) {
   const base = Math.min(h, w * 0.55);
   const pad = Math.max(0.04, Math.min(0.12, h * 0.06));

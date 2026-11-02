@@ -1,11 +1,11 @@
-/** Printing preferences, saved per computer (browser localStorage). */
+/** Printing preferences, saved per computer (browser localStorage) */
 export type PrintMode = "label" | "regular";
 export type Paper = "letter" | "a4";
 export type PrintSettings = { mode: PrintMode; size: string; w: number; h: number; paper: Paper; labelPrinter: string; regularPrinter: string };
 
 export const PRINT_KEY = "dk-print";
 
-/** Label sizes in inches (width × height as the label comes out of the printer). */
+/** Label sizes in inches (width x height as the label comes out of the printer) */
 export const LABEL_SIZES: { id: string; label: string; w: number; h: number }[] = [
   { id: "2.25x1.25", label: "2.25 × 1.25 in (Zebra / Rollo roll)", w: 2.25, h: 1.25 },
   { id: "2x1", label: "2 × 1 in (small SKU / price)", w: 2, h: 1 },

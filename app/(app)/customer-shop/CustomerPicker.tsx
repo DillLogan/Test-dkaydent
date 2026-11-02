@@ -2,7 +2,7 @@ import Link from "next/link";
 
 type C = { id: string; name: string; rep_id: string | null; route_code: string | null; phone: string | null };
 
-/** Pick who you're shopping for: your own customers first, then everyone. */
+// rep's own customers first
 export function CustomerPicker({ customers, me, current, base }: { customers: C[]; me: string; current?: string; base: string }) {
   const mine = customers.filter((c) => c.rep_id === me);
   const rest = customers.filter((c) => c.rep_id !== me);

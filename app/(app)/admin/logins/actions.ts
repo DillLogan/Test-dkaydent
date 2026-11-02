@@ -30,7 +30,7 @@ export async function remove(fd: FormData) {
   await run("portal_remove", { p_profile_id: str(fd, "profile_id") }, "Customer login removed.");
 }
 
-/** Sales or admin creates the customer's login: a username and a password they hand to the customer. */
+// sales/admin sets a username + password and hands them to the customer
 export async function createLogin(fd: FormData) {
   const { supabase } = await requireRole("sales");
   const customer = str(fd, "customer_id");

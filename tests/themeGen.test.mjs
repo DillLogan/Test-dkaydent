@@ -1,4 +1,4 @@
-// Run: node --experimental-strip-types --no-warnings tests/themeGen.test.mjs
+// node --experimental-strip-types --no-warnings tests/themeGen.test.mjs
 import { buildTheme, contrast, hexToOklch, oklchToHex, suggestSeeds, themeCss, isHex } from "../lib/themeGen.ts";
 let pass = 0;
 const ok = (c, m) => { if (!c) throw new Error("FAIL: " + m); pass++; };

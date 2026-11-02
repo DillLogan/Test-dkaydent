@@ -13,7 +13,6 @@ export async function GET(_req: Request, { params }: P) {
   return NextResponse.json({ doc: { id: data.id, name: data.name, pageCount: data.page_count, boxes: data.boxes ?? [], status: data.status } });
 }
 
-/** Save the boxes (where people sign or type), the name, or the page count. */
 export async function PATCH(req: Request, { params }: P) {
   const a = await staffOrError();
   if (!a.ok) return a.res;

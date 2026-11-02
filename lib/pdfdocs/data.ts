@@ -1,6 +1,6 @@
 import type { DocData, Row } from "./types";
 
-/** Company details from Customize printouts, in the shape the layouts use. */
+/** Company details from Customize printouts, in the shape the layouts use */
 export type Business = { name: string; address: string; phone: string; footer: string };
 export const businessFields = (b: Business) => ({ ...b, contact: [b.address.replace(/\s*\n\s*/g, ", "), b.phone].filter(Boolean).join(" · ") });
 
@@ -10,7 +10,7 @@ export const printedNow = () => new Date().toLocaleString("en-US", { month: "sho
 export const today = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export type PullRowIn = { name: string; sku: string; section?: string | null; shelf?: string | null; lot?: string | null; exp?: string | null; qty: string };
-/** Pull ticket: rows grouped by location (with the shop's name first when there are several), then what's short. */
+/** Pull ticket: rows grouped by location (with the shop's name first when there are several), then what's short */
 export function pullData(o: {
   business: Business;
   so: { number: string; customer: string; ships: string; lines: number; notes?: string | null; boxes?: number | null; mustCheck: boolean };
@@ -32,7 +32,7 @@ export function pullData(o: {
   };
 }
 
-/** Invoice: both copies, lines, and the totals block (only the lines that apply). */
+/** Invoice: both copies, lines, and the totals block (only the lines that apply) */
 export function invoiceData(o: {
   business: Business;
   copies: string[];
@@ -64,7 +64,7 @@ export function invoiceData(o: {
   };
 }
 
-/** Route sheet: one row per stop, in driving order. */
+/** Route sheet: one row per stop, in driving order */
 export function routeData(o: {
   business: Business;
   day: string;
@@ -89,9 +89,9 @@ export function routeData(o: {
   };
 }
 
-/** Item / lot / product labels. */
+/** Item / lot / product labels */
 export const itemLabel = (business: Business, l: { title: string; sku: string; code: string; lines: string[] }) => ({ business: businessFields(business), title: l.title, sku: l.sku !== l.code ? l.sku : "", code: l.code, printed: today(), line1: l.lines[0] || "", line2: l.lines[1] || "", line3: l.lines[2] || "" });
 
-/** One box label per box. */
+/** One box label per box */
 export const boxLabels = (business: Business, o: { customer: string; address: string; route?: string | null; code: string; count: number }) =>
   Array.from({ length: o.count }, (_, i) => ({ business: businessFields(business), customer: o.customer, address: o.address, route: o.route || "", code: o.code, box: `Box ${i + 1} of ${o.count}`, printed: today() }));

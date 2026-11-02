@@ -10,7 +10,7 @@ import { splitSpot } from "@/lib/spots";
 
 type Result = { error?: string };
 
-/** Save an area's outline (points in percent of the plan) and colour. Called while editing the plan. */
+// points are % of the plan
 export async function saveArea(id: string, area: { points: Pt[]; color?: string }): Promise<Result> {
   const { supabase } = await requireRole("warehouse");
   if (!validShape(area.points)) return { error: "That shape needs at least 3 points on the plan." };
@@ -24,7 +24,7 @@ export async function saveArea(id: string, area: { points: Pt[]; color?: string 
     map_h: clamp(Math.max(b.h, 0.1), 0.1, 100),
   };
   if (area.color && /^#[0-9a-fA-F]{6}$/.test(area.color)) patch.map_color = area.color;
-  // the id is a location's or a section's
+  // id can be a location or a section
   const { data: hit, error } = await supabase.from("locations").update(patch).eq("id", id).select("id");
   if (error) return { error: dbMessage(error) };
   if (!hit?.length) {
@@ -140,7 +140,7 @@ export async function removePlanBackground(layoutId: string): Promise<Result> {
   return {};
 }
 
-// ---------- Layouts ----------
+// Layouts
 export async function createLayout(name: string): Promise<Result & { id?: string }> {
   const { supabase } = await requireRole("warehouse");
   const n = layoutName(name);
@@ -173,7 +173,7 @@ export async function deleteLayout(id: string, moveTo: string): Promise<Result> 
   return {};
 }
 
-// ---------- Entries and exits ----------
+// Entries and exits
 const SIDES = ["top", "right", "bottom", "left"];
 type DoorPatch = { kind?: string; label?: string; side?: string; pos?: number };
 function cleanDoor(d: DoorPatch): { error?: string; patch: Record<string, unknown> } {
@@ -224,8 +224,7 @@ export async function removeDoor(id: string): Promise<Result> {
   return {};
 }
 
-// ---------- Home areas (one per shop) ----------
-/** Form action from the item page. */
+// Home areas (one per shop)
 export async function setHomeArea(productId: string, layoutId: string, fd: FormData) {
   const { supabase } = await requireRole("buyer", "warehouse");
   const path = `/products/${productId}`;
@@ -240,7 +239,7 @@ export async function setHomeArea(productId: string, layoutId: string, fd: FormD
   redirect(`${path}?message=${encodeURIComponent("Home area saved.")}`);
 }
 
-/** Called from the floor plan's item panel. */
+// used by the item panel on the floor plan
 export async function setHomeAreaInline(productId: string, layoutId: string, locationId: string | null): Promise<Result> {
   const { supabase } = await requireRole("buyer", "warehouse");
   const { error } = await supabase.rpc("set_home_location", { p_product_id: productId, p_layout_id: layoutId, p_location_id: locationId });
@@ -249,7 +248,7 @@ export async function setHomeAreaInline(productId: string, layoutId: string, loc
   return {};
 }
 
-// ---------- sections inside locations ----------
+// sections inside locations
 export type SectionInput = {
   id?: string;
   layoutId: string;
@@ -260,7 +259,7 @@ export type SectionInput = {
   place?: { points: Pt[]; color?: string } | null;
 };
 
-/** "1-4" → 1, 2, 3, 4; otherwise comma or line separated names. */
+// "1-4" -> 1, 2, 3, 4; otherwise comma or line separated names
 function parseShelves(text: string): string[] {
   const out: string[] = [];
   for (const raw of String(text ?? "").split(/[\n,]+/)) {
@@ -273,7 +272,7 @@ function parseShelves(text: string): string[] {
   return out.slice(0, 60);
 }
 
-/** Add or edit a section; can create its location too. Returns the section and location ids. */
+// returns { sectionId, locationId }; creates the location too if asked
 export async function saveSection(input: SectionInput): Promise<Result & { id?: string; locationId?: string }> {
   const { supabase } = await requireRole("warehouse");
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
@@ -335,7 +334,6 @@ export async function renameLocation(id: string, name: string): Promise<Result> 
   return {};
 }
 
-/** An item's usual section and shelf inside its home area (form on the item page). */
 export async function setHomeSpot(productId: string, layoutId: string, fd: FormData) {
   const { supabase } = await requireRole("buyer", "warehouse");
   const path = `/products/${productId}`;

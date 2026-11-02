@@ -14,7 +14,7 @@ create table web_store_settings (
   enabled           boolean not null default false,
   inventory_url     text,
   orders_url        text,
-  api_key           text,           -- sent to the website as "Authorization: Bearer …"
+  api_key           text,           -- sent to the website as "Authorization: Bearer ..."
   webhook_secret    text,           -- the website signs webhooks with this (HMAC-SHA256)
   stock_location_id uuid references locations(id) on delete set null,  -- where increases land
   web_customer_id   uuid references customers(id) on delete set null,   -- orders without a matching customer
@@ -68,7 +68,7 @@ language sql stable security definer set search_path = public as $$
       or has_role('warehouse');
 $$;
 
--- Website SKU → (product, unit): a saved link first, else our own SKU (base unit).
+-- Website SKU -> (product, unit): a saved link first, else our own SKU (base unit).
 create function web_resolve_sku(p_sku text, out product_id uuid, out unit_id uuid, out factor numeric)
 language sql stable security definer set search_path = public as $$
   select l.product_id, l.unit_id, u.factor
@@ -94,7 +94,7 @@ declare
   v_set      web_store_settings;
   v_item     jsonb;
   v_res      record;
-  v_target   jsonb := '{}'::jsonb;      -- product_id → base qty from the website
+  v_target   jsonb := '{}'::jsonb;      -- product_id -> base qty from the website
   v_pid      uuid;
   v_web      numeric;
   v_reserved numeric;
@@ -178,8 +178,8 @@ end $$;
 -- One web order: { "external_id", "number"?, "email"?, "name"?, "phone"?,
 --   "ordered_at"?, "ship_date"?, "notes"?, "cancelled"?: bool,
 --   "lines": [{ "sku", "qty", "price"? }] }
--- New → confirmed sales order (draft if some SKUs didn't match).
--- Seen before → left as is, unless the website cancelled it.
+-- New -> confirmed sales order (draft if some SKUs didn't match).
+-- Seen before -> left as is, unless the website cancelled it.
 -- ---------------------------------------------------------------------
 create function web_store_upsert_order(p_order jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$

@@ -7,7 +7,7 @@ export type { PaletteId } from "./generatedPalettes";
 
 import type { PaletteId } from "./generatedPalettes";
 export const PALETTE_KEY = "dk-palette";
-/** The saved custom theme: its generated colours (CSS variables) and the colour it was made from. */
+/** The saved custom theme: its generated colours (CSS variables) and the colour it was made from */
 export const CUSTOM_KEY = "dk-custom";
 export const CUSTOM_SEED_KEY = "dk-custom-seed";
 

@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Sections inside locations, and shelves inside sections.
---   Location (Cooler 1) → Section (Rack A, drawn on the floor plan) → Shelf (1, 2, Top…)
+--   Location (Cooler 1) -> Section (Rack A, drawn on the floor plan) -> Shelf (1, 2, Top...)
 --   * Stock (lots) records its own section and shelf.
 --   * An item's home can name a usual section and shelf too.
 --   Pull tickets use the stock's spot, else the item's home spot in that location.
@@ -26,7 +26,7 @@ create policy "members read" on location_sections for select to authenticated us
 create policy "warehouse write" on location_sections for all to authenticated
   using (has_role('warehouse')) with check (has_role('warehouse'));
 
--- Shelf names: trimmed, 1–30 characters, no repeats (ignoring case)
+-- Shelf names: trimmed, 1-30 characters, no repeats (ignoring case)
 create function clean_section_shelves() returns trigger
 language plpgsql as $$
 declare v text[] := '{}'; s text;

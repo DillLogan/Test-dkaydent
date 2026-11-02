@@ -72,7 +72,7 @@ export function ReceiveQty({ lineId, remaining, unit, name }: { lineId: string; 
   );
 }
 
-/** "3 in full · 1 part · 1 not received" for the form it sits in. */
+// summary line, recounts on any change in the form
 export function ReceiveSummary() {
   const me = useRef<HTMLParagraphElement>(null);
   const [text, setText] = useState("");

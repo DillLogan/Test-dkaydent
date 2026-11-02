@@ -202,7 +202,7 @@ export function TemplateDesigner({
   );
 }
 
-/* ------------------------------------------------------------------ canvas */
+// canvas
 
 function Canvas({ t, sample, sel, onSelect, onMove, onBegin, table }: { t: Template; sample: ReturnType<typeof sampleData>; sel: string | null; onSelect: (id: string | null) => void; onMove: (id: string, p: Partial<El>, keep: boolean) => void; onBegin: () => void; table: El | undefined }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -324,7 +324,7 @@ function Preview({ el, fields, k, rows }: { el: El; fields: Record<string, unkno
   }
 }
 
-/* ------------------------------------------------------------------ properties */
+// properties
 
 function Props({ el, doc, onChange, onRemove, onClose }: { el: El; doc: DocType; onChange: (p: Partial<El>) => void; onRemove: () => void; onClose: () => void }) {
   const txt = el.type === "text" || el.type === "pagenum" || el.type === "box" || el.type === "signature" || el.type === "barcode";

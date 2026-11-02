@@ -70,7 +70,7 @@ export type Template = {
 /** One row of a table: values by column key. _group makes a full-width band (a section title). */
 export type Row = Record<string, string | number | boolean | null | undefined> & { _group?: string; _tone?: "warn" | "plain" };
 
-/** Any document's data: nested values for {placeholders}, and the table rows. */
+/** Any document's data: nested values for {placeholders}, and the table rows */
 export type DocData = { fields: Record<string, unknown>; rows?: Row[]; copies?: string[] };
 
 export type LabelSheet = { mode: "label" | "regular"; w: number; h: number; paper: "letter" | "a4" };

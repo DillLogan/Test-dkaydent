@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { staffOrError } from "@/lib/apiAuth";
 import { BUCKET, MAX_PDF_BYTES, service } from "@/lib/signatures";
 
-/** Documents prepared for signing: list, and add one by uploading a PDF. Staff only. */
+// staff only
 export async function GET() {
   const a = await staffOrError();
   if (!a.ok) return a.res;

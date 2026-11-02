@@ -100,7 +100,7 @@ export async function importRows(entity: Entity, fd: FormData) {
   redirect(`${path}&message=${encodeURIComponent(`Imported ${created} new and updated ${updated} ${entity}.`)}`);
 }
 
-/** CSV stock batch: validate again on the server, then receive everything in one transaction. */
+// validated again here, the browser preview can't be trusted
 export async function importStockBatch(fd: FormData) {
   const { supabase, profile } = await requireRole("buyer", "warehouse");
   const path = "/import?entity=stock";

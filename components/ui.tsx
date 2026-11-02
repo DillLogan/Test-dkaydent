@@ -79,7 +79,6 @@ const STATUS_STYLES: Record<string, string> = {
   arrived: "bg-amber-50 text-amber-800",
 };
 
-/** Order steps use the shop's own words. */
 export const STATUS_LABELS: Record<string, string> = {
   confirmed: "Ready to pull",
   fulfilled: "Pulled",
@@ -175,7 +174,7 @@ export function Field({
   );
 }
 
-/** Tabs driven by a search param. */
+// ?tab= driven
 export function Tabs({ items, current }: { items: { href: string; label: string; key: string }[]; current: string }) {
   return (
     <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">

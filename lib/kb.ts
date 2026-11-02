@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTICLES, KB_CATEGORIES, TUTORIALS } from "./help";
 import type { KbDoc } from "./kbSearch";
 
-/** One article as people see it: a built-in (as shipped, or as admin changed it) or one written in the app. */
+/** One article as people see it: a built-in (as shipped, or as admin changed it) or one written in the app */
 export type KbView = {
   id: string; // built-in id, or "u-<row id>" for articles written in the app
   rowId: string | null;
@@ -39,6 +39,6 @@ export async function loadKb(supabase: SupabaseClient) {
   return { articles, categories };
 }
 
-/** Tutorials as search results (they open on the Tutorials page). */
+/** Tutorials as search results (they open on the Tutorials page) */
 export const tutorialDocs = (): KbDoc[] =>
   TUTORIALS.map((t) => ({ id: t.id, kind: "tutorial", title: t.title, category: "Tutorial", text: [t.summary, ...t.steps.map((s) => s.text), ...(t.tip ? [t.tip] : [])], href: `/settings/tutorials#${t.id}` }));

@@ -7,7 +7,7 @@ export type Tutorial = {
   who: string;
   steps: { text: string; href?: string; linkLabel?: string }[];
   tip?: string;
-  /** True when no screenshots exist for this tutorial (they are public/help/<id>-<step>.jpg). */
+  /** True when no screenshots exist for this tutorial (they are public/help/<id>-<step>.jpg) */
   noImages?: boolean;
 };
 
@@ -257,7 +257,7 @@ export const TUTORIALS: Tutorial[] = [
   },
 ];
 
-/** `images` are captions; picture n is /help/kb-<id>-<n>.jpg. */
+/** `images` are captions; picture n is /help/kb-<id>-<n>.jpg */
 export type Article = { id: string; category: string; title: string; body: string[]; images?: string[] };
 
 export const ARTICLES: Article[] = [

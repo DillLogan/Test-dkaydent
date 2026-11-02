@@ -4,7 +4,7 @@ import type { DocType, Template } from "./types";
 
 const legacy = (pc: PrintConfig) => ({ invoice: pc.invoice, pull: pc.pull, route: pc.route, labels: pc.labels });
 
-/** The layouts to print with (saved, else built in) and the company details. */
+/** The layouts to print with (saved, else built in) and the company details */
 export async function loadPrintouts(supabase: { from: (t: string) => any }, docs: DocType[]) {
   const pc = await loadPrintConfig(supabase);
   let rows: { doc: DocType; layout: unknown }[] = [];

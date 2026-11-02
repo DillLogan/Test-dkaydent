@@ -34,7 +34,7 @@
 }
 
 /* ---------- Palettes ----------
-   Chosen in Settings → Appearance and set as data-palette on <html> (Fern when unset).
+   Chosen in Settings -> Appearance and set as data-palette on <html> (Fern when unset).
    Each palette remaps the neutral (stone), surface (white) and accent (brand) colours
    plus the two typefaces, so every page follows. Screen only: invoices, labels and
    pull tickets always print in plain black and white. */
@@ -228,7 +228,7 @@
   }
 }
 
-/* ---------- Dark ---------- */
+/* Dark */
 @media screen {
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -379,7 +379,7 @@ html.theme-anim *::after {
   }
 }
 
-/* ---------- Floor plan ---------- */
+/* Floor plan */
 .plan-grid {
   background-color: var(--color-stone-100);
   background-image:
@@ -395,7 +395,7 @@ html.theme-anim *::after {
   animation: plan-pulse 1.6s ease-in-out infinite;
 }
 
-/* ---------- Item tiles (no photo yet), coloured by category ---------- */
+/* Item tiles (no photo yet), coloured by category */
 .tile-thumb {
   background: hsl(var(--h) 45% 88%);
   color: hsl(var(--h) 45% 28%);
@@ -415,7 +415,7 @@ html.theme-anim *::after {
   }
 }
 
-/* ---------- Floor plan shapes ---------- */
+/* Floor plan shapes */
 .plan-shape {
   transition:
     fill-opacity 200ms var(--ease-out),
@@ -481,7 +481,7 @@ html.theme-anim *::after {
   animation: shape-pulse 1.6s ease-in-out infinite;
 }
 
-/* ---------- Menu ---------- */
+/* Menu */
 .nav-group {
   transition: grid-template-rows 320ms var(--ease-out);
 }
@@ -758,7 +758,7 @@ html.theme-anim *::after {
   }
 }
 
-/* ---------- Motion: staggered entrances, press feedback, pop-ins (all off with reduce motion) ---------- */
+/* Motion: staggered entrances, press feedback, pop-ins (all off with reduce motion) */
 .page-in > *,
 .page-in > * > section,
 .stagger > * {
@@ -818,7 +818,7 @@ html.theme-anim *::after {
   .btn-primary:not(:disabled):hover { transform: none; }
 }
 
-/* ---------- Documents: Word editor (ported from the BrightStar handoff, on DKaydent colours) ---------- */
+/* Documents: Word editor (ported from the BrightStar handoff, on DKaydent colours) */
 .dk-docs .ws-wrap { position: relative; display: flex; height: calc(100dvh - 230px); min-height: 560px; border: 1px solid var(--color-stone-200); border-radius: 1rem; overflow: hidden; background: var(--color-white); }
 .ws-list { flex: 0 0 250px; display: none; flex-direction: column; min-height: 0; border-right: 1px solid var(--color-stone-200); background: var(--color-stone-50); }
 .ws-list.open { display: flex; }
@@ -935,7 +935,7 @@ html.mobile .ws-prose { min-height: 60vh; }
 html.mobile .ws-body { min-height: 70vh; }
 html.mobile .ws-diary { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh; border-radius: 16px 16px 0 0; z-index: 40; }
 
-/* ---------- Mobile mode: bottom tab bar (Amazon-app style) ---------- */
+/* Mobile mode: bottom tab bar (Amazon-app style) */
 .tabbar { display: none; }
 html.mobile .tabbar {
   display: grid; grid-template-columns: repeat(var(--tabs, 5), minmax(0, 1fr));
@@ -954,7 +954,7 @@ html.mobile body { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
 @media print { .tabbar { display: none !important; } html.mobile body { padding-bottom: 0; } }
 @media (prefers-reduced-motion: reduce) { .tabbar .tab::before, .tabbar .tab-ic { transition: none; } }
 
-/* ---------- Smooth interactions (see components/Motion.tsx for things that appear and totals that change) ---------- */
+/* Smooth interactions (see components/Motion.tsx for things that appear and totals that change) */
 :root { interpolate-size: allow-keywords; }
 .input, input, select, textarea { transition: border-color .18s var(--ease-out), box-shadow .18s var(--ease-out), background-color .18s var(--ease-out); }
 input[type="checkbox"], input[type="radio"] { transition: transform .15s var(--ease-out); }
@@ -973,7 +973,7 @@ details[open]::details-content { block-size: auto; }
   .val-flash { animation: none !important; }
 }
 
-/* ---------- Receiving: All / Some / None per line ---------- */
+/* Receiving: All / Some / None per line */
 .recv-qty { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
 .recv-seg { display: inline-flex; border: 1px solid var(--color-stone-300, #d6d3d1); border-radius: .6rem; overflow: hidden; background: var(--color-white, #fff); }
 .recv-seg button { padding: .3rem .7rem; font-size: .8125rem; font-weight: 500; color: var(--color-stone-600, #57534e); transition: background-color .15s var(--ease-out), color .15s var(--ease-out); }

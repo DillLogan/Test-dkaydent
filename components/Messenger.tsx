@@ -80,7 +80,6 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
     [supabase],
   );
 
-  // Open a channel
   useEffect(() => {
     if (!active) return;
     setMsgs([]);
@@ -125,7 +124,7 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
 
   async function react(id: string, emoji: string) {
     setPicker(null);
-    // optimistic
+    // optimistic add, replaced on reload
     setMsgs((ms) =>
       ms.map((m) => {
         if (m.id !== id) return m;

@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-/** Resolve a scanned or typed code to the right page. */
 export async function GET(req: NextRequest) {
   const raw = (req.nextUrl.searchParams.get("code") ?? "").trim();
   const go = (path: string) => NextResponse.redirect(new URL(path, req.url));

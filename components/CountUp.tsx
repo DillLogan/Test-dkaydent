@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Counts a figure up from zero when it first appears ("$1,234.50", "12", "33.0%"). Text without a number shows as is. */
+// animates the number in on first render; non-numeric text is left alone
 export function CountUp({ text, ms = 700 }: { text: string; ms?: number }) {
   const m = /^([^\d-]*)(-?[\d,]*\d(?:\.\d+)?)(.*)$/.exec(text);
   const [shown, setShown] = useState(text);

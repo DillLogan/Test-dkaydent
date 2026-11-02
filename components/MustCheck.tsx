@@ -1,4 +1,3 @@
-/** Red MUST CHECK stamp with room for a signature, for the top-right corner of an order. */
 export function MustCheck({ className = "" }: { className?: string }) {
   return (
     <div

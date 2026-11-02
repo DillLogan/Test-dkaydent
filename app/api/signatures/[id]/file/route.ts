@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { staffOrError } from "@/lib/apiAuth";
 import { BUCKET, service } from "@/lib/signatures";
 
-/** The prepared PDF's bytes, for the field editor. Staff only. */
+// staff only
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const a = await staffOrError();
   if (!a.ok) return a.res;

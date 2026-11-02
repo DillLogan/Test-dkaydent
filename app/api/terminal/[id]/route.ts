@@ -4,7 +4,7 @@ import { advance } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
-/** Status of a terminal payment; polled by the charge panel. */
+// polled by TerminalCharge
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();

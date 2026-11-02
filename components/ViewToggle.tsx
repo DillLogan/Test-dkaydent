@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-/** Switch a list between photo cards and a table; the choice is remembered in this browser. */
 export function ViewToggle({ list, view }: { list: string; view: "cards" | "table" }) {
   const router = useRouter();
   const [pending, start] = useTransition();

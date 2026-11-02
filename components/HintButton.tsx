@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { passwordHint } from "@/app/login/hint";
 
-/** "Show password hint" on the sign-in page, after a wrong password. Uses whatever is in the username box. */
+// only shown after a failed sign-in
 export function HintButton() {
   const [text, setText] = useState("");
   const [pending, start] = useTransition();

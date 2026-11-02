@@ -45,7 +45,7 @@ export async function updateSO(id: string, fd: FormData) {
   redirect(`${path}?message=${encodeURIComponent("Saved.")}`);
 }
 
-/** Sales reps flag (or clear) an order as MUST CHECK. Works at any status. */
+// MUST CHECK can be toggled at any status
 export async function setMustCheck(id: string, on: boolean) {
   const { supabase } = await requireRole("sales");
   const path = `/sales/${id}`;
@@ -118,7 +118,7 @@ export async function fulfillSO(id: string) {
   redirect(`${path}?message=${encodeURIComponent("Marked pulled (oldest lots first). Delivery/Order Management can now complete it.")}`);
 }
 
-/** Orders manager: the pull ticket is back, the order is checked and done. */
+// ticket came back and was checked
 export async function completeSO(id: string, undo: boolean) {
   const { supabase } = await requireRole("orders_manager");
   const path = `/sales/${id}`;
@@ -160,7 +160,7 @@ export async function voidInvoice(id: string, soId: string) {
   redirect(`/sales/${soId}?message=${encodeURIComponent("Invoice voided. Correct the order if needed, then invoice again.")}`);
 }
 
-/** Fulfill using hand-picked lots. `picks` is JSON from the pick form. */
+// picks = JSON from the pick form
 export async function fulfillSOPicked(id: string, fd: FormData) {
   const { supabase } = await requireRole("sales", "warehouse");
   const path = `/sales/${id}`;
@@ -204,7 +204,7 @@ export async function setCreditStatus(returnId: string, status: "open" | "applie
   redirect(back);
 }
 
-/** Delivery/Order Management: something is wrong with the pulled order, so it goes back to sales. */
+// problem with a pulled order, kick it back to sales
 export async function returnToSales(id: string, fd: FormData) {
   const { supabase } = await requireRole("orders_manager");
   const path = `/sales/${id}`;
@@ -215,7 +215,7 @@ export async function returnToSales(id: string, fd: FormData) {
   redirect(`${path}?message=${encodeURIComponent("Sent back to sales.")}`);
 }
 
-/** Sales: lower quantities on a returned order (the difference goes back on the shelf), then optionally send it on. */
+// qty can only go down here; the difference is restocked
 export async function fixReturned(id: string, fd: FormData) {
   const { supabase } = await requireRole("sales");
   const path = `/sales/${id}`;
@@ -242,7 +242,6 @@ export async function fixReturned(id: string, fd: FormData) {
   redirect(`${path}?message=${encodeURIComponent("Saved. Anything taken off went back on the shelf.")}`);
 }
 
-/** How many box labels, then straight to printing them. */
 export async function setLabelCount(id: string, fd: FormData) {
   const { supabase } = await requireRole("sales", "warehouse", "orders_manager");
   const path = `/sales/${id}`;

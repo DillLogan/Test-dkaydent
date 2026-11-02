@@ -14,7 +14,6 @@ type Actions = {
   restoreBuiltin: (builtinId: string) => Promise<Result>;
 };
 
-/** Marks the words that matched the search. */
 function Hl({ text, terms }: { text: string; terms: string[] }) {
   return (
     <>

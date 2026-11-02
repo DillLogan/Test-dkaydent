@@ -8,7 +8,7 @@ import "@fontsource-variable/nunito-sans";
 import "@fontsource/instrument-serif";
 import "@fontsource-variable/outfit";
 
-// Typefaces people can pick for themselves in Settings → Appearance (all open source, SIL OFL).
+// Typefaces people can pick for themselves in Settings -> Appearance (all open source, SIL OFL).
 import "@fontsource-variable/inter";
 import "@fontsource-variable/open-sans";
 import "@fontsource-variable/source-sans-3";

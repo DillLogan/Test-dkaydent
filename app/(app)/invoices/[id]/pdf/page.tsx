@@ -8,7 +8,6 @@ import { invoiceData } from "@/lib/pdfdocs/data";
 
 type Props = { params: Promise<{ id: string }> };
 
-/** The invoice as a PDF: customer copy and office copy, made from the invoice layout. */
 export default async function InvoicePdfPage({ params }: Props) {
   const { id } = await params;
   const { supabase } = await getSession();

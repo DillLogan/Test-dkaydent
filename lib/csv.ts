@@ -1,4 +1,4 @@
-/** CSV helpers shared by export (server) and import (browser). */
+/** CSV helpers shared by export (server) and import (browser) */
 
 export type Column<T> = { key: string; label?: string; get?: (row: T) => unknown };
 
@@ -14,7 +14,7 @@ export function toCSV<T>(rows: T[], columns: Column<T>[]): string {
   return [header, ...body].join("\r\n") + "\r\n";
 }
 
-/** RFC 4180 parser: quoted fields, escaped quotes, CRLF/LF, optional BOM. */
+/** RFC 4180 parser: quoted fields, escaped quotes, CRLF/LF, optional BOM */
 export function parseCSV(text: string): string[][] {
   const src = text.replace(/^﻿/, "");
   const rows: string[][] = [];
@@ -51,7 +51,7 @@ export function parseCSV(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
-/** Parse into objects keyed by normalized header (lowercase, spaces → _). */
+/** Parse into objects keyed by normalized header (lowercase, spaces -> _) */
 export function parseCSVObjects(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const [head, ...body] = parseCSV(text);
   if (!head) return { headers: [], rows: [] };
@@ -62,7 +62,7 @@ export function parseCSVObjects(text: string): { headers: string[]; rows: Record
   };
 }
 
-/** "bunch=25; box=250" → [{name, factor}] */
+/** "bunch=25; box=250" -> [{name, factor}] */
 export function parseUnits(s: string): { name: string; factor: number }[] | string {
   if (!s.trim()) return [];
   const out: { name: string; factor: number }[] = [];

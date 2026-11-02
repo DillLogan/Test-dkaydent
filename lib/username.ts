@@ -11,7 +11,7 @@ export function loginEmail(typed: string) {
   return t.includes("@") ? t : `${t.toLowerCase()}@${CUSTOMER_DOMAIN}`;
 }
 
-/** The username to show for a stored address. */
+/** The username to show for a stored address */
 export function usernameOf(email: string | null | undefined) {
   return email && email.endsWith(`@${CUSTOMER_DOMAIN}`) ? email.slice(0, -CUSTOMER_DOMAIN.length - 1) : (email ?? "");
 }

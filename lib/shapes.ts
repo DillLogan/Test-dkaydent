@@ -1,7 +1,7 @@
 /**
  * Floor plan shapes. Points are [x, y] in percent of the plan's width and height
- * (0–100), so shapes stay put when the plan is drawn at any size. Rotation and
- * other angle math is done in "uniform" units (x × aspect, y), where one unit is
+ * (0-100), so shapes stay put when the plan is drawn at any size. Rotation and
+ * other angle math is done in "uniform" units (x x aspect, y), where one unit is
  * the same distance across and down.
  */
 export type Pt = [number, number];
@@ -25,7 +25,7 @@ export function bbox(pts: Pt[]): Box {
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
 
-/** Area-weighted centre (where the label sits); falls back to the average point. */
+/** Area-weighted centre (where the label sits); falls back to the average point */
 export function centroid(pts: Pt[], aspect = 1): Pt {
   let a = 0;
   let cx = 0;
@@ -42,10 +42,10 @@ export function centroid(pts: Pt[], aspect = 1): Pt {
   return [cx / (3 * a) / aspect, cy / (3 * a)];
 }
 
-/** Keep every point on the plan. */
+/** Keep every point on the plan */
 export const clampPts = (pts: Pt[]): Pt[] => pts.map(([x, y]) => [round(clamp(x, 0, 100)), round(clamp(y, 0, 100))]);
 
-/** Move by (dx, dy) percent without leaving the plan. */
+/** Move by (dx, dy) percent without leaving the plan */
 export function translate(pts: Pt[], dx: number, dy: number): Pt[] {
   const b = bbox(pts);
   const mx = clamp(dx, -b.x, 100 - (b.x + b.w));
@@ -53,7 +53,7 @@ export function translate(pts: Pt[], dx: number, dy: number): Pt[] {
   return pts.map(([x, y]) => [round(x + mx), round(y + my)]);
 }
 
-/** Stretch the shape so its bounding box becomes `to`. */
+/** Stretch the shape so its bounding box becomes `to` */
 export function fitBox(pts: Pt[], to: Box): Pt[] {
   const b = bbox(pts);
   const sx = b.w > 1e-9 ? to.w / b.w : 1;
@@ -61,7 +61,7 @@ export function fitBox(pts: Pt[], to: Box): Pt[] {
   return clampPts(pts.map(([x, y]) => [to.x + (x - b.x) * sx, to.y + (y - b.y) * sy]));
 }
 
-/** Turn the shape by `deg` (clockwise on screen) about its centre. */
+/** Turn the shape by `deg` (clockwise on screen) about its centre */
 export function rotate(pts: Pt[], deg: number, aspect: number): Pt[] {
   const [cx, cy] = centroid(pts, aspect);
   const r = (deg * Math.PI) / 180;
@@ -91,7 +91,7 @@ export function insertPoint(pts: Pt[], afterIndex: number): Pt[] {
 
 export const removePoint = (pts: Pt[], i: number): Pt[] => (pts.length <= 3 ? pts : pts.filter((_, j) => j !== i));
 
-/** A shape is usable if it has 3+ points on the plan and some area. */
+/** A shape is usable if it has 3+ points on the plan and some area */
 export function validShape(pts: unknown): pts is Pt[] {
   if (!Array.isArray(pts) || pts.length < 3 || pts.length > 60) return false;
   if (!pts.every((p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 100))) return false;
@@ -101,7 +101,7 @@ export function validShape(pts: unknown): pts is Pt[] {
 
 export const toSvg = (pts: Pt[], aspect: number) => pts.map(([x, y]) => `${round(x * aspect)},${round(y)}`).join(" ");
 
-/** Feet per percent of the plan (null when the floor size isn't set). */
+/** Feet per percent of the plan (null when the floor size isn't set) */
 export function feetScale(widthFt: number | null | undefined, heightFt: number | null | undefined) {
   return widthFt && heightFt ? { x: widthFt / 100, y: heightFt / 100 } : null;
 }

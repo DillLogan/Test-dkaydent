@@ -10,7 +10,7 @@ const MODES: { value: ThemeChoice; label: string; help: string }[] = [
   { value: "system", label: "System", help: "Match this device" },
 ];
 
-/** Miniature of the app: sidebar, title, a card and a button. */
+// tiny mock of the app for the palette cards
 function Mini({ bg, surface, text, accent }: { bg: string; surface: string; text: string; accent: string }) {
   return (
     <div className="flex h-full flex-1 gap-1.5 p-2" style={{ background: bg }}>
@@ -39,7 +39,7 @@ function Radio({ on }: { on: boolean }) {
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
-/** Read a photo in the browser and suggest theme colours from it. The photo is never uploaded or saved. */
+// photo stays in the browser, never uploaded
 async function coloursFromFile(file: File): Promise<string[]> {
   if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw new Error("Choose a JPG, PNG, WebP or GIF picture.");
   if (file.size > MAX_IMAGE_BYTES) throw new Error("That picture is over 10 MB. Choose a smaller one.");

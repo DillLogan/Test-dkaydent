@@ -30,7 +30,6 @@ export async function deleteRule(id: string) {
   redirect(PATH);
 }
 
-/** Fill in categories for items that have none, using the rules. */
 export async function applyToUncategorized() {
   const { supabase } = await requireRole("buyer");
   const [{ data: items }, { data: rules }] = await Promise.all([

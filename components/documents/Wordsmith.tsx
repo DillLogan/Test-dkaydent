@@ -1,11 +1,7 @@
-// @ts-nocheck — ported from the BrightStar CRM handoff (Wordsmith). Documents are private to their owner.
+// @ts-nocheck
 "use client";
-/* ─────────────────────────────────────────────────────────────────────
-   Wordsmith (build 124) — a Word-style editor with a writing diary.
-   Only shown to accounts with the "wordsmith" role; documents are private
-   to their owner. Built on TipTap; to add an editor feature, add its
-   extension to buildExtensions() and a control to <Toolbar>.
-   ───────────────────────────────────────────────────────────────────── */
+// Word-style editor + writing diary, on TipTap.
+// To add a feature: add the extension in buildExtensions() and a button in <Toolbar>.
 import { useState, useEffect, useRef, useMemo, useCallback, useReducer } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { generateJSON } from "@tiptap/core";
@@ -18,7 +14,7 @@ import {
 } from "./diary";
 import { exportDocx, importDocxHtml } from "./docxio";
 
-/** Phone-sized layout: a narrow window, or Mobile mode (lib/viewMode.ts). */
+// narrow window or mobile mode
 const narrow = () => window.innerWidth < 900 || document.documentElement.classList.contains("mobile");
 
 const FONTS = [
@@ -52,7 +48,7 @@ const fmtWhen = (iso) => {
 const n = (x) => Number(x || 0).toLocaleString();
 const signed = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toLocaleString();
 
-/* Plain text of a TipTap JSON doc, blocks and line breaks as newlines. */
+// tiptap json -> plain text
 function jsonText(node) {
   if (!node) return "";
   if (node.type === "text") return node.text || "";
@@ -66,7 +62,7 @@ function readPref(key, fallback) {
 }
 function writePref(key, val) { try { localStorage.setItem(key, val ? "1" : "0"); } catch { /* storage off */ } }
 
-/* ═══════════════════════ main tab ═══════════════════════ */
+// main tab
 export default function Wordsmith() {
   const [docs, setDocs] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -191,7 +187,7 @@ export default function Wordsmith() {
   );
 }
 
-/* ═══════════════════════ load one document ═══════════════════════ */
+// load one document
 function DocLoader({ id, onMeta, listOpen, onShowList }) {
   const [doc, setDoc] = useState(null);
   const [err, setErr] = useState("");
@@ -210,7 +206,7 @@ function DocLoader({ id, onMeta, listOpen, onShowList }) {
   return <DocEditor doc={doc} onMeta={onMeta} listOpen={listOpen} onShowList={onShowList} />;
 }
 
-/* ═══════════════════════ the editor ═══════════════════════ */
+// the editor
 function DocEditor({ doc, onMeta, listOpen, onShowList }) {
   const [, bump] = useReducer((x) => x + 1, 0);
   const [title, setTitle] = useState(doc.title || "Untitled document");
@@ -234,7 +230,7 @@ function DocEditor({ doc, onMeta, listOpen, onShowList }) {
   const stopped = useRef(false);
   const editorRef = useRef(null);
 
-  /* The open diary entry; rolls over to a new one when the date changes. */
+  // rolls over to a new entry when the date changes
   const getEntry = useCallback(() => {
     const next = ensureToday(diaryRef.current, totalRef.current);
     if (next !== diaryRef.current) { diaryRef.current = next; dirty.current = true; setTimeout(bump, 0); }
@@ -306,7 +302,7 @@ function DocEditor({ doc, onMeta, listOpen, onShowList }) {
     };
   }, [doSave]);
 
-  // Ctrl/⌘+S saves now
+  // ctrl/cmd+s
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); clearTimeout(timer.current); doSave(); }
@@ -432,7 +428,7 @@ function DocEditor({ doc, onMeta, listOpen, onShowList }) {
   );
 }
 
-/* ═══════════════════════ toolbar ═══════════════════════ */
+// toolbar
 function TB({ on, label, onClick, disabled, children, wide }) {
   return (
     <button type="button" className={"ws-tb" + (on ? " on" : "") + (wide ? " wide" : "")} onMouseDown={(e) => e.preventDefault()}

@@ -2,7 +2,7 @@ import { Field } from "@/components/ui";
 
 export type DirectCustomer = { id: string; name: string };
 
-/** Pick the customer a purchase order (or standing order) is bought for. Empty = stock for the shop. */
+// empty = regular stock
 export function DirectShipField({ customers, value, className }: { customers: DirectCustomer[]; value?: string | null; className?: string }) {
   return (
     <Field label="Direct ship for" className={className}>
@@ -18,7 +18,6 @@ export function DirectShipField({ customers, value, className }: { customers: Di
   );
 }
 
-/** "Direct ship → Petal Shop" */
 export function DirectShipBadge({ name }: { name?: string | null }) {
   if (!name) return null;
   return (

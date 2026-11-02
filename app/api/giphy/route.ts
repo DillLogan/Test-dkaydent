@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-/** GIF search for the messenger. Needs GIPHY_API_KEY; without it the messenger falls back to pasting a GIF link. */
+// needs GIPHY_API_KEY, otherwise the UI asks for a pasted link
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();

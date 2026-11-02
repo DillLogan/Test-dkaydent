@@ -1,13 +1,13 @@
 export const IMAGE_BUCKET = "item-images";
 
-/** Public URL for a stored photo path (bucket is public-read). */
+/** Public URL for a stored photo path (bucket is public-read) */
 export function imageUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return `${base}/storage/v1/object/public/${IMAGE_BUCKET}/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-/** Stable color for an item's fallback tile, from its category (or name). */
+/** Stable color for an item's fallback tile, from its category (or name) */
 export function tileColor(seed: string) {
   let h = 0;
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;

@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { dbMessage, fail, num, str } from "@/lib/forms";
 import { splitSpot } from "@/lib/spots";
 
-/** Quantities on the lot page are entered in a chosen unit and converted to base units here. */
+// lot page qty comes in the chosen unit, convert to base
 async function toBase(fd: FormData, supabase: any): Promise<number | null> {
   const q = num(fd, "qty");
   const unitId = str(fd, "unit_id");
@@ -67,7 +67,7 @@ export async function createLocation(fd: FormData) {
   redirect("/inventory/locations");
 }
 
-/** Move a location to another shop. It leaves the old floor plan and stops being any item's home there. */
+// moving shops drops it from the old plan and clears item homes there
 export async function moveLocationShop(id: string, fd: FormData) {
   const { supabase } = await requireRole("warehouse");
   const layoutId = str(fd, "layout_id");
@@ -87,7 +87,6 @@ export async function toggleLocation(id: string, active: boolean) {
   redirect("/inventory/locations");
 }
 
-/** Where this stock sits inside its location: a section and shelf, or "Not set". */
 export async function setLotSpot(lotId: string, fd: FormData) {
   const { supabase } = await requireRole("warehouse");
   const path = `/inventory/lots/${lotId}`;

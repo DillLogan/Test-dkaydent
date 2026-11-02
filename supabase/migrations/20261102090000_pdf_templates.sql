@@ -1,4 +1,4 @@
--- PDF printouts: one saved layout per printout, made in Settings → Customize printouts.
+-- PDF printouts: one saved layout per printout, made in Settings -> Customize printouts.
 -- No row means the built-in layout. Everyone signed in (staff) reads them; only admins change them.
 create table pdf_templates (
   doc        text primary key check (doc in ('pull','invoice','route','label','boxlabel')),

@@ -4,7 +4,6 @@ import { Cart, type CatalogItem } from "./Cart";
 
 export type StaffItem = CatalogItem & { tier_price: number | null; special_price: number | null };
 
-/** Sales catalog: the shop cart plus price editing on each item. */
 export function CatalogCart({
   items,
   customerId,

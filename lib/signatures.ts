@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * PDF signing (ported from the BrightStar CRM handoff).
+ * PDF signing
  * Staff prepare a PDF (signature / initials / text / checkbox boxes) and send it to an email.
  * The request records the sender's account email (used as reply-to).
  * Signing: if the recipient email belongs to a DKaydent login, they must be signed in as that login;
@@ -38,7 +38,7 @@ export type RequestRow = {
 const TYPES = new Set(["signature", "initials", "text", "checkbox"]);
 const num01 = (v: unknown) => Math.max(0, Math.min(1, Number(v) || 0));
 
-/** Keep only well-formed boxes (fractions of the page), at most 200. */
+/** Keep only well-formed boxes (fractions of the page), at most 200 */
 export function cleanBoxes(raw: unknown): Box[] {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 200).flatMap((b): Box[] => {
@@ -72,7 +72,7 @@ export function service() {
 export const newToken = () => crypto.randomBytes(24).toString("base64url");
 export const sameEmail = (a?: string | null, b?: string | null) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** The request behind a public signing link, or null. */
+/** The request behind a public signing link, or null */
 export async function requestByToken(token: string): Promise<RequestRow | null> {
   if (!token || token.length > 100) return null;
   const { data } = await service().from("signature_requests").select("*").eq("token", token).maybeSingle();
@@ -81,8 +81,8 @@ export async function requestByToken(token: string): Promise<RequestRow | null> 
 
 /**
  * Who may sign this request right now.
- *  - recipient email belongs to an active DKaydent login → only when signed in as that login ("account").
- *  - otherwise → the signer must type the same email ("email").
+ *  - recipient email belongs to an active DKaydent login -> only when signed in as that login ("account").
+ *  - otherwise -> the signer must type the same email ("email").
  */
 export async function signerCheck(r: RequestRow, typedEmail: string | null): Promise<
   { ok: true; via: "account" | "email"; signerId: string | null } | { ok: false; status: number; error: string; needsLogin?: boolean; needsEmail?: boolean }
@@ -183,7 +183,7 @@ async function certificate(pdf: PDFDocument, info: Record<string, string>) {
   }
 }
 
-/** Fill, flatten, add the certificate, store the signed copy and mark the request complete. */
+/** Fill, flatten, add the certificate, store the signed copy and mark the request complete */
 export async function complete(r: RequestRow, values: Record<string, string>, audit: { name: string; ip: string; userAgent: string; via: "account" | "email"; signerId: string | null }) {
   if (r.status === "completed") return r;
   // only values for this request's boxes, and sensible sizes (a drawn signature is a PNG data URL)

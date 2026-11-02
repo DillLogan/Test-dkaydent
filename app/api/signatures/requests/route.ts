@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { staffOrError } from "@/lib/apiAuth";
 
-/** Every document sent for signing, newest first. Staff only. */
+// staff only
 export async function GET() {
   const a = await staffOrError();
   if (!a.ok) return a.res;

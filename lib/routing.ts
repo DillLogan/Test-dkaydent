@@ -1,13 +1,13 @@
-/** Delivery routing helpers (shared by server and browser). */
+/** Delivery routing helpers (shared by server and browser) */
 
 export type LatLng = { lat: number; lng: number };
 
-/** Same normalization as the database's geo_key(). */
+/** Same normalization as the database's geo_key() */
 export function geoKey(address: string | null | undefined): string {
   return (address ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** Straight-line distance in miles. */
+/** Straight-line distance in miles */
 export function miles(a: LatLng, b: LatLng): number {
   const R = 3958.8;
   const rad = (d: number) => (d * Math.PI) / 180;
@@ -33,7 +33,7 @@ export function closestFirst<T extends { id: string }>(stops: T[], distance: (s:
     .map((x) => x.s);
 }
 
-/** Google Maps allows 9 stops between start and end in a shared link. */
+// Google Maps allows 9 stops between start and end in a shared link
 const PER_LINK = 9;
 
 /**

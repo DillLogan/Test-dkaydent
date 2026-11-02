@@ -1,20 +1,15 @@
-// @ts-nocheck — ported as-is from the BrightStar CRM handoff (Wordsmith writing diary)
-/* ─────────────────────────────────────────────────────────────────────
-   Writing diary (Wordsmith, build 124)
-
-   Every piece of text carries a `diaryDay` mark whose `entry` attribute
-   points at one diary entry: { id, date, startedAt, closedAt, baseline,
-   words, kind, label }.
-
-   Rules (as agreed with Logan):
-   • New text is credited to the entry that is open when it's typed.
-   • A new entry opens automatically when the calendar day changes, or when
-     the writer presses "Start new day". Earlier entries stay in the log.
-   • Editing older text leaves it on its original day (the mark is kept),
-     but the change in word count is credited to the day the edit was made:
-     an entry's count = total words when it closed − total words when it
-     opened (`baseline`).
-   ───────────────────────────────────────────────────────────────────── */
+// @ts-nocheck
+/*
+ * Writing diary.
+ *
+ * All text carries a `diaryDay` mark; its `entry` attr points at a diary entry
+ * { id, date, startedAt, closedAt, baseline, words, kind, label }.
+ *
+ *  - new text belongs to whichever entry is open when it's typed
+ *  - a new entry opens when the date changes or on "Start new day"
+ *  - editing old text keeps its original mark, but the word count change goes
+ *    to today: count = words at close - words at open (baseline)
+ */
 import { Mark, mergeAttributes } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 
@@ -34,7 +29,7 @@ export function newEntryId() {
 }
 export const safeId = (id) => String(id || "").replace(/[^\w-]/g, "");
 
-/* Local calendar date as YYYY-MM-DD. */
+// local date, YYYY-MM-DD
 export function todayLocal(d = new Date()) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -45,31 +40,28 @@ export function openEntry(diary) {
   return last && !last.closedAt ? last : null;
 }
 
-/* Close the open entry (freezing its count) and start a new one. */
+// close the current entry (freezes its count) and open a new one
 export function startNewEntry(diary, totalWords, now = new Date()) {
   const out = diary.map((e) => (e.closedAt ? e : { ...e, closedAt: now.toISOString(), words: totalWords - (e.baseline || 0) }));
   out.push({ id: newEntryId(), kind: "day", date: todayLocal(now), startedAt: now.toISOString(), closedAt: null, baseline: totalWords, words: 0 });
   return out;
 }
 
-/* Make sure an entry for today is open. Returns the same array when nothing changes. */
+// returns the same array if nothing changed
 export function ensureToday(diary, totalWords, now = new Date()) {
   const cur = openEntry(diary);
   if (cur && cur.date === todayLocal(now)) return diary;
   return startNewEntry(diary, totalWords, now);
 }
 
-/* Net words credited to an entry (live for the open one). */
 export function entryWords(e, totalWords) {
   return e.closedAt ? (e.words || 0) : totalWords - (e.baseline || 0);
 }
 
-/* Whole-document plain text, blocks separated by newlines. */
 export function docText(doc) {
   return doc.textBetween(0, doc.content.size, "\n", "\n");
 }
 
-/* Words currently sitting in each entry's highlighted sections. */
 export function wordsBySection(doc, markName = "diaryDay") {
   const parts = {};
   doc.descendants((node) => {
@@ -93,8 +85,10 @@ export function wordsBySection(doc, markName = "diaryDay") {
   return out;
 }
 
-/* The mark itself, plus a plugin that stamps any unmarked new text with the
-   open entry. `getEntry()` returns the open entry's id (or null). */
+/*
+ * The mark itself, plus a plugin that stamps any unmarked new text with the
+ * open entry. `getEntry()` returns the open entry's id (or null).
+ */
 export const DiaryDay = Mark.create({
   name: "diaryDay",
   inclusive: false,      // typing right after an older section starts today's text
@@ -156,7 +150,7 @@ export const DiaryDay = Mark.create({
   },
 });
 
-/* Stamp every text node in a TipTap JSON document with one entry (used for imports). */
+// used for imports
 export function stampJSON(json, entry) {
   const walk = (n) => {
     if (!n || typeof n !== "object") return n;

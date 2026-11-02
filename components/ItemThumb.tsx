@@ -1,6 +1,6 @@
 import { imageUrl, initials, tileColor } from "@/lib/images";
 
-/** Item photo, or a colored tile with the item's initials (colored by category). */
+// falls back to initials on a category color
 export function ItemThumb({
   path,
   name,
@@ -40,7 +40,6 @@ export function ItemThumb({
   );
 }
 
-/** Thumbnail + name + SKU, for table cells. */
 export function ItemCell({
   path,
   name,
@@ -65,7 +64,6 @@ export function ItemCell({
   );
 }
 
-/** Full-width photo for cards; a soft category-coloured tile with initials when there's no photo. */
 export function ItemPhoto({ path, name, category }: { path?: string | null; name: string; category?: string | null }) {
   const url = imageUrl(path);
   if (url) {

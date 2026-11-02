@@ -1,11 +1,11 @@
-// @ts-nocheck — ported from the BrightStar CRM handoff (recipient signing page)
+// @ts-nocheck
 "use client";
 import { useEffect, useRef, useState } from "react";
 
 const initialsOf = (name) => (name || "").trim().split(/\s+/).map((w) => w[0] || "").join("").toUpperCase().slice(0, 6);
 const isImg = (v) => typeof v === "string" && v.startsWith("data:image");
 
-/* Draw pad — finger/mouse signature, returns a trimmed PNG data URL. */
+// finger/mouse signature pad -> PNG data URL
 function DrawPad({ title, onUse, onClose }) {
   const ref = useRef(null);
   const drawing = useRef(false);
@@ -55,7 +55,6 @@ export default function SignRecipient({ token }) {
   const [done, setDone] = useState(false);
   const [already, setAlready] = useState(false);
   const [busy, setBusy] = useState(false);
-  // identity gate
   const [verified, setVerified] = useState("");   // the email that matched
   const [gateName, setGateName] = useState("");
   const [gateEmail, setGateEmail] = useState("");
@@ -67,7 +66,7 @@ export default function SignRecipient({ token }) {
   const [needsLogin, setNeedsLogin] = useState(false);
   const [viaAccount, setViaAccount] = useState(false);
 
-  // Load the pages for a checked signer. `email` is sent only for someone confirming by email.
+  // email only gets sent for the confirm-by-email route
   async function loadPages(email, boxesFromServer) {
     setLoading(true);
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -93,7 +92,7 @@ export default function SignRecipient({ token }) {
     setPages(rendered); setBoxes(boxesFromServer || []); setLoading(false);
   }
 
-  // Step 1: what this link needs. A DKaydent login signs while signed in; anyone else confirms the email.
+  // 1) what does this link need? DKaydent logins sign while signed in, everyone else confirms their email
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -114,7 +113,7 @@ export default function SignRecipient({ token }) {
     return () => { cancelled = true; };
   }, [token]);
 
-  // Step 2 (email route): check the email with the server, then load the document.
+  // 2) email route: verify with the server, then load
   async function verify() {
     const email = gateEmail.trim();
     if (!gateName.trim() || !email) { setGateErr("Enter your full name and email."); return; }

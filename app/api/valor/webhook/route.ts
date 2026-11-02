@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * UNCONFIRMED: Valor's notification format and signing. Until Valor confirms
  * them, requests must carry the shared secret in the "x-webhook-secret" header.
  * Needs VALOR_WEBHOOK_SECRET and SUPABASE_SERVICE_ROLE_KEY.
- * Sales rung up on the terminal alone come in through Payments → Sync terminal sales.
+ * Sales rung up on the terminal alone come in through Payments -> Sync terminal sales.
  */
 export async function POST(req: Request) {
   const secret = process.env.VALOR_WEBHOOK_SECRET;

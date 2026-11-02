@@ -15,7 +15,7 @@ function refresh() {
   revalidatePath("/");
 }
 
-// ---------------------------------------------------------------- shipments
+// shipments
 
 export async function createShipment(fd: FormData) {
   const { supabase } = await requireRole("buyer", "warehouse");
@@ -127,7 +127,7 @@ export async function receiveShipment(id: string, lineIds: string[], fd: FormDat
   );
 }
 
-// ---------------------------------------------------------- standing orders
+// standing orders
 
 const SO = `${LIST}/standing`;
 
@@ -158,7 +158,7 @@ export async function createStandingOrder(fd: FormData) {
   redirect(msg(`${SO}/${data.id}`, "Standing order created. Add the items it brings in."));
 }
 
-/** After a template change: drop untouched future occurrences and plan them again. */
+// template changed -> drop untouched future drafts and regenerate
 async function replan(supabase: any, id: string, path: string) {
   const { data: so } = await supabase.from("standing_orders").select("active").eq("id", id).single();
   const { error: e1 } = await supabase.rpc("clear_untouched_occurrences", { p_standing_order_id: id });

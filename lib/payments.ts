@@ -44,7 +44,7 @@ export async function loadRequest(supabase: SupabaseClient, id: string) {
 
 const providerFor = (r: TerminalRequestRow) => (r.provider === "valor" ? valorConnect : getProvider());
 
-/** Apply a final result through the database (idempotent). */
+/** Apply a final result through the database (idempotent) */
 export async function finalize(supabase: SupabaseClient, id: string, result: TerminalResult) {
   const { data, error } = await supabase.rpc("finalize_terminal_request", { p_id: id, p_result: result });
   if (error) throw new Error(error.message);

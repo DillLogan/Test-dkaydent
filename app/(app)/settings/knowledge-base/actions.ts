@@ -9,7 +9,6 @@ import { dbMessage } from "@/lib/forms";
 type Result = { error?: string; id?: string };
 const PATH = "/settings/knowledge-base";
 
-/** Paragraphs are separated by a blank line. */
 const paragraphs = (text: string) =>
   String(text ?? "")
     .split(/\n\s*\n/)
@@ -19,7 +18,7 @@ const paragraphs = (text: string) =>
 
 export type ArticleInput = { id?: string; builtinId?: string; title: string; category: string; text: string };
 
-/** Add an article, edit your own (admin: anyone's), or (admin) change a built-in article's wording. */
+// staff edit their own; admin can edit anything incl. built-ins
 export async function saveArticle(a: ArticleInput): Promise<Result> {
   const { supabase, profile } = await getSession();
   if (profile.role === "customer") return { error: "Not allowed." };
@@ -51,7 +50,6 @@ export async function saveArticle(a: ArticleInput): Promise<Result> {
   return { id: `u-${data.id}` };
 }
 
-/** Remove an article you wrote (admin: any article written in the app). */
 export async function deleteArticle(rowId: string): Promise<Result> {
   const { supabase, profile } = await getSession();
   if (profile.role === "customer") return { error: "Not allowed." };
@@ -62,7 +60,6 @@ export async function deleteArticle(rowId: string): Promise<Result> {
   return {};
 }
 
-/** Admin: hide or show an article (built-in or written in the app). */
 export async function setArticleHidden(target: { builtinId?: string; rowId?: string }, hidden: boolean): Promise<Result> {
   const { supabase, profile } = await getSession();
   if (!can(profile)) return { error: "Only admin can hide articles." };
@@ -82,7 +79,7 @@ export async function setArticleHidden(target: { builtinId?: string; rowId?: str
   return {};
 }
 
-/** Admin: put a built-in article back the way it shipped (and show it again). */
+// drop the override row -> built-in text comes back
 export async function restoreBuiltin(builtinId: string): Promise<Result> {
   const { supabase, profile } = await getSession();
   if (!can(profile)) return { error: "Only admin can restore built-in articles." };

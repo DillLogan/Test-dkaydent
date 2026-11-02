@@ -4,7 +4,7 @@ import { qty } from "./format";
 
 type Unit = { id: string; product_id: string; name: string; factor: number };
 
-/** Active products with units, stock and average cost — for order-line pickers. */
+/** Active products with units, stock and average cost, for order-line pickers */
 export async function loadCatalog(supabase: SupabaseClient) {
   const [{ data: products }, { data: units }, { data: stock }] = await Promise.all([
     supabase.from("products").select("id, sku, name, base_unit, kind").eq("active", true).order("name"),

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Free-form floor plan areas and real measurements.
---   * locations.map_shape: the area's outline as [[x, y], …] points in
---     percent of the plan's width / height (0–100). map_x/y/w/h stay as its
+--   * locations.map_shape: the area's outline as [[x, y], ...] points in
+--     percent of the plan's width / height (0-100). map_x/y/w/h stay as its
 --     bounding box, kept in step by the app.
 --   * shop_layouts.width_ft / height_ft: the floor's real size, so areas
 --     can be shown and typed in feet.

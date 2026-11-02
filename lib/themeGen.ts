@@ -20,7 +20,7 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-/** [L, C, h] with L 0..1, C about 0..0.4, h in degrees. */
+/** [L, C, h] with L 0..1, C about 0..0.4, h in degrees */
 export function hexToOklch(hex: string): [number, number, number] {
   const [R, G, B] = hexToRgb(hex).map((v) => toLin(v / 255));
   const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
@@ -46,7 +46,7 @@ function oklchToLinear(L: number, C: number, h: number): [number, number, number
   ];
 }
 
-/** Colour to hex; if it falls outside what a screen can show, chroma is reduced until it fits. */
+/** Colour to hex; if it falls outside what a screen can show, chroma is reduced until it fits */
 export function oklchToHex(L: number, C: number, h: number): string {
   let c = C;
   for (let i = 0; i < 40; i++) {
@@ -65,14 +65,14 @@ function luminance(hex: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** WCAG contrast ratio, 1 to 21. */
+/** WCAG contrast ratio, 1 to 21 */
 export function contrast(a: string, b: string) {
   const x = luminance(a);
   const y = luminance(b);
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
-/** Move a colour's lightness (toward dark or light) until it reaches the contrast target against every background given. */
+// Move a colour's lightness (toward dark or light) until it reaches the contrast target against every background given
 function solve(L: number, C: number, h: number, against: string[], target: number, dir: 1 | -1) {
   let l = L;
   for (let i = 0; i < 120; i++) {
@@ -99,7 +99,7 @@ export function buildTheme(seed: ThemeSeed): Theme {
   const hi = !!seed.contrast;
   const k = cA / 0.12; // scale for tinted accent surfaces
 
-  // ----- light -----
+  // light
   const lightWhite = oklchToHex(0.997, cN * 0.25, hN);
   const lS: Record<string, number> = hi
     ? { "50": 0.965, "100": 0.93, "200": 0.78, "300": 0.66, "400": 0.55, "500": 0.44, "600": 0.35, "700": 0.27, "800": 0.19, "900": 0.1 }
@@ -117,7 +117,7 @@ export function buildTheme(seed: ThemeSeed): Theme {
   light["--color-brand-600"] = oklchToHex(b7.L + 0.07, cA, hA);
   light["--color-brand-500"] = oklchToHex(b7.L + 0.16, cA, hA);
 
-  // ----- dark -----
+  // dark
   const darkWhite = oklchToHex(0.225, cN * 1.1, hN);
   const dS: Record<string, number> = hi
     ? { "50": 0.13, "100": 0.2, "200": 0.32, "300": 0.44, "400": 0.58, "500": 0.78, "600": 0.87, "700": 0.93, "800": 0.96, "900": 0.99 }
@@ -137,13 +137,13 @@ export function buildTheme(seed: ThemeSeed): Theme {
   return { light, dark };
 }
 
-/** Screen-only CSS for a palette id (print stays black and white). */
+/** Screen-only CSS for a palette id (print stays black and white) */
 export function themeCss(id: string, t: Theme): string {
   const body = (v: Vars) => Object.entries(v).map(([k, x]) => `${k}:${x}`).join(";");
   return `@media screen{:root[data-palette="${id}"]{${body(t.light)}}:root[data-theme="dark"][data-palette="${id}"]{${body(t.dark)}}}`;
 }
 
-/** Swatches for the picker cards, the same four the built-in palettes show. */
+/** Swatches for the picker cards, the same four the built-in palettes show */
 export function swatches(t: Theme): { light: [string, string, string, string]; dark: [string, string] } {
   return {
     light: [t.light["--color-stone-50"], t.light["--color-white"], t.light["--color-stone-900"], t.light["--color-brand-700"]],

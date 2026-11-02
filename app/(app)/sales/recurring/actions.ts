@@ -39,7 +39,7 @@ export async function createRecurringSale(fd: FormData) {
   );
 }
 
-/** After a change to the template: drop planned drafts nobody edited and plan again. */
+// same idea as standing orders: regenerate untouched drafts
 async function replan(supabase: any, id: string, path: string) {
   const { data: r } = await supabase
     .from("recurring_sales")

@@ -28,7 +28,7 @@ import type { MapArea } from "./MiniMap";
 import type { PlanSection } from "@/lib/plan";
 import { SectionEditor, type SectionDraft } from "./SectionEditor";
 
-/** A location's area, or a section's (parent = the section's location). */
+// parent is set for sections
 export type PlanArea = MapArea & { parent?: string };
 export type PlanLocation = { id: string; name: string; kind: string; active: boolean; whole_layout?: boolean };
 export type PlanItem = {
@@ -39,8 +39,8 @@ export type PlanItem = {
   image: string | null;
   baseUnit: string;
   home: string | null;
-  stock: Record<string, number>; // location id → base qty
-  sectionStock?: Record<string, number>; // section id → base qty recorded there
+  stock: Record<string, number>; // location id -> base qty
+  sectionStock?: Record<string, number>; // section id -> base qty recorded there
 };
 type Result = { error?: string } | void;
 type Created = { error?: string; id?: string };
@@ -146,7 +146,7 @@ export function FloorPlan(props: {
   const vbW = 100 * aspect;
   const u = vbW / planPx; // plan units per screen pixel
   const scale = feetScale(feet?.w, feet?.h);
-  // snap to ½ ft when the floor size is set, else ½ % of the plan
+  // snap to 1/2 ft when the floor size is set, else 1/2 % of the plan
   const stepX = scale ? 0.5 / scale.x : 0.5;
   const stepY = scale ? 0.5 / scale.y : 0.5;
   const snapX = (v: number) => Math.round(v / stepX) * stepX;
@@ -187,7 +187,7 @@ export function FloorPlan(props: {
     });
   }
 
-  // ---------- dragging ----------
+  // dragging
   const toPlanRaw = (e: { clientX: number; clientY: number }): Pt => {
     const box = planRef.current!.getBoundingClientRect();
     return [((e.clientX - box.left) / box.width) * 100, ((e.clientY - box.top) / box.height) * 100];
@@ -261,7 +261,7 @@ export function FloorPlan(props: {
       let y2 = b.y + b.h;
       const minW = stepX * 2;
       const minH = stepY * 2;
-      // the handle follows the pointer; sizes snap to ½ ft steps from the edge that stays put
+      // the handle follows the pointer; sizes snap to 1/2 ft steps from the edge that stays put
       const dx = p[0] - d.p0[0];
       const dy = p[1] - d.p0[1];
       if (d.handle.includes("w")) x1 = x2 - Math.max(snapX(b.w - dx), minW);
@@ -338,7 +338,7 @@ export function FloorPlan(props: {
     saveShape(a, removePoint(a.points, i));
   }
 
-  /** Where a new area goes: inside its location's area for a section, else a 10 × 8 ft (or fifth of the plan) box in the middle. */
+  // default box for a new area. Sections start inside their location
   function spotFor(parent?: string) {
     const pa = parent ? areas.find((x) => x.id === parent) : null;
     if (pa) {
@@ -514,7 +514,7 @@ export function FloorPlan(props: {
   }
   const others = props.layouts.filter((l) => l.id !== layoutId);
 
-  // ---------- render ----------
+  // render
   const markFor = (a: PlanArea) => {
     if (!item) return null;
     const q = item.stock[a.id] ?? 0;
@@ -929,7 +929,7 @@ export function FloorPlan(props: {
                             r={r}
                             className={`plan-handle cursor-move ${vertex === i ? "plan-handle-on" : ""}`}
                             onPointerDown={(e) => {
-                              // a second tap on the same corner within ⅓ s removes it (works with mouse and touch)
+                              // a second tap on the same corner within 1/3 s removes it (works with mouse and touch)
                               const key = `${area.id}:${i}`;
                               const now = e.timeStamp;
                               if (lastTap.current && lastTap.current.key === key && now - lastTap.current.at < 350) {
@@ -1422,7 +1422,7 @@ export function FloorPlan(props: {
   );
 }
 
-/** Grid in feet: a line every foot (every 5 ft on big floors), stronger every 10 ft. */
+// 1ft grid (5ft on big floors), heavier line every 10ft
 function FeetGrid({ aspect, widthFt, heightFt }: { aspect: number; widthFt: number; heightFt: number }) {
   const vbW = 100 * aspect;
   const perFt = 100 / heightFt; // plan units per foot (same across and down)

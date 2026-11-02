@@ -45,7 +45,7 @@ export async function changePassword(fd: FormData) {
   redirect(`${PATH}?message=${encodeURIComponent(hintOnly ? "Hint saved." : "Password changed.")}`);
 }
 
-/** Admin: the card processing fee added to orders paid by card (0 turns it off). */
+// 0 turns the fee off
 export async function setCardFee(fd: FormData) {
   const { supabase } = await requireRole();
   const raw = String(fd.get("card_fee_pct") ?? "").trim();

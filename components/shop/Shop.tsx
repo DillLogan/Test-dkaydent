@@ -12,7 +12,6 @@ type Actions = {
   saveCartDetails: (payment: string | null, notes: string) => Promise<{ error?: string }>;
   placeOrder: () => Promise<void>;
 };
-/** Where the shop and cart pages live, and whether a customer or a rep (shopping for a customer) is using them. */
 export type ShopMode = { shopHref: string; cartHref: string; rep?: { pullOnline?: () => Promise<{ error?: string }>; onlineCount: number } };
 const CUSTOMER: ShopMode = { shopHref: "/shop", cartHref: "/shop/cart" };
 
@@ -25,7 +24,7 @@ const STATUS_WORDS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-/** The saved cart, changed optimistically and confirmed by the server (which also checks stock). */
+// optimistic updates, server has the final say (stock checks)
 function useCart(initial: CartRow[], actions: Actions) {
   const router = useRouter();
   const [rows, setRows] = useState<CartRow[]>(initial);
@@ -101,7 +100,6 @@ function CartButton({ count, onOpen }: { count: number; onOpen: () => void }) {
   );
 }
 
-/** For a rep: the customer has items in their own online cart; pull them into this one. */
 function OnlineCart({ mode, name }: { mode: ShopMode; name: string }) {
   const router = useRouter();
   const [busy, start] = useTransition();
@@ -132,7 +130,6 @@ function OnlineCart({ mode, name }: { mode: ShopMode; name: string }) {
 
 const priceFor = (i: CatalogItem, cashPct: number, pay: string | null) => (pay === "cash" && cashPct ? Math.round(i.price * (1 - cashPct / 100) * 100) / 100 : i.price);
 
-/** Shop: browse at your prices, Add saves to the cart on your account, the cart button slides the cart out, Buy again, past orders. */
 export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; orders: HistoryOrder[]; cart: CartRow[]; payment: string | null; actions: Actions; mode?: ShopMode }) {
   const c = useCart(cart, actions);
   const [q, setQ] = useState("");
@@ -343,7 +340,6 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
   );
 }
 
-/** The cart page: change amounts, save for later, and a live order summary they can check and print before placing the order. */
 export function CartView({ me, catalog, cart, payment, notes, actions, placed, placedId, error, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; cart: CartRow[]; payment: string | null; notes: string; actions: Actions; placed?: string; placedId?: string; error?: string; mode?: ShopMode }) {
   const c = useCart(cart, actions);
   const [pay, setPay] = useState<string>(payment ?? me.default_payment ?? "");

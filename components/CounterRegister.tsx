@@ -347,7 +347,7 @@ export function CounterRegister({
   );
 }
 
-/** Shop the stock without typing: category tabs, item tiles, a button per unit. Stays open so several things can be added. */
+// browse-by-category picker for the counter. stays open between adds
 function InventoryBrowser({
   open,
   onClose,

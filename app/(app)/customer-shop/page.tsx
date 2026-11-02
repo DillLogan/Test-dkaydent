@@ -7,7 +7,7 @@ import { repPlaceOrder, repPullOnline, repSaveCartDetails, repSetCartQty } from 
 
 type SP = Promise<Record<string, string | undefined>>;
 
-/** A rep's customer page: shop for a customer who calls or walks in, at their prices, with the same cart they'd see. */
+// rep shopping on behalf of a customer (phone / walk-in), at that customer's prices
 export default async function CustomerShopPage({ searchParams }: { searchParams: SP }) {
   const { c, error } = await searchParams;
   const { supabase, profile } = await requireRole("sales");

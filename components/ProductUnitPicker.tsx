@@ -14,7 +14,7 @@ export type PickerProduct = {
 };
 
 /**
- * Product → unit → quantity → price inputs for an order line.
+ * Product -> unit -> quantity -> price inputs for an order line.
  * Submits: product_id, unit_id, qty, and the field named by `priceName`.
  */
 export function ProductUnitPicker({

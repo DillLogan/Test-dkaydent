@@ -1,4 +1,4 @@
-/** Choices for "where inside a location": "Rack A (any shelf)", "Rack A · Shelf 2"…, as "sectionId::shelf" values. */
+/** Choices for "where inside a location": "Rack A (any shelf)", "Rack A · Shelf 2"..., as "sectionId::shelf" values */
 export function spotOptions(sections: { id: string; name: string; shelves: string[] | null }[]): { value: string; label: string }[] {
   return sections.flatMap((x) => [
     { value: `${x.id}::`, label: (x.shelves ?? []).length ? `${x.name} (any shelf)` : x.name },

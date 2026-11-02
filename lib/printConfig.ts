@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG: PrintConfig = {
 
 type Json = Record<string, unknown>;
 
-/** Fill any missing or wrong-typed setting from the defaults, so old or partial saves never break a printout. */
+/** Fill any missing or wrong-typed setting from the defaults, so old or partial saves never break a printout */
 export function mergeConfig(raw: unknown): PrintConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Json;
   const out: Json = {};
@@ -37,7 +37,7 @@ export function mergeConfig(raw: unknown): PrintConfig {
   return c;
 }
 
-/** Read the saved setting; any failure falls back to the defaults so printing always works. */
+/** Read the saved setting; any failure falls back to the defaults so printing always works */
 export async function loadPrintConfig(supabase: { from: (t: string) => any }): Promise<PrintConfig> {
   try {
     const { data } = await supabase.from("print_config").select("config").eq("id", 1).maybeSingle();

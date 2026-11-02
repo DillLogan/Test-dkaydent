@@ -1,4 +1,4 @@
-/* ---------- PDF viewer ---------- */
+/* PDF viewer */
 .pdfv { display: grid; gap: 12px; }
 .pdfv-bar { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--color-stone-200); border-radius: 14px; background: var(--color-white); }
 .pdfv-scroll { overflow: auto; border-radius: 14px; background: color-mix(in srgb, var(--color-stone-200) 70%, transparent); padding: 12px; }
@@ -10,7 +10,7 @@
 .pdfv-modal-body { overflow: auto; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: reduce) { .pdfv-page, .pdfv-modal { animation: none; } }
 
-/* ---------- PDF layout designer ---------- */
+/* PDF layout designer */
 .pdfd-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .pdfd-tab { position: relative; flex-shrink: 0; border: 1px solid var(--color-stone-200); background: var(--color-white); color: inherit; border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; transition: background-color .18s, color .18s, border-color .18s; }
 .pdfd-tab.on { background: var(--color-brand-700); border-color: var(--color-brand-700); color: var(--color-white); }

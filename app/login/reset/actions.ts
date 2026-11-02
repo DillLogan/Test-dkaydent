@@ -16,7 +16,6 @@ function checkPasswords(path: string, fd: FormData) {
   return next;
 }
 
-/** From the emailed link. */
 export async function resetWithToken(fd: FormData) {
   const hash = str(fd, "token_hash") ?? "";
   const path = `/login/reset?token_hash=${encodeURIComponent(hash)}`;
@@ -30,7 +29,7 @@ export async function resetWithToken(fd: FormData) {
   redirect(`/login?message=${encodeURIComponent(OK)}`);
 }
 
-/** After sales or admin approved the request. */
+// approved-by-sales path (no email on file)
 export async function resetApproved(fd: FormData) {
   const path = "/login/reset";
   const typed = str(fd, "username");

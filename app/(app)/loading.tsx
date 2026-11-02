@@ -1,4 +1,4 @@
-/** Shown while a page loads: soft shimmering placeholders in the page's shape. */
+// skeleton while the page streams in
 export default function Loading() {
   return (
     <div aria-busy="true" aria-label="Loading" className="space-y-6">

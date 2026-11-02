@@ -1,4 +1,4 @@
-/** Checks for Word editor documents (ported from the BrightStar CRM handoff). Each person's documents are private (RLS). */
+// validation for word editor docs (RLS keeps them per owner)
 export const LIST_COLS = "id, title, word_count, created_at, updated_at";
 const MAX_CONTENT_CHARS = 4_000_000;
 const MAX_DIARY = 5000;

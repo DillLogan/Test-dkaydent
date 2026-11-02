@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * The web store posts updates here as they happen:
- *   POST /api/web-store/webhook?type=inventory   (stock counts)
- *   POST /api/web-store/webhook?type=order       (a new, changed or cancelled order)
- * The body is the website's own JSON; Settings → Web store maps its fields.
+ *  POST /api/web-store/webhook?type=inventory (stock counts)
+ *  POST /api/web-store/webhook?type=order (a new, changed or cancelled order)
+ * The body is the website's own JSON; Settings -> Web store maps its fields.
  * Signed with the webhook secret: "X-Signature: sha256=<hex HMAC-SHA256 of the raw body>".
  * Needs SUPABASE_SERVICE_ROLE_KEY. WEBSTORE_WEBHOOK_SECRET, if set, overrides the secret saved in Settings.
  */

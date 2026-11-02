@@ -4,7 +4,7 @@ import type { CatalogItem, HistoryOrder } from "@/components/Cart";
 export type CartRow = { unit_id: string; qty: number; saved: boolean; added_at: string };
 export type ShopMe = { customer_id: string; name: string; rep: string | null; default_payment: string | null; cash_discount_pct: number; card_fee_pct?: number };
 
-/** Everything the customer's shop pages need: who they are, what they can buy at their prices, their saved cart and past orders. */
+/** Everything the customer's shop pages need: who they are, what they can buy at their prices, their saved cart and past orders */
 export async function loadShop(supabase: SupabaseClient) {
   const [{ data: me }, { data: catalog }, { data: orders }, { data: items }, { data: cart }] = await Promise.all([
     supabase.rpc("portal_me"),

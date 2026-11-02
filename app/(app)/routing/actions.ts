@@ -7,7 +7,6 @@ import { dbMessage } from "@/lib/forms";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-/** Save the day's stop order for one shop. */
 export async function saveRoute(input: {
   date: string;
   layoutId: string;
@@ -38,7 +37,7 @@ export async function saveRoute(input: {
   return { ok: true };
 }
 
-/** Cache coordinates the browser looked up with Google Geocoding. */
+// browser does the geocoding, we just cache it
 export async function saveGeocodes(rows: { address: string; lat: number; lng: number; formatted?: string | null }[]): Promise<Result> {
   const { supabase } = await getSession();
   const clean = rows
@@ -53,7 +52,6 @@ export async function saveGeocodes(rows: { address: string; lat: number; lng: nu
 
 export type ScannedStop = { id: string; number: string; customer: string; address: string; status: string; ships: string | null };
 
-/** Turn a scanned invoice or order number into a route stop. */
 export async function scanRouteOrder(raw: string): Promise<{ ok: true; order: ScannedStop } | { ok: false; error: string }> {
   const { supabase, profile } = await getSession();
   if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };

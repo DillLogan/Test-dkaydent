@@ -2,9 +2,9 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type PDFIm
 import { code128 } from "./code128";
 import type { Column, DocData, El, LabelSheet, Row, Template } from "./types";
 
-/* ------------------------------------------------------------------ helpers */
+// helpers
 
-/** The standard PDF fonts only know Windows-1252 characters; swap or drop the rest so text never fails. */
+// The standard PDF fonts only know Windows-1252 characters; swap or drop the rest so text never fails
 const WIN = new Set<number>([
   ...Array.from({ length: 95 }, (_, i) => 32 + i),
   ...Array.from({ length: 96 }, (_, i) => 160 + i),
@@ -48,7 +48,7 @@ function hex(c: string | undefined, d = "#111111") {
 type Fonts = { reg: PDFFont; bold: PDFFont; ital: PDFFont; mono: PDFFont; monoBold: PDFFont };
 const pick = (f: Fonts, o: { bold?: boolean; mono?: boolean; italic?: boolean }) => (o.mono ? (o.bold ? f.monoBold : f.mono) : o.bold ? f.bold : o.italic ? f.ital : f.reg);
 
-/** Break text into lines that fit the width (long words are cut). */
+/** Break text into lines that fit the width (long words are cut) */
 export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const out: string[] = [];
   for (const para of winAnsi(text).split("\n")) {
@@ -72,7 +72,7 @@ export function wrap(text: string, font: PDFFont, size: number, width: number): 
   return out;
 }
 
-/* ------------------------------------------------------------------ drawing */
+// drawing
 
 type Ctx = { doc: PDFDocument; f: Fonts; sx: number; sy: number; fs: number; H: number; images: Map<string, PDFImage> };
 
@@ -117,7 +117,7 @@ async function imageOf(ctx: Ctx, src: string) {
   }
 }
 
-/** One element (not the table) at a page position (already scaled). */
+// One element (not the table) at a page position (already scaled)
 async function drawEl(ctx: Ctx, page: PDFPage, el: El, fields: Record<string, unknown>, x: number, y: number, extra: Record<string, string>) {
   const w = el.w * ctx.sx, h = el.h * ctx.sy;
   const color = el.color;
@@ -165,7 +165,7 @@ async function drawEl(ctx: Ctx, page: PDFPage, el: El, fields: Record<string, un
 
 const visible = (el: El, fields: Record<string, unknown>) => !el.hidden && (!el.when || shown(getField(fields, el.when)));
 
-/* ------------------------------------------------------------------ tables */
+// tables
 
 function colsOf(el: El, W: number) {
   const cols = (el.columns || []).filter((c) => !c.hidden);
@@ -215,7 +215,7 @@ function drawRow(ctx: Ctx, page: PDFPage, cols: ReturnType<typeof colsOf>, row: 
   page.drawLine({ start: { x, y: ctx.H - y - h }, end: { x: x + W, y: ctx.H - y - h }, thickness: 0.5 * ctx.fs, color: hex("#e7e5e4") });
 }
 
-/* ------------------------------------------------------------------ documents */
+// documents
 
 async function fonts(doc: PDFDocument): Promise<Fonts> {
   const [reg, bold, ital, mono, monoBold] = await Promise.all([
@@ -228,7 +228,7 @@ async function fonts(doc: PDFDocument): Promise<Fonts> {
   return { reg, bold, ital, mono, monoBold };
 }
 
-/** Lay out one copy of a document into doc (adds pages). Returns the pages it made. */
+// Lay out one copy of a document into doc (adds pages). Returns the pages it made.
 async function layoutCopy(doc: PDFDocument, f: Fonts, t: Template, data: DocData, extra: Record<string, string>, size?: { w: number; h: number }) {
   const W = size?.w ?? t.page.w, H = size?.h ?? t.page.h;
   const ctx: Ctx = { doc, f, sx: W / t.page.w, sy: H / t.page.h, fs: Math.min(W / t.page.w, H / t.page.h), H, images: new Map() };
@@ -274,7 +274,7 @@ async function layoutCopy(doc: PDFDocument, f: Fonts, t: Template, data: DocData
   } else {
     end = 0;
   }
-  // things placed after the table (totals, signatures…): move to a new page if they don't fit
+  // things placed after the table (totals, signatures...): move to a new page if they don't fit
   const after = els.filter((e) => e.type !== "table" && e.type !== "pagenum" && e.flow === "after");
   if (after.length) {
     const need = Math.max(...after.map((e) => (e.y + e.h) * ctx.sy));
@@ -306,7 +306,7 @@ export async function renderDoc(t: Template, data: DocData, meta: { title?: stri
   return doc.save();
 }
 
-/** Labels: one page per label at the label's size, or laid out on letter/A4 paper with cut lines. */
+/** Labels: one page per label at the label's size, or laid out on letter/A4 paper with cut lines */
 export async function renderLabels(t: Template, labels: Record<string, unknown>[], sheet: LabelSheet, meta: { title?: string } = {}): Promise<Uint8Array> {
   const W = sheet.w * 72, H = sheet.h * 72;
   const one = await PDFDocument.create();

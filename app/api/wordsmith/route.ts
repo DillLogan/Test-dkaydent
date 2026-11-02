@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readJson, staffOrError } from "@/lib/apiAuth";
 import { BadInput, cleanDoc, LIST_COLS } from "@/lib/wordsmith";
 
-/** My documents: list, and create one. Staff only; each person sees only their own. */
+// RLS keeps these per-owner
 export async function GET() {
   const a = await staffOrError();
   if (!a.ok) return a.res;

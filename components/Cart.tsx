@@ -40,7 +40,7 @@ const STATUS_WORDS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-/** Browse items, build a cart, send it to a server action that works out the real prices. */
+// prices shown here are only for display, the server action recalculates
 export function Cart({
   items,
   action,
@@ -59,7 +59,7 @@ export function Cart({
   extra?: (item: CatalogItem) => React.ReactNode;
   /** Customer's usual payment and cash discount. Omit to hide the payment choice. */
   payment?: { usual: string | null; cashPct: number };
-  /** Past orders, with a button to order the same again. */
+  /** Past orders, with a button to order the same again */
   history?: HistoryOrder[];
 }) {
   const [pay, setPay] = useState<string>(payment?.usual ?? "");

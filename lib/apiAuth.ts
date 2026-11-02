@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/roles";
 
-/** For API routes: the signed-in staff member (any role but customer), or a JSON error response. */
+/** For API routes: the signed-in staff member (any role but customer), or a JSON error response */
 export async function staffOrError(): Promise<
   { ok: true; supabase: Awaited<ReturnType<typeof createClient>>; profile: Profile } | { ok: false; res: NextResponse }
 > {

@@ -16,7 +16,7 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "orders_manager", label: "Delivery/Order Management", description: "Checks pulled orders, marks them completed, invoices, builds delivery routes" },
 ];
 
-/** Customer logins are set up on the Customer logins page, so they are not in the staff role list above. */
+/** Customer logins are set up on the Customer logins page, so they are not in the staff role list above */
 export const CUSTOMER_LABEL = "Customer";
 
 /** Admin always passes. With no roles listed, only admin passes. */

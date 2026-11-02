@@ -195,7 +195,7 @@ export function verifySignature(raw: string, header: string | null, secret: stri
 
 export type SyncResult = { kind: "inventory" | "orders"; ok: boolean; summary?: any; error?: string };
 
-/** Apply mapped data through the database functions, logging failures to the sync history. */
+/** Apply mapped data through the database functions, logging failures to the sync history */
 export async function applyInventory(db: SupabaseClient, rows: InventoryRow[], source: "webhook" | "pull" | "manual"): Promise<SyncResult> {
   const { data, error } = await db.rpc("web_store_apply_inventory", { p_items: rows, p_source: source });
   if (error) {
@@ -236,7 +236,7 @@ async function fetchJson(url: string, apiKey: string | null) {
   }
 }
 
-/** Pull inventory and new orders from the website's URLs. */
+/** Pull inventory and new orders from the website's URLs */
 export async function pullFromWebsite(db: SupabaseClient, source: "pull" | "manual"): Promise<SyncResult[]> {
   const { data: cfg, error } = await db.rpc("web_store_config");
   if (error || !cfg) throw new Error(error?.message || "Web store isn't set up.");

@@ -38,7 +38,6 @@ export function PdfViewer({
   const buildRef = useRef(build);
   buildRef.current = build;
 
-  // make the PDF
   useEffect(() => {
     let off = false;
     setBusy(true);
@@ -191,7 +190,7 @@ export function PdfViewer({
   );
 }
 
-/** The viewer over the page, for things printed from a screen (route sheet, designer preview). */
+// modal version (route sheet, designer preview)
 export function PdfModal({ open, onClose, title, ...rest }: { open: boolean; onClose: () => void; title: string } & React.ComponentProps<typeof PdfViewer>) {
   useEffect(() => {
     if (!open) return;

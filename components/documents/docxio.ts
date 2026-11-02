@@ -1,7 +1,9 @@
-// @ts-nocheck — ported as-is from the BrightStar CRM handoff (Word .docx import/export)
-/* Word (.docx) import and export for Wordsmith. Both run in the browser;
-   the `docx` and `mammoth` libraries load only when used.
-   Diary highlights are not exported — the file holds the writing only. */
+// @ts-nocheck
+/*
+ * Word (.docx) import and export for Wordsmith. Both run in the browser;
+ * the `docx` and `mammoth` libraries load only when used.
+ * Diary highlights are not exported, the file holds the writing only.
+ */
 
 const PT_PER_PX = 0.75;
 function halfPoints(size) {
@@ -139,7 +141,7 @@ export async function exportDocx(json, title) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-/* Read a .docx in the browser and return HTML (images are dropped). */
+// images are dropped
 export async function importDocxHtml(file) {
   const mod = await import("mammoth/mammoth.browser.min.js");
   const mammoth = mod.default || mod;

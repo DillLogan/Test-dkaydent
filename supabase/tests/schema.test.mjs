@@ -12,7 +12,7 @@ const expectErr = async (s, p, frag, m) => {
   throw new Error("FAIL: expected error: " + m);
 };
 
-// Supabase stubs
+// minimal stand-ins for the supabase bits the migrations use
 await db.exec(`
   create role authenticated; create role anon;
   create schema auth;
@@ -137,7 +137,7 @@ ok(i.invoice_number === "INV-1001" && Number(i.total) === 214 && Number(i.tax) =
 ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "invoiced", "SO invoiced");
 await expectErr(`select create_invoice($1, 0)`, [so.id], "Only completed", "no double invoice");
 
-// ---------- Returns & credits ----------
+// Returns & credits
 // so: 10 bunch (250 stems) @ $20/bunch, all from $0.50 lots, invoiced at 7%
 const soLine = (await one(`select id from sales_order_lines where so_id=$1`, [so.id])).id;
 const lotQtyBefore = Number((await one(`select sum(qty_on_hand_base) q from lots where product_id=$1`, [rose])).q);
@@ -163,7 +163,7 @@ await expectErr(`update returns set total = 0 where id=$1`, [ret], "credit statu
 await q(`update returns set credit_status='applied' where id=$1`, [ret]);
 ok(true, "credit can be marked applied");
 
-// ---------- Invoice void & re-invoice ----------
+// Invoice void & re-invoice
 await expectErr(`update invoices set status='void' where id=$1`, [inv], "Use Void invoice", "can't void by direct update");
 await q(`select void_invoice($1)`, [inv]);
 ok((await one(`select status from sales_orders where id=$1`, [so.id])).status === "completed", "void sends order back to completed");
@@ -173,7 +173,7 @@ await expectErr(`update invoices set status='open' where id=$1`, [inv], "cannot 
 await q(`update invoices set status='paid', paid_at=current_date where id=$1`, [inv2]);
 await expectErr(`select void_invoice($1)`, [inv2], "Only open", "paid invoice can't be voided");
 
-// ---------- Hand-picked lots ----------
+// Hand-picked lots
 const lot60 = (await one(`select id from lots where product_id=$1 and unit_cost_base > 0.55 and qty_on_hand_base > 0`, [rose])).id;
 const soP = (await one(`insert into sales_orders (customer_id) values ($1) returning id`, [cust])).id;
 const pl = (await one(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,2,20) returning id`, [soP, rose, bunch.id])).id;
@@ -185,7 +185,7 @@ await q(`select fulfill_sales_order($1, $2::jsonb)`, [soP, JSON.stringify([{ so_
 const pc = await one(`select cost_total from sales_order_lines where id=$1`, [pl]);
 ok(Math.abs(Number(pc.cost_total) - 30) < 1e-9, "hand-picked newer $0.60 lot instead of FIFO ($30 cost)");
 
-// ---------- Category rules ----------
+// Category rules
 const cat = async (n) => (await one(`select * from categorize($1)`, [n])) || {};
 ok((await cat("Rose Freedom 60cm")).category === "Roses", "categorize: rose → Roses");
 ok((await cat("Spray Rose Majolika")).category === "Spray Roses", "categorize: longest keyword wins (spray rose)");
@@ -195,7 +195,7 @@ ok((await cat("Oriental Lilies Mixed")).category === "Lilies", "categorize: plur
 ok(!(await cat("Mystery Stem")).category, "categorize: no match → none");
 ok(!(await cat("Primrose Yellow")).category, "categorize: matches word starts only (primrose ≠ rose)");
 
-// ---------- CSV stock batch ----------
+// CSV stock batch
 const lotsBefore = Number((await one(`select count(*) n from lots`)).n);
 const batch = [
   { sku: "ro-fre-60", unit: "box", qty: 2, unit_cost: 110, location: "cooler 1" },
@@ -218,7 +218,7 @@ await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: 
 await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Attic" }])], "Attic", "batch: unknown location rejected");
 ok(lotsMid - lotsBefore === 3, "batch: lot count");
 
-// ---------- Receiving: shipments + standing orders ----------
+// Receiving: shipments + standing orders
 {
   const plus = async (n) => (await one(`select (current_date + $1::int)::text d`, [n])).d;
   await expectErr(`insert into shipments (eta) values (current_date + 400)`, [], "one year out", "ETA limited to one year out");
@@ -294,7 +294,7 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   ok((await one(`select generate_standing_orders($1) n`, [m])).n === 3, "monthly with end date: 3 occurrences");
 }
 
-// ---------- Payments, counter sales, Valor terminals ----------
+// Payments, counter sales, Valor terminals
 {
   const term = (await one(`insert into payment_terminals (name, model, epi, serial_no) values ('Counter VP800', 'VP800', '2501357713', 'SN800') returning id`)).id;
   await expectErr(`insert into payment_terminals (name, model, epi) values ('X', 'Z9', 'E1')`, [], "check", "unknown terminal model rejected");
@@ -361,7 +361,7 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   await expectErr(`select import_terminal_txn($1::jsonb)`, [JSON.stringify({ txn_id: "VAL-9003", amount: 5 })], "no matching invoice", "unmatched, unitemized txn rejected");
 }
 
-// ---------- Recurring sales orders ----------
+// Recurring sales orders
 {
   const tierRow = await one(`select c.price_tier_id t, pt.markup_pct m from customers c left join price_tiers pt on pt.id = c.price_tier_id where c.id=$1`, [cust]);
   const rs = (await one(`insert into recurring_sales (name, customer_id, cadence, start_date) values ('Weekly shop roses', $1, 'weekly', current_date + 2) returning id`, [cust])).id;
@@ -392,7 +392,7 @@ ok(lotsMid - lotsBefore === 3, "batch: lot count");
   ok((await one(`select set_recurring_sale_state($1,'resume') n`, [rs])).n === removed, "recurring: resume plans them again");
 }
 
-// ---------- Floor plan, home areas, photos ----------
+// Floor plan, home areas, photos
 const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
 const main = (await one(`select id, aspect from shop_layouts where name='Main shop'`));
 ok(Number(main.aspect) === 1.6, "existing plan became the Main shop layout");
@@ -440,7 +440,7 @@ await as(sales);
 await expectErr(`select receive_po($1, '[]')`, [po2], "Not authorized", "sales cannot receive");
 await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not authorized", "sales cannot transfer");
 
-// ---------- Web store connection ----------
+// Web store connection
 {
   await as(admin);
   const lot = (name) => one(`select coalesce(sum(qty_on_hand_base),0)::numeric q from lots l join products p on p.id=l.product_id where p.sku=$1`, [name]);
@@ -484,7 +484,7 @@ await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not aut
   await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', false)`);
   await q(`select web_store_apply_inventory($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: before - 50 }])]);
   ok(Number((await lot("RO-FRE-60")).q) === before - 50 + 50, "open web orders are added back on top of the website count");
-  // unmatched SKU → order waits as a draft
+  // unmatched SKU -> order waits as a draft
   const r3 = (await one(`select web_store_upsert_order($1::jsonb) r`, [JSON.stringify({ external_id: "5002", lines: [{ sku: "MYSTERY", qty: 1 }, { sku: "HY-WHT", qty: 5 }] })])).r;
   ok(r3.result === "needs_review" && (await one(`select status from sales_orders where id=$1`, [r3.so_id])).status === "draft", "unmatched SKU leaves the web order as a draft to review");
   // cancelled on the website
@@ -636,7 +636,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
-// ---- customer shopping login ----
+// customer shopping login
 {
   await db.exec(`reset role`);
   const cu = "00000000-0000-0000-0000-0000000000c1", s2 = "00000000-0000-0000-0000-0000000000c2", cu2 = "00000000-0000-0000-0000-0000000000c3";
@@ -740,7 +740,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
-// ---- order workflow: returned to sales, restock on edit, label count ----
+// order workflow: returned to sales, restock on edit, label count
 {
   await as(admin);
   const sku = await one(`select u.id unit_id, u.product_id, u.factor from product_units u join products p on p.id=u.product_id
@@ -769,7 +769,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Number((await one(`select label_count from sales_orders where id=$1`, [wso])).label_count) === 3, "label count saved");
 }
 
-// ---- password reset requests and printouts config ----
+// password reset requests and printouts config
 {
   await as(admin);
   const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
@@ -801,7 +801,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- password hints ----
+// password hints
 {
   await as(admin);
   const cu = (await one(`select profile_id from portal_accounts limit 1`)).profile_id;
@@ -824,7 +824,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- sections and shelves ----
+// sections and shelves
 {
   await as(admin);
   const c1 = (await one(`select id, layout_id from locations where name='Cooler 1'`));
@@ -868,7 +868,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- documents and signing ----
+// documents and signing
 {
   await as(admin);
   await db.exec(`set role authenticated`);
@@ -896,7 +896,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- knowledge base articles ----
+// knowledge base articles
 {
   await q(`update profiles set active=true, role='sales' where id=$1`, [sales]);
   await as(sales);
@@ -934,7 +934,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- customer cart saved on the account ----
+// customer cart saved on the account
 {
   const pa = await one(`select profile_id, customer_id from portal_accounts limit 1`);
   const cu = pa.profile_id;
@@ -982,7 +982,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
 }
 
 
-// ---- rep shopping for a customer ----
+// rep shopping for a customer
 {
   const pa = await one(`select profile_id, customer_id from portal_accounts limit 1`);
   await as(pa.profile_id);
@@ -1012,7 +1012,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await db.exec(`reset role`);
 }
 
-// ---- receiving puts stock on a section and shelf ----
+// receiving puts stock on a section and shelf
 {
   await as(admin);
   const c1 = await one(`select id, layout_id from locations where name='Cooler 1'`);
@@ -1039,7 +1039,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await q(`select set_home_location($1,$2,null)`, [rP, c1.layout_id]);
 }
 
-// ---- card processing fee ----
+// card processing fee
 {
   await as(admin);
   await q(`update app_settings set card_fee_pct = 2.5`);
@@ -1095,7 +1095,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok(Number((await one(`select card_fee_pct from app_settings`)).card_fee_pct) === 2.5, "sales can't change the rate");
 }
 
-// ---- PDF layouts ----
+// PDF layouts
 {
   await as(admin);
   await db.exec(`set role authenticated`);
@@ -1111,7 +1111,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await one(`select layout from pdf_templates where doc='pull'`)).layout.elements !== undefined, "staff can't change layouts");
 }
 
-// ---- Direct ship ----
+// Direct ship
 {
   await as(admin);
   const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
@@ -1123,7 +1123,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   const other = (await one(`insert into customers (name, address) values ('Other Shop','3 Oak St') returning id`)).id;
   await q(`insert into customer_prices (customer_id, product_unit_id, price) values ($1,$2,55)`, [cust, bx]);
 
-  // standing order with a direct-ship customer → generated POs carry it
+  // standing order with a direct-ship customer -> generated POs carry it
   const sto = (await one(`insert into standing_orders (name, vendor_id, cadence, start_date, direct_customer_id) values ('DS weekly',$1,'weekly',current_date + 2,$2) returning id`, [v, cust])).id;
   await q(`insert into standing_order_lines (standing_order_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,3,20)`, [sto, pid, bx]);
   await q(`select generate_standing_orders($1)`, [sto]);
@@ -1137,7 +1137,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   const pl = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,1,20) returning id`, [plain, pid, bx])).id;
   await expectErr(`select receive_po_to_customer($1,$2::jsonb)`, [plain, JSON.stringify([{ line_id: pl, qty: 1, location_id: c1 }])], "isn't a direct-ship order", "only direct-ship POs go to a customer order");
 
-  // first PO: 3 boxes due, 2 arrive → customer order for 2 boxes at their price, stock held
+  // first PO: 3 boxes due, 2 arrive -> customer order for 2 boxes at their price, stock held
   const po = gen[0].id;
   await q(`update purchase_orders set status='ordered' where id=$1`, [po]);
   const line = (await one(`select id from purchase_order_lines where po_id=$1`, [po])).id;
@@ -1156,7 +1156,7 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await expectErr(`select fulfill_sales_order($1)`, [so2], "Not enough stock", "oldest-first skips stock held for another order");
   await expectErr(`select fulfill_sales_order($1,$2::jsonb)`, [so2, JSON.stringify([{ so_line_id: l2, lot_id: held.id, qty_base: 5 }])], "held for another order", "hand-picking a held lot is refused");
 
-  // the rest arrives later → always a new order
+  // the rest arrives later -> always a new order
   const soB = (await one(`select receive_po_to_customer($1,$2::jsonb) id`, [po, JSON.stringify([{ line_id: line, qty: 1, location_id: c1 }])])).id;
   ok(soB !== soId && (await one(`select count(*)::int n from sales_orders where from_po_id=$1`, [po])).n === 2, "each receipt makes its own order");
   ok((await one(`select status from purchase_orders where id=$1`, [po])).status === "received", "PO fully received");

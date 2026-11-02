@@ -1,5 +1,5 @@
 -- =====================================================================
--- DKaydent Wholesale — initial schema
+-- DKaydent Wholesale, initial schema
 -- Purchasing, inventory (lots / locations / movements), sales,
 -- invoicing, reporting views, roles and row-level security.
 --

@@ -7,7 +7,6 @@ import { Empty, PageHeader } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }> };
 
-/** One label per box: shop name, ship-to address, route and "Box x of y", with the order's barcode. */
 export default async function BoxLabelsPage({ params }: Props) {
   const { id } = await params;
   const { supabase } = await getSession();

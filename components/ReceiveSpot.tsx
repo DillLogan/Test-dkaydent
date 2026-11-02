@@ -8,7 +8,7 @@ export type SpotHome = { location_id: string; section_id: string | null; shelf: 
 
 const key = (h?: SpotHome | null) => (h && h.section_id ? `${h.section_id}::${h.shelf ?? ""}` : "");
 
-/** Location, then section and shelf inside it, for one line being received. The spot starts at the item's usual spot in that location. */
+// starts at the item's usual spot for whatever location is picked
 export function ReceiveSpot({
   lineId,
   name,

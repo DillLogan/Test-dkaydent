@@ -21,7 +21,7 @@ export const STOCK_COLUMNS: { key: string; required?: boolean; help: string }[] 
   { key: "lot_code", help: "Farm or box code (default: generated)" },
 ];
 
-/** Accept common spreadsheet headings. */
+// Accept common spreadsheet headings
 const ALIASES: Record<string, string> = {
   item: "name", product: "name", item_name: "name", product_name: "name", description: "name",
   quantity: "qty", count: "qty", cost: "unit_cost", price: "unit_cost", unit_price: "unit_cost", cost_per_unit: "unit_cost",
@@ -33,7 +33,7 @@ export const normalizeHeader = (h: string) => {
   return ALIASES[k] ?? k;
 };
 
-/** "boxes" → "box", "bunches" → "bunch", "cases" → "case" when the singular is a known unit. */
+// "boxes" -> "box", "bunches" -> "bunch", "cases" -> "case" when the singular is a known unit
 function normalizeUnit(u: string, known: string[]) {
   if (known.includes(u)) return u;
   for (const cut of ["es", "s"]) if (u.endsWith(cut) && known.includes(u.slice(0, -cut.length))) return u.slice(0, -cut.length);
@@ -92,7 +92,6 @@ export function validateStockRows(
     if (kindRaw && !["flower", "hard_good"].includes(kindRaw)) errors.push('kind must be "flower" or "hard_good"');
     const kind = (["flower", "hard_good"].includes(kindRaw) ? kindRaw : rule?.kind ?? "flower") as StockRow["kind"];
 
-    // Units
     const baseUnit = known?.baseUnit ?? earlierNew?.baseUnit ?? ((r.base_unit ?? "").trim().toLowerCase() || (kind === "hard_good" ? "each" : "stem"));
     let packUnits: { name: string; factor: number }[] = [];
     if (isNew && !earlierNew) {

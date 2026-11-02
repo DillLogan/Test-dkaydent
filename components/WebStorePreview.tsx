@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 
 type Res = { error?: string; inventory?: { rows: { sku: string; qty: number }[]; problems: string[] }; orders?: { orders: any[]; problems: string[] } };
 
-/** Paste a sample of what the website sends and see how it will be read. Changes nothing. */
 export function WebStorePreview({ preview }: { preview: (kind: "inventory" | "orders", sample: string) => Promise<Res> }) {
   const [kind, setKind] = useState<"inventory" | "orders">("inventory");
   const [sample, setSample] = useState("");

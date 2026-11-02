@@ -8,7 +8,6 @@ import { repPlaceOrder, repPullOnline, repSaveCartDetails, repSetCartQty } from 
 
 type SP = Promise<Record<string, string | undefined>>;
 
-/** The rep's cart for a customer, with the live order summary to read back to them or print. */
 export default async function CustomerCartPage({ searchParams }: { searchParams: SP }) {
   const { c, error, placed, so } = await searchParams;
   if (!c) redirect("/customer-shop");

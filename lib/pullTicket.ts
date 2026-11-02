@@ -55,7 +55,7 @@ const byText = (a: string, b: string) => a.localeCompare(b, undefined, { numeric
 export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts: { id: string; name: string }[]): Ticket {
   const used = new Map<string, number>();
   const ordered = [...lots].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt) || a.createdAt.localeCompare(b.createdAt));
-  // shop → section → rows
+  // shop -> section -> rows
   const tree = new Map<string, Map<string, TicketRow[]>>();
   const short: TicketRow[] = [];
 
@@ -100,7 +100,7 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
   return { shops, short };
 }
 
-/** "2 box · 50 stem" — the order's unit first, base units when they differ. */
+/** "2 box · 50 stem", the order's unit first, base units when they differ */
 export function ticketQty(r: Pick<TicketRow, "base" | "baseUnit" | "unitName" | "factor">): string {
   const f = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
   if (r.factor === 1 || r.unitName === r.baseUnit) return `${f(r.base)} ${r.baseUnit}`;

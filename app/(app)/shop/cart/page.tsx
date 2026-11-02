@@ -7,7 +7,6 @@ import { placeOrder, saveCartDetails, setCartQty } from "../actions";
 
 type SP = Promise<Record<string, string | undefined>>;
 
-/** The cart and its live order summary (what the order will come to), saved on the customer's account. */
 export default async function CartPage({ searchParams }: { searchParams: SP }) {
   const { error, placed } = await searchParams;
   const { supabase } = await getSession();

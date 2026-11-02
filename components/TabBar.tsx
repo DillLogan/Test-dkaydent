@@ -78,7 +78,7 @@ export function TabIconSvg({ name }: { name: TabIcon | "menu" }) {
   );
 }
 
-/** Amazon-app style tabs along the bottom, only in Mobile mode. Menu opens the full menu. */
+// mobile mode only
 export function TabBar({ tabs, active, menuOpen, onMenu }: { tabs: Tab[]; active: string | undefined; menuOpen: boolean; onMenu: () => void }) {
   const isOn = (href: string) => !menuOpen && (href === "/" ? active === "/" : active === href || (active ?? "").startsWith(href + "/"));
   return (
@@ -102,7 +102,6 @@ export function TabBar({ tabs, active, menuOpen, onMenu }: { tabs: Tab[]; active
   );
 }
 
-/** "Desktop site" in Mobile mode; "Mobile site" in PC mode on a phone. */
 export function ViewSwitch() {
   const [state, setState] = useState<{ mobile: boolean; phone: boolean } | null>(null);
   useEffect(() => {

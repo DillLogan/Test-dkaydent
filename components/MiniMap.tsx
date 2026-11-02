@@ -5,7 +5,6 @@ import { centroid, toSvg, type Pt } from "@/lib/shapes";
 export type MapArea = { id: string; name: string; x: number; y: number; w: number; h: number; color: string; points: Pt[] };
 export type MapMark = "home" | "here" | "both";
 
-/** Static view of a shop's floor plan with some areas marked. */
 export function MiniMap({
   aspect,
   background,

@@ -20,7 +20,7 @@ type Req = {
 const when = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
 
 /**
- * Documents to sign (ported from the BrightStar CRM handoff): upload a PDF, mark where people sign or type,
+ * Documents to sign : upload a PDF, mark where people sign or type,
  * send it to an email, and track what came back signed. Sent from the signed-in account's email.
  */
 export function SignaturesView({ senderEmail }: { senderEmail: string | null }) {

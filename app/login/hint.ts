@@ -5,7 +5,7 @@ import { loginEmail } from "@/lib/username";
 
 const NONE = "No hint has been set for this login.";
 
-/** The hint for a customer login. Same answer for unknown usernames and logins without a hint. */
+// unknown user and no-hint look identical on purpose
 export async function passwordHint(typed: string): Promise<string> {
   const t = String(typed ?? "").trim().slice(0, 200);
   const admin = createServiceClient();

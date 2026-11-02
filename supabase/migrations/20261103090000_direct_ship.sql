@@ -94,7 +94,7 @@ create trigger purchase_orders_settle_shipment after update on purchase_orders
   for each row execute function po_settle_shipment();
 
 -- ---------------------------------------------------------------------
--- Direct ship → customer order
+-- Direct ship -> customer order
 -- ---------------------------------------------------------------------
 
 -- The customer's order for one receipt of a direct-ship PO: a line per lot

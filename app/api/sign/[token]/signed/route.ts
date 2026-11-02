@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requestByToken, signedBytes, signerCheck } from "@/lib/signatures";
 
-/** Public, link + signer gated: the signed PDF, with its certificate page. */
+// public (token + signer check)
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const r = await requestByToken(token);

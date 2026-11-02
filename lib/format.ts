@@ -5,13 +5,13 @@ const usd4 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD"
 const qtyFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 export const money = (n: unknown) => usd.format(Number(n ?? 0));
-/** For per-stem costs that need more precision. */
+/** For per-stem costs that need more precision */
 export const unitMoney = (n: unknown) => usd4.format(Number(n ?? 0));
 export const qty = (n: unknown) => qtyFmt.format(Number(n ?? 0));
 export const pct = (n: number | null | undefined) =>
   n === null || n === undefined || !Number.isFinite(n) ? "—" : `${(n * 100).toFixed(1)}%`;
 
-/** Date-only strings (YYYY-MM-DD) are shown as-is; timestamps in the app time zone. */
+/** Date-only strings (YYYY-MM-DD) are shown as-is; timestamps in the app time zone */
 export function date(d: string | null | undefined) {
   if (!d) return "—";
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -34,7 +34,7 @@ export function dateTime(d: string | null | undefined) {
   });
 }
 
-/** Today as YYYY-MM-DD in the app time zone. */
+/** Today as YYYY-MM-DD in the app time zone */
 export function today() {
   return new Date().toLocaleDateString("en-CA", { timeZone: TZ });
 }

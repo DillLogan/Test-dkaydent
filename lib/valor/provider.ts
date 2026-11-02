@@ -6,9 +6,9 @@ import { valorConnect } from "./connect";
  *
  * Two providers:
  * - "simulator" (default): no hardware. The screen shows a simulated terminal
- *   with Approve / Decline / Time out buttons.
+ *  with Approve / Decline / Time out buttons.
  * - "valor": Valor Connect (cloud to terminal). Turned on with VALOR_MODE=live
- *   plus VALOR_CONNECT_URL, VALOR_APP_ID and VALOR_APP_KEY from Valor.
+ *  plus VALOR_CONNECT_URL, VALOR_APP_ID and VALOR_APP_KEY from Valor.
  */
 export type TerminalInfo = { id: string; name: string; epi: string; serial_no: string | null; model: string };
 
@@ -68,7 +68,7 @@ export function getProvider(): TerminalProvider {
   return valorConfigured() ? valorConnect : simulator;
 }
 
-/** A believable approval from the simulator. */
+/** A believable approval from the simulator */
 export function simulatedApproval(amount: number, tip = 0): TerminalResult {
   const brands = ["Visa", "Mastercard", "Amex", "Discover"];
   const n = Math.floor(Math.random() * 1e9);

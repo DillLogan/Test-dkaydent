@@ -66,7 +66,7 @@ create table return_lines (
   qty             numeric not null check (qty > 0),   -- in the sale line's unit
   qty_base        numeric not null,
   restock         boolean not null,
-  credit          numeric not null,                   -- qty × sale price
+  credit          numeric not null,                   -- qty x sale price
   cost_total      numeric not null                    -- FIFO cost of the returned units
 );
 

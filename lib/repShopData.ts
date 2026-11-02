@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CatalogItem, HistoryOrder } from "@/components/Cart";
 import type { CartRow, ShopMe } from "./shopData";
 
-/** The customer page for a rep: the customer's prices, the rep's saved cart for them, their online cart and past orders. */
+/** The customer page for a rep: the customer's prices, the rep's saved cart for them, their online cart and past orders */
 export async function loadRepShop(supabase: SupabaseClient, repId: string, customerId: string) {
   const [{ data: c }, { data: catalog }, { data: items }, { data: cart }, { data: online }, { data: orders }] = await Promise.all([
     supabase.from("customers").select("id, name, default_payment, cash_discount_pct, profiles:rep_id(full_name, email)").eq("id", customerId).eq("active", true).maybeSingle(),

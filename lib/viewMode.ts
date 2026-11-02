@@ -1,10 +1,10 @@
 /**
  * Mobile and PC modes, like Amazon's app and desktop site.
  *  - Phones are told apart by a touch screen and a small physical screen, not by the width the browser
- *    reports, so a browser asking for the desktop site still gets Mobile mode.
+ *  reports, so a browser asking for the desktop site still gets Mobile mode.
  *  - Phones start in Mobile, everything else in PC. "Desktop site" / "Mobile site" switches it on this device.
  *  - Mobile: html.mobile turns the phone layout on at any width (see the sm/md/lg/xl variants in globals.css).
- *    If the browser still lays the page out at desktop width, the page is re-laid out at phone width with CSS zoom.
+ *  If the browser still lays the page out at desktop width, the page is re-laid out at phone width with CSS zoom.
  *  - PC on a phone: a 1200px-wide page the phone scales to fit and you can pinch, like a desktop site.
  */
 export const VIEW_KEY = "dk-view";
@@ -22,7 +22,7 @@ d.style.zoom=z>1.15?z.toFixed(3):""}
 vp();document.addEventListener("DOMContentLoaded",function(){vp();fit()});addEventListener("resize",fit);fit();
 }catch(e){}})();`;
 
-/** Switch modes on this device and reload so the page is laid out fresh. */
+/** Switch modes on this device and reload so the page is laid out fresh */
 export function setViewMode(mode: ViewMode) {
   try {
     localStorage.setItem(VIEW_KEY, mode);

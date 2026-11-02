@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_PRINT, LABEL_SIZES, PAPERS, readPrintSettings, savePrintSettings, withSize, type PrintSettings } from "@/lib/printSettings";
 
-/** Size picker shared by Settings and the print screen. */
 export function LabelSizeFields({ value, onChange }: { value: PrintSettings; onChange: (s: PrintSettings) => void }) {
   return (
     <div className="flex flex-wrap items-end gap-2">

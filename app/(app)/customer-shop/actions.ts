@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { dbMessage, fail } from "@/lib/forms";
 
-/** A rep's saved cart for one customer (bound to the customer on the page). */
 export async function repSetCartQty(customerId: string, unitId: string, qty: number, saved?: boolean) {
   const { supabase } = await requireRole("sales");
   const { data, error } = await supabase.rpc("rep_cart_set", { p_customer_id: customerId, p_unit_id: unitId, p_qty: Math.max(0, Math.floor(Number(qty) || 0)), p_saved: saved ?? null });
@@ -27,7 +26,7 @@ export async function repPullOnline(customerId: string) {
   return error ? { error: dbMessage(error) } : {};
 }
 
-/** Place the order for the customer, already approved (Ready to pull). */
+// rep orders skip approval and go straight to Ready to pull
 export async function repPlaceOrder(customerId: string) {
   const { supabase } = await requireRole("sales");
   const back = `/customer-shop/cart?c=${customerId}`;

@@ -3,7 +3,7 @@ import { readJson } from "@/lib/apiAuth";
 import { escHtml, sendMail } from "@/lib/mail";
 import { complete, requestByToken, signerCheck } from "@/lib/signatures";
 
-/** Public, link + signer gated. The IP and device are read here on the server, not reported by the page. */
+// public (token + signer check). IP/UA taken server side, not from the client
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const r = await requestByToken(token);

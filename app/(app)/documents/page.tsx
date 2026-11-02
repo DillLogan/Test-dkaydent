@@ -12,10 +12,9 @@ const TABS = [
   ["mine", "To sign"],
 ] as const;
 
-/** Documents: a Word-style editor (private to each person), PDF signing sent from your account, and what's waiting for your signature. */
 export default async function DocumentsPage({ searchParams }: { searchParams: SP }) {
   const { tab: tabParam } = await searchParams;
-  // every staff role; customers can't reach this page (they sign from the emailed link)
+  // customers never get here, they sign from the emailed link
   const { supabase, profile } = await requireRole("buyer", "warehouse", "sales", "orders_manager");
   const tab = TABS.some(([k]) => k === tabParam) ? tabParam! : "write";
   const { data: mine } =

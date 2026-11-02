@@ -7,7 +7,7 @@ import { str } from "@/lib/forms";
 
 const SAME = "If that username has a login, a reset link was sent, or your sales rep has been asked to approve a reset. Check back with them if you hear nothing.";
 
-/** Always answers the same way, so it cannot be used to find out which usernames exist. */
+// same response either way so it can't be used to probe usernames
 export async function requestReset(fd: FormData) {
   const typed = str(fd, "username");
   const admin = createServiceClient();

@@ -1,4 +1,4 @@
-/** Browser-side: shrink a photo before upload (phone photos are often 4–12 MB). */
+/** Browser-side: shrink a photo before upload (phone photos are often 4-12 MB) */
 export async function resizeImage(file: File, maxSide = 1400, quality = 0.84): Promise<{ blob: Blob; width: number; height: number }> {
   if (!file.type.startsWith("image/")) throw new Error("Choose an image file (JPEG, PNG, HEIC or WebP).");
   const bitmap = await createImageBitmap(file).catch(() => {

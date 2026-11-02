@@ -11,7 +11,7 @@ export const DOCS: { doc: DocType; label: string; hint: string }[] = [
 export const LETTER = { w: 612, h: 792 };
 const GRAY = "#57534e";
 
-/** The old show/hide switches from Customize printouts, used to start the layouts so nothing changes for existing setups. */
+/** The old show/hide switches from Customize printouts, used to start the layouts so nothing changes for existing setups */
 export type LegacyToggles = {
   invoice?: { showSku?: boolean; showNotes?: boolean; showBarcode?: boolean; showResale?: boolean };
   pull?: { showSku?: boolean; showLot?: boolean; showNotes?: boolean; showBarcode?: boolean; showLabelLine?: boolean };
@@ -133,7 +133,7 @@ function route(t: LegacyToggles["route"] = {}): Template {
   };
 }
 
-/** Item label, designed at 4 × 2 in; it scales to the label size in use. */
+// Item label, designed at 4 x 2 in; it scales to the label size in use
 function label(): Template {
   return {
     doc: "label", version: 1, page: { w: 288, h: 144 }, contTop: 0, bottom: 0,
@@ -149,7 +149,7 @@ function label(): Template {
   };
 }
 
-/** Box label, designed at 4 × 6 in; it scales to the label size in use. */
+// Box label, designed at 4 x 6 in; it scales to the label size in use
 function boxlabel(t: LegacyToggles["labels"] = {}): Template {
   const on = (v: boolean | undefined) => v !== false;
   return {
@@ -178,7 +178,7 @@ export function defaultTemplate(doc: DocType, legacy: LegacyToggles = {}): Templ
   }
 }
 
-/** A saved layout, checked: anything missing or broken falls back to the default so a printout always works. */
+/** A saved layout, checked: anything missing or broken falls back to the default so a printout always works */
 export function cleanTemplate(doc: DocType, raw: unknown, legacy: LegacyToggles = {}): Template {
   const d = defaultTemplate(doc, legacy);
   if (!raw || typeof raw !== "object") return d;
@@ -200,7 +200,7 @@ export function cleanTemplate(doc: DocType, raw: unknown, legacy: LegacyToggles 
   return { doc, version: 1, page: { w: num(r.page.w, d.page.w, 36, 2000), h: num(r.page.h, d.page.h, 36, 3000) }, contTop: num(r.contTop, d.contTop, 0), bottom: num(r.bottom, d.bottom, 0), elements };
 }
 
-/* ------------------------------------------------------------- what the designer offers */
+// what the designer offers
 
 export const FIELDS: Record<DocType, { key: string; label: string }[]> = {
   pull: [
@@ -232,7 +232,7 @@ export const FIELDS: Record<DocType, { key: string; label: string }[]> = {
   ],
 };
 
-/** Made-up data so the designer can show what a printout will look like. */
+/** Made-up data so the designer can show what a printout will look like */
 export function sampleData(doc: DocType, business = { name: "DKaydent Wholesale", address: "100 Market St\nPhiladelphia, PA 19106", phone: "215-555-0100", footer: "Thank you for your business!" }): DocData {
   const b = { ...business, contact: [business.address.replace(/\s*\n\s*/g, ", "), business.phone].filter(Boolean).join(" · ") };
   const printed = new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });

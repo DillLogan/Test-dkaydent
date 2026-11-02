@@ -130,7 +130,7 @@ export async function Nav({ profile }: { profile: Profile }) {
   );
 }
 
-/** Bottom tabs in Mobile mode: Home, two pages for the role, Messages (and Menu, added by the tab bar). */
+// mobile tabs per role (TabBar appends Menu)
 function staffTabs(role: string, unread: number): Tab[] {
   const home: Tab = { href: "/", label: "Home", icon: "home" };
   const msgs: Tab = { href: "/messages", label: "Messages", icon: "messages", badge: unread };

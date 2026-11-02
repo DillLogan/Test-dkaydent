@@ -2,7 +2,7 @@
 -- Card processing fee
 --   * Admins set the rate in Settings (app_settings.card_fee_pct, starts at 2.5%; 0 turns it off).
 --   * Only orders paid by card get it: sales_orders.payment_type = 'card'.
---   * The invoice adds it on its own line: rate × (subtotal + tax), rounded to the cent.
+--   * The invoice adds it on its own line: rate x (subtotal + tax), rounded to the cent.
 --     The rate used is kept on the invoice, so changing the setting later doesn't change old invoices.
 --   * Before invoicing, a card order is worth its lines plus the fee on them (tax comes with the invoice).
 --   * Staff can set how an order is paid (set_so_payment) until it is invoiced.

@@ -80,7 +80,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
   mergeReturns(byCustomer, rets ?? [], (r) => r.customer_id, (r) => ({ key: r.customer_id, label: r.customer_name }), false);
   byCustomer.sort((a, b) => b.revenue - a.revenue);
 
-  // Sell-through: sold ÷ received in the period, per product
+  // Sell-through: sold / received in the period, per product
   const flow = new Map<string, { name: string; sku: string; unit: string; received: number; sold: number; shrunk: number }>();
   for (const m of (moves ?? []) as any[]) {
     const f = flow.get(m.product_id) ?? { name: m.products?.name, sku: m.products?.sku, unit: m.products?.base_unit, received: 0, sold: 0, shrunk: 0 };
@@ -311,7 +311,7 @@ function MarginTable({ rows, qtyLabel, linkBase }: { rows: Agg[]; qtyLabel: stri
 
 const net = (r: Agg) => r.revenue - r.returns - (r.cost - r.returnedCost);
 
-/** Subtract returns from sales aggregates (adding rows for items only returned in this period). */
+// net out returns (adds rows for items that were only returned this period)
 function mergeReturns(
   rows: Agg[],
   rets: any[],

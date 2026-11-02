@@ -7,12 +7,11 @@ import { readPrintSettings, type PrintSettings } from "@/lib/printSettings";
 import { LabelSizeFields, ModeSwitch } from "../PrintSettingsForm";
 import { PdfViewer } from "./PdfViewer";
 
-/** A pull ticket, invoice or route sheet as a real PDF. */
 export function DocPdf({ template, data, filename, title }: { template: Template; data: DocData; filename: string; title: string }) {
   return <PdfViewer build={() => renderDoc(template, data, { title })} buildKey={filename + JSON.stringify(data).length} filename={filename} />;
 }
 
-/** Labels as a PDF, sized for this computer's label printer (or laid out on paper), with the size and copies to hand. */
+// label size comes from this computer's print settings
 export function LabelsPdf({ template, labels, filename, initialCopies = 1, hideCopies, workerSrc }: { template: Template; labels: Record<string, unknown>[]; filename: string; initialCopies?: number; hideCopies?: boolean; workerSrc?: string }) {
   const [s, setS] = useState<PrintSettings | null>(null);
   const [copies, setCopies] = useState(initialCopies);

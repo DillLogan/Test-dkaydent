@@ -30,7 +30,7 @@ create table shop_layout (
 insert into shop_layout (id) values (1);
 
 -- ---------- Category rules ----------
--- Keyword → category (and flower / hard good). A keyword matches at the start
+-- Keyword -> category (and flower / hard good). A keyword matches at the start
 -- of a word in the item name; the longest matching keyword wins, then priority.
 create table category_rules (
   id         uuid primary key default gen_random_uuid(),

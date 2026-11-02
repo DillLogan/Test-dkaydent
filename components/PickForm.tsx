@@ -24,7 +24,7 @@ export type PickLine = {
 
 const fmt = (n: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 
-/** Oldest-first suggestion, matching what automatic fulfillment would do. */
+// same FIFO order fulfill_sales_order uses
 function suggest(lines: PickLine[]) {
   const q: Record<string, number> = {};
   for (const l of lines) {

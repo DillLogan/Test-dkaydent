@@ -28,7 +28,7 @@ export async function savePrintouts(fd: FormData) {
 
 const DOC_TYPES: DocType[] = ["pull", "invoice", "route", "label", "boxlabel"];
 
-/** Save one printout's PDF layout (checked, so a broken layout can't be stored). */
+// cleanTemplate() so a bad layout never gets stored
 export async function savePdfTemplate(doc: DocType, layout: Template): Promise<{ error?: string }> {
   const { supabase } = await requireRole("admin");
   if (!DOC_TYPES.includes(doc)) return { error: "Unknown printout." };
@@ -41,7 +41,6 @@ export async function savePdfTemplate(doc: DocType, layout: Template): Promise<{
   return {};
 }
 
-/** Back to the built-in layout. */
 export async function resetPdfTemplate(doc: DocType): Promise<{ error?: string }> {
   const { supabase } = await requireRole("admin");
   const { error } = await supabase.from("pdf_templates").delete().eq("doc", doc);

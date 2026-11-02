@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: P) {
   return NextResponse.json({ doc: data });
 }
 
-/** Saves only if nobody saved since `base` (the updated_at the editor loaded); 409 otherwise. */
+// optimistic lock on updated_at, 409 if someone saved in between
 export async function PUT(req: Request, { params }: P) {
   const a = await staffOrError();
   if (!a.ok) return a.res;

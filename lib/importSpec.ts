@@ -57,7 +57,7 @@ const n = (s: string | undefined) => (s && s.trim() !== "" ? Number(s) : null);
 
 /**
  * existing: keys that already exist (SKUs upper-cased, names lower-cased).
- * tiers: price tier name (lower-cased) → id.
+ * tiers: price tier name (lower-cased) -> id.
  */
 export function validate(
   entity: Entity,

@@ -94,7 +94,7 @@ export async function syncNow() {
   );
 }
 
-/** Try the field names on a pasted sample, without changing anything. */
+// dry run against a pasted sample
 export async function previewMapping(kind: "inventory" | "orders", sample: string) {
   const { supabase } = await requireRole();
   let json: unknown;

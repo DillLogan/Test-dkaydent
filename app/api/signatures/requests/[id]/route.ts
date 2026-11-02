@@ -4,7 +4,7 @@ import { BUCKET, service } from "@/lib/signatures";
 
 type P = { params: Promise<{ id: string }> };
 
-/** Download the signed copy (and mark it seen). Staff only. */
+// staff only. Downloading marks it seen
 export async function GET(_req: Request, { params }: P) {
   const a = await staffOrError();
   if (!a.ok) return a.res;
@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: P) {
   return new Response(await file.arrayBuffer(), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" } });
 }
 
-/** Withdraw an unsigned request, or remove a signed one and its copy. Staff only. */
+// staff only
 export async function DELETE(_req: Request, { params }: P) {
   const a = await staffOrError();
   if (!a.ok) return a.res;

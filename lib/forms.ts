@@ -26,7 +26,7 @@ export function bool(fd: FormData, key: string): boolean {
   return fd.get(key) === "on" || fd.get(key) === "true";
 }
 
-/** Turn a Postgres / PostgREST error into something readable. */
+/** Turn a Postgres / PostgREST error into something readable */
 export function dbMessage(error: { message: string; code?: string } | null): string {
   if (!error) return "Unknown error";
   if (error.code === "23505") return "That already exists (duplicate value).";
@@ -35,7 +35,7 @@ export function dbMessage(error: { message: string; code?: string } | null): str
   return error.message;
 }
 
-/** Strip characters that would break a PostgREST `or=` filter. */
+/** Strip characters that would break a PostgREST `or=` filter */
 export function searchTerm(q: string | undefined): string | null {
   const s = (q ?? "").replace(/[,()*%\\]/g, " ").trim();
   return s ? s : null;

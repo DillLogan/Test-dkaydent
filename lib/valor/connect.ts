@@ -1,20 +1,20 @@
 import type { SaleRequest, TerminalInfo, TerminalProvider, TerminalResult } from "./provider";
 
 /**
- * Valor Connect (cloud → terminal) adapter.
+ * Valor Connect (cloud -> terminal) adapter.
  *
  * Coded from Valor's public POS integration docs (ValorPay POS Integration
  * v1.1.9 and valorapi.readme.io). Confirmed fields:
- *   TRAN_MODE "1" + TRAN_CODE "1" = credit sale, AMOUNT in cents, TIP_ENTRY,
- *   INVOICENUMBER (≤ 32 chars), EPI, REQ_TXN_ID, and a STAN number on the
- *   acknowledgment that is used to poll for the result.
+ *  TRAN_MODE "1" + TRAN_CODE "1" = credit sale, AMOUNT in cents, TIP_ENTRY,
+ *  INVOICENUMBER (<= 32 chars), EPI, REQ_TXN_ID, and a STAN number on the
+ *  acknowledgment that is used to poll for the result.
  *
- * NOT in the public docs — get these from Valor when they give you
+ * NOT in the public docs, get these from Valor when they give you
  * developer access, then check every line marked UNCONFIRMED:
- *   - the cloud endpoint URL (VALOR_CONNECT_URL)
- *   - how APP ID / APP KEY are sent (headers below are a best guess)
- *   - the exact status-poll and cancel request shapes
- *   - response field names for approval, card brand, last 4 and auth code
+ *  - the cloud endpoint URL (VALOR_CONNECT_URL)
+ *  - how APP ID / APP KEY are sent (headers below are a best guess)
+ *  - the exact status-poll and cancel request shapes
+ *  - response field names for approval, card brand, last 4 and auth code
  */
 
 const TIMEOUT = 20_000;

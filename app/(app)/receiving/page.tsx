@@ -24,7 +24,7 @@ const CHIP: Record<string, string> = {
   cancelled: "border-stone-200 bg-stone-50 text-stone-400 line-through",
 };
 
-/** Monday of the week that contains ymd. */
+// monday of that week
 function weekStart(ymd: string) {
   const d = new Date(ymd + "T00:00:00Z");
   const dow = (d.getUTCDay() + 6) % 7;

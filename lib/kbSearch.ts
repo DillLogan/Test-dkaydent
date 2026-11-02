@@ -2,8 +2,8 @@
  * Knowledge base search: ranks articles and tutorials by how well they match, and marks the matching words.
  * Pure functions, no dependencies: the same file runs in the app and the demo.
  *
- * Scoring per query word, best match wins: exact word 3, same stem (roses → rose, printing → print) 2.5,
- * word starts with it 2, contains it 1 (4+ letters). Weighted by where it hits: title ×4, category ×2, text ×1.
+ * Scoring per query word, best match wins: exact word 3, same stem (roses -> rose, printing -> print) 2.5,
+ * word starts with it 2, contains it 1 (4+ letters). Weighted by where it hits: title x4, category x2, text x1.
  * Every word must match somewhere; if nothing matches all of them, documents matching most of them are shown as partial.
  * The whole phrase appearing in the title or text adds a bonus.
  */
@@ -14,19 +14,19 @@ const STOP = new Set(["a", "an", "the", "to", "of", "and", "or", "is", "are", "i
 
 export const words = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[a-z0-9]+/g) ?? [];
 
-/** A rough English stem, enough to match roses/rose, printing/print, labels/label, boxes/box, pulled/pull. */
+/** A rough English stem, enough to match roses/rose, printing/print, labels/label, boxes/box, pulled/pull */
 export function stem(w: string) {
   if (w.length <= 3) return w;
   if (w.endsWith("ies") && w.length > 4) return w.slice(0, -3) + "y";
-  if (w.endsWith("lves")) return w.slice(0, -3) + "f"; // shelves → shelf
-  if (/(x|z|ch|sh|ss)es$/.test(w)) return w.slice(0, -2); // boxes → box
+  if (w.endsWith("lves")) return w.slice(0, -3) + "f"; // shelves -> shelf
+  if (/(x|z|ch|sh|ss)es$/.test(w)) return w.slice(0, -2); // boxes -> box
   for (const suf of ["ings", "ing", "edly", "ed", "s", "ly"]) {
     if (w.endsWith(suf) && !w.endsWith("ss") && w.length - suf.length >= 3) return w.slice(0, -suf.length);
   }
   return w;
 }
 
-/** The query's meaningful words (stop words dropped unless that is all there is). */
+/** The query's meaningful words (stop words dropped unless that is all there is) */
 export function queryTerms(q: string) {
   const all = words(q);
   const kept = all.filter((w) => !STOP.has(w));
@@ -72,7 +72,7 @@ export function searchKb(docs: KbDoc[], q: string): KbHit[] {
     .map((x) => ({ doc: x.doc, score: x.score, partial: !full.length, terms }));
 }
 
-/** Splits text into plain and matching pieces, for <mark>-ing the words that matched. */
+/** Splits text into plain and matching pieces, for <mark>-ing the words that matched */
 export function highlight(text: string, terms: string[]): { t: string; hit: boolean }[] {
   if (!terms.length || !text) return [{ t: text, hit: false }];
   const stems = terms.map(stem);
@@ -88,7 +88,7 @@ export function highlight(text: string, terms: string[]): { t: string; hit: bool
   return out;
 }
 
-/** The best sentence-sized snippet for a result: the body line with the most matching words. */
+/** The best sentence-sized snippet for a result: the body line with the most matching words */
 export function bestLine(doc: KbDoc, terms: string[]) {
   if (!terms.length) return doc.text[0] ?? "";
   let best = doc.text[0] ?? "";
