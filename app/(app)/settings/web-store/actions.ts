@@ -21,7 +21,8 @@ function url(fd: FormData, key: string, label: string) {
   } catch {
     fail(PATH, `${label} isn't a full web address (https://…)`);
   }
-  if (u.protocol !== "https:" && !(u.protocol === "http:" && ["localhost", "127.0.0.1"].includes(u.hostname))) fail(PATH, `${label} must start with https://`);
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && ["localhost", "127.0.0.1"].includes(u.hostname)))
+    fail(PATH, `${label} must start with https://`);
   return u.toString();
 }
 

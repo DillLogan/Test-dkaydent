@@ -21,7 +21,11 @@ export async function setUp(fd: FormData) {
   const profile = str(fd, "profile_id");
   const customer = str(fd, "customer_id");
   if (!profile || !customer) fail(PATH, "Choose the person and the customer.");
-  await run("portal_set_up", { p_profile_id: profile, p_customer_id: customer }, "Login set up. A different person now needs to verify it.");
+  await run(
+    "portal_set_up",
+    { p_profile_id: profile, p_customer_id: customer },
+    "Login set up. A different person now needs to verify it.",
+  );
 }
 export async function verify(fd: FormData) {
   await run("portal_verify", { p_profile_id: str(fd, "profile_id") }, "Verified. The customer can shop now.");
@@ -48,7 +52,8 @@ export async function createLogin(fd: FormData) {
     email_confirm: true,
     user_metadata: { full_name: name },
   });
-  if (error || !data.user) fail(PATH, error?.message.includes("already") ? "That username is taken." : (error?.message ?? "Could not create the login."));
+  if (error || !data.user)
+    fail(PATH, error?.message.includes("already") ? "That username is taken." : (error?.message ?? "Could not create the login."));
   const { error: setErr } = await supabase.rpc("portal_set_up", { p_profile_id: data.user.id, p_customer_id: customer });
   if (setErr) {
     await admin.auth.admin.deleteUser(data.user.id); // do not leave a half-made login behind
@@ -64,7 +69,11 @@ export async function resetPassword(fd: FormData) {
   const password = String(fd.get("password") ?? "");
   if (password.length < 8) fail(PATH, "The password needs at least 8 characters.");
   const { supabase } = await requireRole("sales");
-  const { data: acct } = await supabase.from("portal_accounts").select("profile_id").eq("profile_id", profile ?? "").maybeSingle();
+  const { data: acct } = await supabase
+    .from("portal_accounts")
+    .select("profile_id")
+    .eq("profile_id", profile ?? "")
+    .maybeSingle();
   if (!acct) fail(PATH, "That is not a customer login.");
   const admin = createServiceClient();
   if (!admin) fail(PATH, "Resetting passwords needs SUPABASE_SERVICE_ROLE_KEY to be set on the server.");
@@ -74,5 +83,9 @@ export async function resetPassword(fd: FormData) {
 }
 
 export async function decideReset(fd: FormData) {
-  await run("decide_password_request", { p_id: str(fd, "id"), p_approve: fd.get("approve") === "1" ? "true" : "false" } as never, "Decision saved.");
+  await run(
+    "decide_password_request",
+    { p_id: str(fd, "id"), p_approve: fd.get("approve") === "1" ? "true" : "false" } as never,
+    "Decision saved.",
+  );
 }

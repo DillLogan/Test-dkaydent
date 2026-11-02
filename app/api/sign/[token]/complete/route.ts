@@ -15,7 +15,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!name) return NextResponse.json({ error: "Enter your full name." }, { status: 400 });
   const values = b.values && typeof b.values === "object" ? (b.values as Record<string, string>) : {};
   const missing = r.boxes.filter((x) => (x.type === "signature" || x.type === "initials") && !values[x.id]);
-  if (missing.length) return NextResponse.json({ error: `Fill every signature and initials box (${missing.length} left).` }, { status: 400 });
+  if (missing.length)
+    return NextResponse.json({ error: `Fill every signature and initials box (${missing.length} left).` }, { status: 400 });
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
   try {
     const done = await complete(r, values, { name, ip, userAgent: req.headers.get("user-agent") ?? "", via: c.via, signerId: c.signerId });

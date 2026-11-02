@@ -41,8 +41,13 @@ export async function saveArea(id: string, area: { points: Pt[]; color?: string 
  */
 export async function setFloorSize(layoutId: string, widthFt: number, heightFt: number): Promise<Result & { aspect?: number }> {
   const { supabase } = await requireRole("warehouse");
-  if (!(widthFt > 0 && widthFt <= 5000 && heightFt > 0 && heightFt <= 5000)) return { error: "Enter the floor's width and depth in feet (up to 5,000)." };
-  const { data: lay, error: e1 } = await supabase.from("shop_layouts").select("width_ft, height_ft, background_path, aspect").eq("id", layoutId).single();
+  if (!(widthFt > 0 && widthFt <= 5000 && heightFt > 0 && heightFt <= 5000))
+    return { error: "Enter the floor's width and depth in feet (up to 5,000)." };
+  const { data: lay, error: e1 } = await supabase
+    .from("shop_layouts")
+    .select("width_ft, height_ft, background_path, aspect")
+    .eq("id", layoutId)
+    .single();
   if (e1 || !lay) return { error: "Layout not found." };
   // a floor image fixes the shape: depth follows the width
   const h = lay.background_path ? Math.round((widthFt / Number(lay.aspect)) * 10) / 10 : heightFt;
@@ -52,17 +57,31 @@ export async function setFloorSize(layoutId: string, widthFt: number, heightFt: 
     const sx = Number(lay.width_ft) / widthFt;
     const sy = Number(lay.height_ft) / h;
     if (Math.abs(sx - 1) > 1e-6 || Math.abs(sy - 1) > 1e-6) {
-      const { data: locs } = await supabase.from("locations").select("id, map_shape").eq("layout_id", layoutId).not("map_shape", "is", null);
+      const { data: locs } = await supabase
+        .from("locations")
+        .select("id, map_shape")
+        .eq("layout_id", layoutId)
+        .not("map_shape", "is", null);
       const { data: allLocs } = await supabase.from("locations").select("id").eq("layout_id", layoutId);
       const { data: secs } = (allLocs ?? []).length
-        ? await supabase.from("location_sections").select("id, map_shape").in("location_id", (allLocs ?? []).map((x) => x.id)).not("map_shape", "is", null)
+        ? await supabase
+            .from("location_sections")
+            .select("id, map_shape")
+            .in(
+              "location_id",
+              (allLocs ?? []).map((x) => x.id),
+            )
+            .not("map_shape", "is", null)
         : { data: [] as { id: string; map_shape: unknown }[] };
       for (const sec of secs ?? []) {
         if (!validShape(sec.map_shape)) continue;
         const pts = clampPts((sec.map_shape as Pt[]).map(([x, y]) => [x * sx, y * sy] as Pt));
         if (!validShape(pts)) continue;
         const b = bbox(pts);
-        await supabase.from("location_sections").update({ map_shape: pts, map_x: b.x, map_y: b.y, map_w: Math.max(b.w, 0.1), map_h: Math.max(b.h, 0.1) }).eq("id", sec.id);
+        await supabase
+          .from("location_sections")
+          .update({ map_shape: pts, map_x: b.x, map_y: b.y, map_w: Math.max(b.w, 0.1), map_h: Math.max(b.h, 0.1) })
+          .eq("id", sec.id);
       }
       for (const l of locs ?? []) {
         if (!validShape(l.map_shape)) continue;
@@ -98,8 +117,12 @@ export async function removeArea(id: string): Promise<Result> {
   return {};
 }
 
-const layoutName = (v: unknown) => String(v ?? "").trim().replace(/\s+/g, " ");
-const unique = (e: { message: string }) => (e.message.includes("shop_layouts_name_uidx") ? "A layout with that name already exists." : dbMessage(e));
+const layoutName = (v: unknown) =>
+  String(v ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+const unique = (e: { message: string }) =>
+  e.message.includes("shop_layouts_name_uidx") ? "A layout with that name already exists." : dbMessage(e);
 
 export async function uploadPlanBackground(fd: FormData): Promise<Result> {
   const { supabase } = await requireRole("warehouse");
@@ -125,7 +148,11 @@ export async function uploadPlanBackground(fd: FormData): Promise<Result> {
     })
     .eq("id", layoutId);
   if (error) return { error: dbMessage(error) };
-  if (old?.background_path) await supabase.storage.from(IMAGE_BUCKET).remove([old.background_path]).catch(() => {});
+  if (old?.background_path)
+    await supabase.storage
+      .from(IMAGE_BUCKET)
+      .remove([old.background_path])
+      .catch(() => {});
   revalidatePath("/floor-plan");
   return {};
 }
@@ -135,7 +162,11 @@ export async function removePlanBackground(layoutId: string): Promise<Result> {
   const { data: old } = await supabase.from("shop_layouts").select("background_path").eq("id", layoutId).single();
   const { error } = await supabase.from("shop_layouts").update({ background_path: null }).eq("id", layoutId);
   if (error) return { error: dbMessage(error) };
-  if (old?.background_path) await supabase.storage.from(IMAGE_BUCKET).remove([old.background_path]).catch(() => {});
+  if (old?.background_path)
+    await supabase.storage
+      .from(IMAGE_BUCKET)
+      .remove([old.background_path])
+      .catch(() => {});
   revalidatePath("/floor-plan");
   return {};
 }
@@ -168,7 +199,11 @@ export async function deleteLayout(id: string, moveTo: string): Promise<Result> 
   const { data: old } = await supabase.from("shop_layouts").select("background_path").eq("id", id).single();
   const { error } = await supabase.rpc("delete_shop_layout", { p_id: id, p_move_to: moveTo });
   if (error) return { error: dbMessage(error) };
-  if (old?.background_path) await supabase.storage.from(IMAGE_BUCKET).remove([old.background_path]).catch(() => {});
+  if (old?.background_path)
+    await supabase.storage
+      .from(IMAGE_BUCKET)
+      .remove([old.background_path])
+      .catch(() => {});
   revalidatePath("/floor-plan");
   return {};
 }
@@ -196,11 +231,18 @@ function cleanDoor(d: DoorPatch): { error?: string; patch: Record<string, unknow
   return { patch };
 }
 
-export async function addDoor(layoutId: string, d: { kind: string; label: string; side: string; pos: number }): Promise<Result & { id?: string }> {
+export async function addDoor(
+  layoutId: string,
+  d: { kind: string; label: string; side: string; pos: number },
+): Promise<Result & { id?: string }> {
   const { supabase } = await requireRole("warehouse");
   const { error: bad, patch } = cleanDoor(d);
   if (bad) return { error: bad };
-  const { data, error } = await supabase.from("plan_doors").insert({ layout_id: layoutId, ...patch }).select("id").single();
+  const { data, error } = await supabase
+    .from("plan_doors")
+    .insert({ layout_id: layoutId, ...patch })
+    .select("id")
+    .single();
   if (error) return { error: dbMessage(error) };
   revalidatePath("/floor-plan");
   return { id: data.id };
@@ -266,7 +308,8 @@ function parseShelves(text: string): string[] {
     const t = raw.trim();
     if (!t) continue;
     const m = /^(\d{1,3})\s*-\s*(\d{1,3})$/.exec(t);
-    if (m && Number(m[2]) >= Number(m[1]) && Number(m[2]) - Number(m[1]) < 50) for (let i = Number(m[1]); i <= Number(m[2]); i++) out.push(String(i));
+    if (m && Number(m[2]) >= Number(m[1]) && Number(m[2]) - Number(m[1]) < 50)
+      for (let i = Number(m[1]); i <= Number(m[2]); i++) out.push(String(i));
     else out.push(t.slice(0, 30));
   }
   return out.slice(0, 60);
@@ -275,7 +318,9 @@ function parseShelves(text: string): string[] {
 // returns { sectionId, locationId }; creates the location too if asked
 export async function saveSection(input: SectionInput): Promise<Result & { id?: string; locationId?: string }> {
   const { supabase } = await requireRole("warehouse");
-  const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
+  const name = String(input.name ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
   if (!name || name.length > 40) return { error: "Name the section (up to 40 characters)." };
   let locationId = input.locationId;
   if (locationId === "__layout") {
@@ -285,9 +330,17 @@ export async function saveSection(input: SectionInput): Promise<Result & { id?: 
     const { data: here } = await supabase.from("locations").select("id, name, whole_layout").eq("layout_id", lay.id);
     let whole = (here ?? []).find((l) => l.whole_layout) ?? (here ?? []).find((l) => l.name.toLowerCase() === lay.name.toLowerCase());
     if (!whole) {
-      const { data: taken } = await supabase.from("locations").select("id").ilike("name", lay.name.replace(/[%_\\]/g, "\\$&")).limit(1);
+      const { data: taken } = await supabase
+        .from("locations")
+        .select("id")
+        .ilike("name", lay.name.replace(/[%_\\]/g, "\\$&"))
+        .limit(1);
       const name = taken?.length ? `${lay.name} (whole space)` : lay.name;
-      const { data: made, error } = await supabase.from("locations").insert({ name, kind: "other", layout_id: lay.id, whole_layout: true }).select("id, name, whole_layout").single();
+      const { data: made, error } = await supabase
+        .from("locations")
+        .insert({ name, kind: "other", layout_id: lay.id, whole_layout: true })
+        .select("id, name, whole_layout")
+        .single();
       if (error || !made) return { error: error ? dbMessage(error) : "Couldn't add the location." };
       whole = made;
     } else if (!whole.whole_layout) {
@@ -295,10 +348,21 @@ export async function saveSection(input: SectionInput): Promise<Result & { id?: 
     }
     locationId = whole.id;
   } else if (locationId === "__new") {
-    const ln = String(input.newLocation ?? "").trim().replace(/\s+/g, " ");
+    const ln = String(input.newLocation ?? "")
+      .trim()
+      .replace(/\s+/g, " ");
     if (!ln) return { error: "Name the new location." };
-    const { data: loc, error } = await supabase.from("locations").insert({ name: ln, kind: "other", layout_id: input.layoutId }).select("id").single();
-    if (error) return { error: error.message.includes("duplicate") ? "A location with that name already exists. Choose it from the list." : dbMessage(error) };
+    const { data: loc, error } = await supabase
+      .from("locations")
+      .insert({ name: ln, kind: "other", layout_id: input.layoutId })
+      .select("id")
+      .single();
+    if (error)
+      return {
+        error: error.message.includes("duplicate")
+          ? "A location with that name already exists. Choose it from the list."
+          : dbMessage(error),
+      };
     locationId = loc.id;
   }
   const row: Record<string, unknown> = { name, location_id: locationId, shelves: parseShelves(input.shelves) };
@@ -311,7 +375,12 @@ export async function saveSection(input: SectionInput): Promise<Result & { id?: 
   const res = input.id
     ? await supabase.from("location_sections").update(row).eq("id", input.id).select("id").single()
     : await supabase.from("location_sections").insert(row).select("id").single();
-  if (res.error) return { error: res.error.message.includes("location_sections_name_uidx") ? "That location already has a section with this name." : dbMessage(res.error) };
+  if (res.error)
+    return {
+      error: res.error.message.includes("location_sections_name_uidx")
+        ? "That location already has a section with this name."
+        : dbMessage(res.error),
+    };
   revalidatePath("/floor-plan");
   return { id: res.data.id, locationId };
 }
@@ -326,7 +395,9 @@ export async function deleteSection(id: string): Promise<Result> {
 
 export async function renameLocation(id: string, name: string): Promise<Result> {
   const { supabase } = await requireRole("warehouse");
-  const n = String(name ?? "").trim().replace(/\s+/g, " ");
+  const n = String(name ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
   if (!n || n.length > 60) return { error: "Name the location (up to 60 characters)." };
   const { error } = await supabase.from("locations").update({ name: n }).eq("id", id);
   if (error) return { error: error.message.includes("duplicate") ? "Another location already has that name." : dbMessage(error) };
@@ -338,7 +409,12 @@ export async function setHomeSpot(productId: string, layoutId: string, fd: FormD
   const { supabase } = await requireRole("buyer", "warehouse");
   const path = `/products/${productId}`;
   const { sectionId, shelf } = splitSpot(fd.get("spot"));
-  const { error } = await supabase.rpc("set_home_spot", { p_product_id: productId, p_layout_id: layoutId, p_section_id: sectionId, p_shelf: shelf });
+  const { error } = await supabase.rpc("set_home_spot", {
+    p_product_id: productId,
+    p_layout_id: layoutId,
+    p_section_id: sectionId,
+    p_shelf: shelf,
+  });
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   redirect(`${path}?message=${encodeURIComponent("Usual section and shelf saved.")}`);

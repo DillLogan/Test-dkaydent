@@ -12,8 +12,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!a.ok) return a.res;
   const { id } = await params;
   const b = await readJson(req);
-  const email = String(b.email ?? "").trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
+  const email = String(b.email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200)
+    return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
   const { data: doc } = await a.supabase.from("signature_docs").select("id, name, boxes, file_path").eq("id", id).maybeSingle();
   if (!doc) return NextResponse.json({ error: "Document not found." }, { status: 404 });
   const boxes = cleanBoxes(doc.boxes);
@@ -24,7 +27,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const senderName = a.profile.full_name ?? null;
   const { error } = await service()
     .from("signature_requests")
-    .insert({ doc_id: doc.id, doc_name: doc.name, token, recipient_email: email, boxes, source_path: doc.file_path, sender_id: a.profile.id, sender_email: senderEmail, sender_name: senderName });
+    .insert({
+      doc_id: doc.id,
+      doc_name: doc.name,
+      token,
+      recipient_email: email,
+      boxes,
+      source_path: doc.file_path,
+      sender_id: a.profile.id,
+      sender_email: senderEmail,
+      sender_name: senderName,
+    });
   if (error) return NextResponse.json({ error: "Couldn't create the request." }, { status: 500 });
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   const link = `${origin}/sign/${token}`;

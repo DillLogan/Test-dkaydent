@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 
-type Res = { error?: string; inventory?: { rows: { sku: string; qty: number }[]; problems: string[] }; orders?: { orders: any[]; problems: string[] } };
+type Res = {
+  error?: string;
+  inventory?: { rows: { sku: string; qty: number }[]; problems: string[] };
+  orders?: { orders: any[]; problems: string[] };
+};
 
 export function WebStorePreview({ preview }: { preview: (kind: "inventory" | "orders", sample: string) => Promise<Res> }) {
   const [kind, setKind] = useState<"inventory" | "orders">("inventory");
@@ -20,7 +24,12 @@ export function WebStorePreview({ preview }: { preview: (kind: "inventory" | "or
             <option value="orders">Orders</option>
           </select>
         </label>
-        <button type="button" className="btn" disabled={!sample.trim() || pending} onClick={() => start(async () => setRes(await preview(kind, sample)))}>
+        <button
+          type="button"
+          className="btn"
+          disabled={!sample.trim() || pending}
+          onClick={() => start(async () => setRes(await preview(kind, sample)))}
+        >
           {pending ? "Reading…" : "Preview"}
         </button>
       </div>

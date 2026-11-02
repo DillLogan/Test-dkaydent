@@ -12,7 +12,8 @@ export async function staffOrError(): Promise<
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, res: NextResponse.json({ error: "Sign in first." }, { status: 401 }) };
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-  if (!profile || !profile.active || profile.role === "customer") return { ok: false, res: NextResponse.json({ error: "Not allowed." }, { status: 403 }) };
+  if (!profile || !profile.active || profile.role === "customer")
+    return { ok: false, res: NextResponse.json({ error: "Not allowed." }, { status: 403 }) };
   return { ok: true, supabase, profile: profile as Profile };
 }
 

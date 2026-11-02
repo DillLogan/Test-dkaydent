@@ -55,7 +55,13 @@ export default async function ImportPage({ searchParams }: { searchParams: SP })
       <>
         {header}
         <StockBatchForm
-          items={(products ?? []).map((p) => ({ sku: p.sku, name: p.name, baseUnit: p.base_unit, category: p.category, units: unitsBy.get(p.id) ?? [p.base_unit] }))}
+          items={(products ?? []).map((p) => ({
+            sku: p.sku,
+            name: p.name,
+            baseUnit: p.base_unit,
+            category: p.category,
+            units: unitsBy.get(p.id) ?? [p.base_unit],
+          }))}
           locations={(locations ?? []).map((l) => l.name)}
           rules={(rules ?? []) as CategoryRule[]}
           canCreate={can(profile, "buyer")}
@@ -87,7 +93,9 @@ export default async function ImportPage({ searchParams }: { searchParams: SP })
       {allowed ? (
         <ImportForm key={entity} entity={entity} existing={existing} tiers={tiers} action={importRows.bind(null, entity)} />
       ) : (
-        <Empty>Importing {entity} needs the {IMPORT_ROLE[entity]} role.</Empty>
+        <Empty>
+          Importing {entity} needs the {IMPORT_ROLE[entity]} role.
+        </Empty>
       )}
     </>
   );

@@ -43,7 +43,8 @@ export async function importRows(entity: Entity, fd: FormData) {
   if (entity === "products") {
     // Blank categories are filled from the keyword rules
     const { data: rules } = await supabase.from("category_rules").select("keyword, category, kind, priority");
-    for (const r of results) if (!r.record.category) r.record.category = categorize(r.record.name ?? "", (rules ?? []) as CategoryRule[])?.category ?? null;
+    for (const r of results)
+      if (!r.record.category) r.record.category = categorize(r.record.name ?? "", (rules ?? []) as CategoryRule[])?.category ?? null;
     const creates = results.filter((r) => r.action === "create").map((r) => r.record);
     const updates = results.filter((r) => r.action === "update").map((r) => r.record);
 
@@ -55,7 +56,9 @@ export async function importRows(entity: Entity, fd: FormData) {
       if (error) fail(path, dbMessage(error));
       const idBySku = new Map((data ?? []).map((p) => [p.sku, p.id]));
       const unitRows = creates.flatMap((p) =>
-        p.units.filter((u: any) => u.name !== p.base_unit).map((u: any) => ({ product_id: idBySku.get(p.sku), name: u.name, factor: u.factor })),
+        p.units
+          .filter((u: any) => u.name !== p.base_unit)
+          .map((u: any) => ({ product_id: idBySku.get(p.sku), name: u.name, factor: u.factor })),
       );
       if (unitRows.length) {
         const { error: uerr } = await supabase.from("product_units").insert(unitRows);
@@ -121,7 +124,13 @@ export async function importStockBatch(fd: FormData) {
   const unitsBy = new Map<string, string[]>();
   for (const u of units ?? []) unitsBy.set(u.product_id, [...(unitsBy.get(u.product_id) ?? []), u.name]);
   const results = validateStockRows(raw, {
-    items: (products ?? []).map((p) => ({ sku: p.sku, name: p.name, baseUnit: p.base_unit, category: p.category, units: unitsBy.get(p.id) ?? [p.base_unit] })),
+    items: (products ?? []).map((p) => ({
+      sku: p.sku,
+      name: p.name,
+      baseUnit: p.base_unit,
+      category: p.category,
+      units: unitsBy.get(p.id) ?? [p.base_unit],
+    })),
     locations: (locations ?? []).map((l) => l.name),
     rules: (rules ?? []) as CategoryRule[],
     defaultLocation: String(fd.get("default_location") ?? ""),

@@ -68,10 +68,7 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <PageHeader
-        title="Location in shop"
-        subtitle="Where everything belongs on the floor, and where it actually is right now"
-      />
+      <PageHeader title="Location in shop" subtitle="Where everything belongs on the floor, and where it actually is right now" />
       <FloorPlan
         key={layoutId}
         layout={{ id: layoutId, name: plan.layout.name }}

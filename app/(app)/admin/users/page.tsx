@@ -14,10 +14,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
 
   return (
     <>
-      <PageHeader
-        title="Users & roles"
-        subtitle="New sign-ups wait here inactive until you assign a role and activate them."
-      />
+      <PageHeader title="Users & roles" subtitle="New sign-ups wait here inactive until you assign a role and activate them." />
       <ErrorBanner error={error} />
       <Notice message={message} />
 

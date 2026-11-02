@@ -24,14 +24,30 @@ export default async function DocumentsPage({ searchParams }: { searchParams: SP
           .select("id, token, doc_name, status, sent_at, completed_at, sender_name, sender_email")
           .ilike("recipient_email", profile.email.replace(/[%_\\]/g, "\\$&"))
           .order("sent_at", { ascending: false })
-      : { data: [] as { id: string; token: string; doc_name: string; status: string; sent_at: string; completed_at: string | null; sender_name: string | null; sender_email: string | null }[] };
+      : {
+          data: [] as {
+            id: string;
+            token: string;
+            doc_name: string;
+            status: string;
+            sent_at: string;
+            completed_at: string | null;
+            sender_name: string | null;
+            sender_email: string | null;
+          }[],
+        };
 
   return (
     <>
       <PageHeader title="Documents" subtitle="Write in a Word-style editor, send PDFs for signing, and sign what's sent to you" />
       <nav className="mb-5 flex flex-wrap gap-1 rounded-full bg-stone-100 p-1 sm:w-fit" aria-label="Documents">
         {TABS.map(([k, l]) => (
-          <Link key={k} href={`/documents?tab=${k}`} aria-current={tab === k ? "page" : undefined} className={`nav-link rounded-full px-4 py-1.5 text-sm ${tab === k ? "bg-white font-medium shadow-sm" : "text-stone-600 hover:text-stone-900"}`}>
+          <Link
+            key={k}
+            href={`/documents?tab=${k}`}
+            aria-current={tab === k ? "page" : undefined}
+            className={`nav-link rounded-full px-4 py-1.5 text-sm ${tab === k ? "bg-white font-medium shadow-sm" : "text-stone-600 hover:text-stone-900"}`}
+          >
             {l}
           </Link>
         ))}
@@ -45,7 +61,14 @@ export default async function DocumentsPage({ searchParams }: { searchParams: SP
       {tab === "mine" && (
         <div className="space-y-3">
           <p className="text-sm text-stone-500">
-            Documents sent to your account email{profile.email ? <> (<b>{profile.email}</b>)</> : null}. You sign them while signed in, so no extra check is needed.
+            Documents sent to your account email
+            {profile.email ? (
+              <>
+                {" "}
+                (<b>{profile.email}</b>)
+              </>
+            ) : null}
+            . You sign them while signed in, so no extra check is needed.
           </p>
           {(mine ?? []).length === 0 ? (
             <div className="card text-sm text-stone-500">Nothing waiting for your signature.</div>

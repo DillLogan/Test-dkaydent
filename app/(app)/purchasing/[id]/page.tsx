@@ -20,22 +20,27 @@ export default async function POPage({ params, searchParams }: Props) {
   const { error, message } = await searchParams;
   const { supabase, profile } = await getSession();
 
-  const [{ data: po }, { data: lines }, { data: locations }, { data: sections }, { data: customers }, { data: madeOrders }] = await Promise.all([
-    supabase
-      .from("purchase_orders")
-      .select("*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name), customers(id, name)")
-      .eq("id", id)
-      .maybeSingle(),
-    supabase
-      .from("purchase_order_lines")
-      .select("*, products(sku, name, base_unit, shelf_life_days, product_homes(location_id, section_id, shelf)), product_units(name, factor)")
-      .eq("po_id", id)
-      .order("created_at"),
-    supabase.from("locations").select("id, name").eq("active", true).order("name"),
-    supabase.from("location_sections").select("id, location_id, name, shelves").order("name"),
-    supabase.from("customers").select("id, name").eq("active", true).order("name"),
-    supabase.from("sales_orders").select("id, so_number, status").eq("from_po_id", id).order("created_at"),
-  ]);
+  const [{ data: po }, { data: lines }, { data: locations }, { data: sections }, { data: customers }, { data: madeOrders }] =
+    await Promise.all([
+      supabase
+        .from("purchase_orders")
+        .select(
+          "*, vendors(id, name), shipments(id, shipment_number, status, eta, carrier), standing_orders(id, name), customers(id, name)",
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("purchase_order_lines")
+        .select(
+          "*, products(sku, name, base_unit, shelf_life_days, product_homes(location_id, section_id, shelf)), product_units(name, factor)",
+        )
+        .eq("po_id", id)
+        .order("created_at"),
+      supabase.from("locations").select("id, name").eq("active", true).order("name"),
+      supabase.from("location_sections").select("id, location_id, name, shelves").order("name"),
+      supabase.from("customers").select("id, name").eq("active", true).order("name"),
+      supabase.from("sales_orders").select("id, so_number, status").eq("from_po_id", id).order("created_at"),
+    ]);
   if (!po) notFound();
 
   // Original receipts only (not later transfer splits)
@@ -271,7 +276,14 @@ export default async function POPage({ params, searchParams }: Props) {
 
       {receivable && canReceive && pending.length > 0 && (
         <Section title="Receive">
-          <form action={receivePO.bind(null, id, pending.map((r) => r.id))} className="card space-y-4">
+          <form
+            action={receivePO.bind(
+              null,
+              id,
+              pending.map((r) => r.id),
+            )}
+            className="card space-y-4"
+          >
             <div className="flex flex-wrap items-end gap-3">
               <Field label="Default location">
                 <select name="default_location" className="input w-auto" required>
@@ -309,7 +321,15 @@ export default async function POPage({ params, searchParams }: Props) {
                         <ReceiveQty lineId={r.id} remaining={r.remainingUnits} unit={r.product_units.name} name={r.products.name} />
                       </td>
                       <td>
-                        <ReceiveSpot lineId={r.id} name={r.products.name} locations={locations ?? []} sections={sections ?? []} homes={r.products.product_homes ?? []} defaultLoc="" defaultLabel="Default" />
+                        <ReceiveSpot
+                          lineId={r.id}
+                          name={r.products.name}
+                          locations={locations ?? []}
+                          sections={sections ?? []}
+                          homes={r.products.product_homes ?? []}
+                          defaultLoc=""
+                          defaultLabel="Default"
+                        />
                       </td>
                       <td>
                         <input

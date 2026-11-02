@@ -51,7 +51,13 @@ export function ReceiveSpot({
         ))}
       </select>
       {here.length > 0 && (
-        <select name={`spot_${lineId}`} className="input w-auto" value={spot} onChange={(e) => setSpot(e.target.value)} aria-label={`Section and shelf for ${name}`}>
+        <select
+          name={`spot_${lineId}`}
+          className="input w-auto"
+          value={spot}
+          onChange={(e) => setSpot(e.target.value)}
+          aria-label={`Section and shelf for ${name}`}
+        >
           <option value="">No section</option>
           {spotOptions(here).map((o) => (
             <option key={o.value} value={o.value}>
@@ -63,4 +69,3 @@ export function ReceiveSpot({
     </div>
   );
 }
-

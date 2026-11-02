@@ -15,12 +15,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: SP
   let query = supabase.from("customers").select("*, price_tiers(name)").order("name");
   const term = searchTerm(q);
   if (term) query = query.or(`name.ilike.%${term}%,contact_name.ilike.%${term}%,email.ilike.%${term}%`);
-  const [{ data: customers }, { data: tiers }] = await Promise.all([
-    query,
-    supabase.from("price_tiers").select("id, name").order("name"),
-  ]);
+  const [{ data: customers }, { data: tiers }] = await Promise.all([query, supabase.from("price_tiers").select("id, name").order("name")]);
 
-  const { data: reps } = await supabase.from("profiles").select("id, full_name, email, role").eq("active", true).in("role", ["sales", "admin"]).order("full_name");
+  const { data: reps } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role")
+    .eq("active", true)
+    .in("role", ["sales", "admin"])
+    .order("full_name");
   const repList = (reps ?? []).map((r) => ({ id: r.id, name: r.full_name || r.email || "" }));
 
   return (

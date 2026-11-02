@@ -76,9 +76,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: SP }
                     {r.return_lines.map((l: any, i: number) => (
                       <div key={i} className="text-sm">
                         {qty(l.qty_base)} {l.products?.base_unit} {l.products?.name}{" "}
-                        <span className={l.restock ? "text-brand-700" : "text-red-700"}>
-                          ({l.restock ? "restocked" : "written off"})
-                        </span>
+                        <span className={l.restock ? "text-brand-700" : "text-red-700"}>({l.restock ? "restocked" : "written off"})</span>
                       </div>
                     ))}
                     {r.reason && <div className="text-xs text-stone-500">{r.reason}</div>}

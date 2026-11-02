@@ -43,7 +43,14 @@ export function CatalogCart({
             )}
             <label>
               <span className="block text-stone-500">This customer only</span>
-              <input name="special_price" type="number" min="0" step="0.0001" className="input w-28" defaultValue={it.special_price ?? ""} />
+              <input
+                name="special_price"
+                type="number"
+                min="0"
+                step="0.0001"
+                className="input w-28"
+                defaultValue={it.special_price ?? ""}
+              />
             </label>
             <button className="btn">Save prices</button>
           </form>

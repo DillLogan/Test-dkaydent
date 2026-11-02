@@ -10,7 +10,11 @@ type Result = { error?: string; available?: number };
 // qty 0 removes the line
 export async function setCartQty(unitId: string, qty: number, saved?: boolean): Promise<Result> {
   const { supabase } = await getSession();
-  const { data, error } = await supabase.rpc("portal_cart_set", { p_unit_id: unitId, p_qty: Math.max(0, Math.floor(Number(qty) || 0)), p_saved: saved ?? null });
+  const { data, error } = await supabase.rpc("portal_cart_set", {
+    p_unit_id: unitId,
+    p_qty: Math.max(0, Math.floor(Number(qty) || 0)),
+    p_saved: saved ?? null,
+  });
   if (error) return { error: dbMessage(error) };
   revalidatePath("/shop");
   return { available: (data as { available?: number } | null)?.available };
@@ -43,7 +47,11 @@ export async function checkout(fd: FormData) {
   } catch {
     fail("/shop", "The cart could not be read.");
   }
-  const { error } = await supabase.rpc("portal_checkout", { p_lines: lines, p_notes: String(fd.get("notes") ?? ""), p_payment: String(fd.get("payment") ?? "") || null });
+  const { error } = await supabase.rpc("portal_checkout", {
+    p_lines: lines,
+    p_notes: String(fd.get("notes") ?? ""),
+    p_payment: String(fd.get("payment") ?? "") || null,
+  });
   if (error) fail("/shop", dbMessage(error));
   revalidatePath("/shop");
   redirect(`/shop?message=${encodeURIComponent("Thanks. Your order was sent to us for approval.")}`);

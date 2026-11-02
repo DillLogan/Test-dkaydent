@@ -42,12 +42,18 @@ export function Motion() {
           if (!el || el.closest(".page-in")?.getAnimations().length) continue;
           const rect = el.getBoundingClientRect();
           if (!rect.width || rect.bottom < 0 || rect.top > innerHeight) continue;
-          el.animate([{ opacity: 0, transform: "translateY(6px) scale(.985)" }, { opacity: 1, transform: "none" }], {
-            duration: 240,
-            easing: ease,
-            delay: Math.min(n++, 8) * 18,
-            fill: "backwards",
-          });
+          el.animate(
+            [
+              { opacity: 0, transform: "translateY(6px) scale(.985)" },
+              { opacity: 1, transform: "none" },
+            ],
+            {
+              duration: 240,
+              easing: ease,
+              delay: Math.min(n++, 8) * 18,
+              fill: "backwards",
+            },
+          );
         }
       }
     });

@@ -25,7 +25,11 @@ export const SYNC_COLUMNS: Record<string, string[]> = {
   price: ["price", "unit price", "item price"],
 };
 
-const norm = (s: string) => s.trim().toLowerCase().replace(/[_\s]+/g, " ");
+const norm = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, " ");
 export function mapHeader(h: string): string | null {
   const n = norm(h);
   for (const [key, names] of Object.entries(SYNC_COLUMNS)) if (key === n || names.includes(n)) return key;

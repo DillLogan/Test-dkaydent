@@ -65,7 +65,12 @@ export default async function LocationsPage({ searchParams }: { searchParams: SP
                         <td>
                           {canEdit ? (
                             <form action={moveLocationShop.bind(null, l.id)} className="flex items-center gap-1">
-                              <select name="layout_id" defaultValue={l.layout_id} className="input w-auto py-1 text-xs" aria-label={`Shop for ${l.name}`}>
+                              <select
+                                name="layout_id"
+                                defaultValue={l.layout_id}
+                                className="input w-auto py-1 text-xs"
+                                aria-label={`Shop for ${l.name}`}
+                              >
                                 {shops.map((s) => (
                                   <option key={s.id} value={s.id}>
                                     {s.name}

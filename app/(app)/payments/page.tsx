@@ -16,13 +16,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: SP 
   const [{ data: pays }, { data: reqs }, { count: terminalCount }] = await Promise.all([
     supabase
       .from("payments")
-      .select("id, payment_number, kind, method, amount, tip, status, card_brand, card_last4, reference, received_at, so_id, invoice_id, customers(name), sales_orders(so_number, channel), invoices(invoice_number), payment_terminals(name)")
+      .select(
+        "id, payment_number, kind, method, amount, tip, status, card_brand, card_last4, reference, received_at, so_id, invoice_id, customers(name), sales_orders(so_number, channel), invoices(invoice_number), payment_terminals(name)",
+      )
       .order("received_at", { ascending: false })
       .limit(300),
     view === "terminal"
       ? supabase
           .from("terminal_requests")
-          .select("id, purpose, amount, status, message, provider, req_txn_id, created_at, so_id, invoice_id, payment_terminals(name), sales_orders(so_number)")
+          .select(
+            "id, purpose, amount, status, message, provider, req_txn_id, created_at, so_id, invoice_id, payment_terminals(name), sales_orders(so_number)",
+          )
           .order("created_at", { ascending: false })
           .limit(200)
       : Promise.resolve({ data: [] as any[] }),
@@ -55,7 +59,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: SP 
       </PageHeader>
       <ErrorBanner error={error} />
       <Notice message={message} />
-      <div className={`mb-4 rounded-md border px-4 py-2 text-sm ${live ? "border-brand-100 bg-brand-50 text-brand-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+      <div
+        className={`mb-4 rounded-md border px-4 py-2 text-sm ${live ? "border-brand-100 bg-brand-50 text-brand-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+      >
         {live
           ? "Valor Connect is live: charges go to your real terminals."
           : "Terminal charges use the built-in simulator until Valor Connect credentials are added (see README → Valor terminals)."}
@@ -164,7 +170,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: SP 
                     </td>
                     <td className="num">{money(r.amount)}</td>
                     <td>
-                      <span className={r.status === "approved" ? "text-brand-700" : r.status === "pending" ? "text-blue-700" : "text-red-700"}>
+                      <span
+                        className={r.status === "approved" ? "text-brand-700" : r.status === "pending" ? "text-blue-700" : "text-red-700"}
+                      >
                         {r.status}
                       </span>
                       {r.message && <div className="text-xs text-stone-500">{r.message}</div>}

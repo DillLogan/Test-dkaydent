@@ -59,11 +59,17 @@ export default async function CategoryRulesPage({ searchParams }: { searchParams
                     <td>
                       <div className="flex flex-wrap gap-1.5">
                         {rs.map((r) => (
-                          <span key={r.id} className="inline-flex items-center gap-1 rounded-full border border-stone-200 py-0.5 pr-1 pl-2.5 text-xs">
+                          <span
+                            key={r.id}
+                            className="inline-flex items-center gap-1 rounded-full border border-stone-200 py-0.5 pr-1 pl-2.5 text-xs"
+                          >
                             {r.keyword}
                             {canEdit && (
                               <form action={deleteRule.bind(null, r.id)}>
-                                <button className="rounded-full px-1 text-stone-400 hover:bg-red-50 hover:text-red-700" aria-label={`Remove keyword ${r.keyword}`}>
+                                <button
+                                  className="rounded-full px-1 text-stone-400 hover:bg-red-50 hover:text-red-700"
+                                  aria-label={`Remove keyword ${r.keyword}`}
+                                >
                                   ×
                                 </button>
                               </form>

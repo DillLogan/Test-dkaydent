@@ -110,9 +110,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </div>
         <div className="card">
           <div className="label">Avg landed cost</div>
-          <div className="text-xl font-semibold">
-            {stock?.avg_cost_base ? unitMoney(stock.avg_cost_base) : "—"}
-          </div>
+          <div className="text-xl font-semibold">{stock?.avg_cost_base ? unitMoney(stock.avg_cost_base) : "—"}</div>
           <div className="text-xs text-stone-500">per {product.base_unit}</div>
         </div>
         <div className="card">
@@ -178,7 +176,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 {home &&
                   (canPlace ? (
                     homeSections.length ? (
-                      <form action={setHomeSpot.bind(null, id, plan.layout.id)} className="flex flex-wrap items-end gap-2" data-testid="home-spot">
+                      <form
+                        action={setHomeSpot.bind(null, id, plan.layout.id)}
+                        className="flex flex-wrap items-end gap-2"
+                        data-testid="home-spot"
+                      >
                         <label className="min-w-48 flex-1">
                           <span className="label">Usual section and shelf</span>
                           <select name="spot" defaultValue={spotNow} className="input">
@@ -361,7 +363,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
         )}
         {(tiers ?? []).length === 0 && (
           <Empty>
-            No price tiers yet. <Link href="/customers/tiers" className="link">Create tiers</Link>
+            No price tiers yet.{" "}
+            <Link href="/customers/tiers" className="link">
+              Create tiers
+            </Link>
           </Empty>
         )}
       </Section>

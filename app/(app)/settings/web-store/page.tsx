@@ -30,30 +30,45 @@ function runText(r: any) {
 export default async function WebStorePage({ searchParams }: { searchParams: SP }) {
   const { error, message } = await searchParams;
   const { supabase } = await requireRole();
-  const [{ data: cfg }, { data: runs }, { data: unmatched }, { data: links }, { data: locations }, { data: customers }, { data: products }, { data: units }] =
-    await Promise.all([
-      supabase.from("web_store_settings").select("*").eq("id", 1).single(),
-      supabase.from("web_sync_runs").select("*").order("created_at", { ascending: false }).limit(25),
-      supabase.from("web_unmatched_skus").select("*").order("last_seen", { ascending: false }),
-      supabase.from("web_sku_links").select("external_sku, products(name, sku), product_units(name, factor)").order("external_sku"),
-      supabase.from("locations").select("id, name").eq("active", true).order("name"),
-      supabase.from("customers").select("id, name").eq("active", true).order("name"),
-      supabase.from("products").select("id, sku, name, base_unit").eq("active", true).order("name"),
-      supabase.from("product_units").select("id, product_id, name, factor").order("factor"),
-    ]);
+  const [
+    { data: cfg },
+    { data: runs },
+    { data: unmatched },
+    { data: links },
+    { data: locations },
+    { data: customers },
+    { data: products },
+    { data: units },
+  ] = await Promise.all([
+    supabase.from("web_store_settings").select("*").eq("id", 1).single(),
+    supabase.from("web_sync_runs").select("*").order("created_at", { ascending: false }).limit(25),
+    supabase.from("web_unmatched_skus").select("*").order("last_seen", { ascending: false }),
+    supabase.from("web_sku_links").select("external_sku, products(name, sku), product_units(name, factor)").order("external_sku"),
+    supabase.from("locations").select("id, name").eq("active", true).order("name"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
+    supabase.from("products").select("id, sku, name, base_unit").eq("active", true).order("name"),
+    supabase.from("product_units").select("id, product_id, name, factor").order("factor"),
+  ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const map = withDefaults(cfg?.field_map);
   const combos = (products ?? []).flatMap((p) =>
     (units ?? [])
       .filter((u) => u.product_id === p.id)
-      .map((u) => ({ value: `${p.id}:${u.id}`, label: `${p.name} (${p.sku}) — ${u.name}${Number(u.factor) !== 1 ? ` of ${Number(u.factor)} ${p.base_unit}` : ""}` })),
+      .map((u) => ({
+        value: `${p.id}:${u.id}`,
+        label: `${p.name} (${p.sku}) — ${u.name}${Number(u.factor) !== 1 ? ` of ${Number(u.factor)} ${p.base_unit}` : ""}`,
+      })),
   );
   const last = (kind: string) => (runs ?? []).find((r) => r.kind === kind);
 
   return (
     <>
-      <PageHeader title="Web store" subtitle="Bring stock counts and web orders in from your ordering website" back={{ href: "/settings", label: "Settings" }}>
+      <PageHeader
+        title="Web store"
+        subtitle="Bring stock counts and web orders in from your ordering website"
+        back={{ href: "/settings", label: "Settings" }}
+      >
         <form action={syncNow}>
           <SubmitButton className="btn btn-primary" pendingText="Syncing…">
             Sync now
@@ -67,14 +82,18 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
         <div className="card">
           <div className="text-sm text-stone-500">Connection</div>
           <div className="font-display mt-1 text-2xl">{cfg?.enabled ? "On" : "Off"}</div>
-          <div className="mt-1 text-xs text-stone-500">{cfg?.enabled ? "Webhooks and the daily sync are accepted" : "Webhooks are refused until you turn it on"}</div>
+          <div className="mt-1 text-xs text-stone-500">
+            {cfg?.enabled ? "Webhooks and the daily sync are accepted" : "Webhooks are refused until you turn it on"}
+          </div>
         </div>
         {(["inventory", "orders"] as const).map((k) => {
           const r = last(k);
           return (
             <div key={k} className="card">
               <div className="text-sm text-stone-500">Last {k === "inventory" ? "stock" : "orders"} sync</div>
-              <div className={`font-display mt-1 text-2xl ${r && !r.ok ? "text-red-700" : ""}`}>{r ? (r.ok ? "Worked" : "Failed") : "Never"}</div>
+              <div className={`font-display mt-1 text-2xl ${r && !r.ok ? "text-red-700" : ""}`}>
+                {r ? (r.ok ? "Worked" : "Failed") : "Never"}
+              </div>
               <div className="mt-1 text-xs text-stone-500">{r ? `${dateTime(r.created_at)} · ${runText(r)}` : "Nothing received yet"}</div>
             </div>
           );
@@ -84,13 +103,13 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
       <Section title="How it works">
         <div className="card space-y-2 text-[15px] text-stone-600">
           <p>
-            Your website is the source of truth for stock. Each count it sends sets on-hand here for that item, plus anything already on
-            web orders that hasn&apos;t been pulled yet, so it isn&apos;t counted twice. Changes show in the movement log as{" "}
-            <b>Web sync</b>. Counts going up are added to the location you pick below; counts going down come out of the oldest lots first.
+            Your website is the source of truth for stock. Each count it sends sets on-hand here for that item, plus anything already on web
+            orders that hasn&apos;t been pulled yet, so it isn&apos;t counted twice. Changes show in the movement log as <b>Web sync</b>.
+            Counts going up are added to the location you pick below; counts going down come out of the oldest lots first.
           </p>
           <p>
-            Each web order becomes a confirmed sales order, once. It goes to the customer with the same email, or to the web orders customer.
-            If an order has a SKU we don&apos;t know, it waits as a draft and the SKU shows up below to link.
+            Each web order becomes a confirmed sales order, once. It goes to the customer with the same email, or to the web orders
+            customer. If an order has a SKU we don&apos;t know, it waits as a draft and the SKU shows up below to link.
           </p>
         </div>
       </Section>
@@ -103,15 +122,31 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
           </label>
           <label>
             <span className="label">Inventory address (optional)</span>
-            <input name="inventory_url" className="input" defaultValue={cfg?.inventory_url ?? ""} placeholder="https://shop.example.com/api/inventory" />
+            <input
+              name="inventory_url"
+              className="input"
+              defaultValue={cfg?.inventory_url ?? ""}
+              placeholder="https://shop.example.com/api/inventory"
+            />
           </label>
           <label>
             <span className="label">Orders address (optional)</span>
-            <input name="orders_url" className="input" defaultValue={cfg?.orders_url ?? ""} placeholder="https://shop.example.com/api/orders" />
+            <input
+              name="orders_url"
+              className="input"
+              defaultValue={cfg?.orders_url ?? ""}
+              placeholder="https://shop.example.com/api/orders"
+            />
           </label>
           <label>
             <span className="label">API key {cfg?.api_key ? "(saved; leave blank to keep it)" : ""}</span>
-            <input name="api_key" type="password" className="input" autoComplete="off" placeholder={cfg?.api_key ? "••••••••" : "Sent as Authorization: Bearer …"} />
+            <input
+              name="api_key"
+              type="password"
+              className="input"
+              autoComplete="off"
+              placeholder={cfg?.api_key ? "••••••••" : "Sent as Authorization: Bearer …"}
+            />
             {cfg?.api_key && (
               <span className="mt-1.5 flex items-center gap-2 text-xs text-stone-500">
                 <input type="checkbox" name="clear_api_key" /> Remove the saved key
@@ -150,7 +185,8 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
         <div className="card space-y-4 text-sm">
           <p className="text-[15px] text-stone-600">
             Have the website post to these addresses whenever stock changes or an order is placed, changed or cancelled. Each post is signed
-            with the secret below: header <code className="rounded bg-stone-100 px-1">X-Signature: sha256=&lt;HMAC-SHA256 of the body, hex&gt;</code>.
+            with the secret below: header{" "}
+            <code className="rounded bg-stone-100 px-1">X-Signature: sha256=&lt;HMAC-SHA256 of the body, hex&gt;</code>.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label>
@@ -172,14 +208,19 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
               )}
             </label>
             <form action={newWebhookSecret}>
-              <SubmitButton className="btn" confirm={cfg?.webhook_secret ? "Make a new secret? The website must be updated or its webhooks will be refused." : undefined}>
+              <SubmitButton
+                className="btn"
+                confirm={
+                  cfg?.webhook_secret ? "Make a new secret? The website must be updated or its webhooks will be refused." : undefined
+                }
+              >
                 {cfg?.webhook_secret ? "Make a new secret" : "Make a secret"}
               </SubmitButton>
             </form>
           </div>
           <p className="text-xs text-stone-500">
-            The daily sync also pulls from the addresses above in case a webhook was missed. It needs SUPABASE_SERVICE_ROLE_KEY and CRON_SECRET on
-            the server (see the README).
+            The daily sync also pulls from the addresses above in case a webhook was missed. It needs SUPABASE_SERVICE_ROLE_KEY and
+            CRON_SECRET on the server (see the README).
           </p>
         </div>
       </Section>
@@ -195,8 +236,8 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
         }
       >
         <p className="mb-3 text-[15px] text-stone-600">
-          Where each piece of information sits in the website&apos;s JSON. Use dots for nested fields, like <code>customer.email</code>. Leave a
-          list field empty if the response is the list itself.
+          Where each piece of information sits in the website&apos;s JSON. Use dots for nested fields, like <code>customer.email</code>.
+          Leave a list field empty if the response is the list itself.
         </p>
         <form action={saveFieldMap} className="card space-y-5">
           {(["Inventory", "Orders", "Order lines"] as const).map((g) => (
@@ -206,7 +247,12 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
                 {MAP_FIELDS.filter((f) => f.group === g).map((f) => (
                   <label key={f.key}>
                     <span className="label">{f.label}</span>
-                    <input name={f.key} className="input" defaultValue={map[f.key]} placeholder={DEFAULT_MAP[f.key] || "(the response itself)"} />
+                    <input
+                      name={f.key}
+                      className="input"
+                      defaultValue={map[f.key]}
+                      placeholder={DEFAULT_MAP[f.key] || "(the response itself)"}
+                    />
                   </label>
                 ))}
               </div>
@@ -246,7 +292,13 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
                     <td>
                       <form action={linkSku} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="sku" value={u.external_sku} />
-                        <select name="product_unit" className="input w-auto max-w-80" required defaultValue="" aria-label={`Item for ${u.external_sku}`}>
+                        <select
+                          name="product_unit"
+                          className="input w-auto max-w-80"
+                          required
+                          defaultValue=""
+                          aria-label={`Item for ${u.external_sku}`}
+                        >
                           <option value="" disabled>
                             Choose item and unit…
                           </option>
@@ -315,7 +367,9 @@ export default async function WebStorePage({ searchParams }: { searchParams: SP 
                   <tr key={r.id}>
                     <td className="whitespace-nowrap">{dateTime(r.created_at)}</td>
                     <td>{r.kind === "inventory" ? "Stock" : "Orders"}</td>
-                    <td className="text-stone-500">{r.source === "webhook" ? "Webhook" : r.source === "pull" ? "Daily sync" : "Sync now"}</td>
+                    <td className="text-stone-500">
+                      {r.source === "webhook" ? "Webhook" : r.source === "pull" ? "Daily sync" : "Sync now"}
+                    </td>
                     <td className={r.ok ? "" : "text-red-700"}>{runText(r)}</td>
                   </tr>
                 ))}

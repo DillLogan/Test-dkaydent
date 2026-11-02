@@ -41,7 +41,12 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
         )}
       </div>
       {l.svg ? (
-        <span className="block w-full" style={{ height: `${barH}in` }} aria-label={`Barcode ${l.code}`} dangerouslySetInnerHTML={{ __html: l.svg }} />
+        <span
+          className="block w-full"
+          style={{ height: `${barH}in` }}
+          aria-label={`Barcode ${l.code}`}
+          dangerouslySetInnerHTML={{ __html: l.svg }}
+        />
       ) : (
         <span className="text-[#b91c1c]" style={{ fontSize: `${base * 0.1}in` }}>
           Can&apos;t encode {l.code}
@@ -50,7 +55,12 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
       <div className="text-center font-mono font-bold tracking-wider" style={{ fontSize: `${base * 0.12}in`, lineHeight: 1 }}>
         {l.code}
       </div>
-      <div className="text-center whitespace-nowrap text-[#555555]" style={{ fontSize: `${base * 0.08}in`, lineHeight: 1 }} data-testid="label-printed" suppressHydrationWarning>
+      <div
+        className="text-center whitespace-nowrap text-[#555555]"
+        style={{ fontSize: `${base * 0.08}in`, lineHeight: 1 }}
+        data-testid="label-printed"
+        suppressHydrationWarning
+      >
         Printed {printedOn()}
       </div>
       {lines.map((line, i) => (
@@ -62,7 +72,15 @@ function LabelBox({ l, w, h, cut }: { l: PrintLabel; w: number; h: number; cut: 
   );
 }
 
-export function LabelPrintView({ labels, initialCopies, hideCopies }: { labels: PrintLabel[]; initialCopies: number; hideCopies?: boolean }) {
+export function LabelPrintView({
+  labels,
+  initialCopies,
+  hideCopies,
+}: {
+  labels: PrintLabel[];
+  initialCopies: number;
+  hideCopies?: boolean;
+}) {
   const [s, setS] = useState<PrintSettings | null>(null);
   const [copies, setCopies] = useState(initialCopies);
   useEffect(() => setS(readPrintSettings()), []);
@@ -88,23 +106,34 @@ export function LabelPrintView({ labels, initialCopies, hideCopies }: { labels: 
           {s.mode === "regular" && (
             <label className="block">
               <span className="label">Paper</span>
-              <select className="input w-auto" value={s.paper} onChange={(e) => setS({ ...s, paper: e.target.value === "a4" ? "a4" : "letter" })}>
+              <select
+                className="input w-auto"
+                value={s.paper}
+                onChange={(e) => setS({ ...s, paper: e.target.value === "a4" ? "a4" : "letter" })}
+              >
                 <option value="letter">Letter</option>
                 <option value="a4">A4</option>
               </select>
             </label>
           )}
-          {!hideCopies && (<label className="block">
-            <span className="label">Copies each</span>
-            <select className="input w-24" value={copies} onChange={(e) => setCopies(Number(e.target.value))} aria-label="Copies each">
-              {[1, 2, 3, 4, 5, 6, 8, 10, 12, 20, 25, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>)}
-          <button type="button" className="btn btn-primary" onClick={() => window.print()} disabled={!all.length || (s.mode === "regular" && !fitsPaper)}>
+          {!hideCopies && (
+            <label className="block">
+              <span className="label">Copies each</span>
+              <select className="input w-24" value={copies} onChange={(e) => setCopies(Number(e.target.value))} aria-label="Copies each">
+                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 20, 25, 50].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => window.print()}
+            disabled={!all.length || (s.mode === "regular" && !fitsPaper)}
+          >
             Print {all.length} label{all.length === 1 ? "" : "s"}
           </button>
         </div>

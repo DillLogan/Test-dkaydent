@@ -10,7 +10,9 @@ export async function GET(_req: Request, { params }: P) {
   const { id } = await params;
   const { data } = await a.supabase.from("signature_docs").select("id, name, page_count, boxes, status").eq("id", id).maybeSingle();
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  return NextResponse.json({ doc: { id: data.id, name: data.name, pageCount: data.page_count, boxes: data.boxes ?? [], status: data.status } });
+  return NextResponse.json({
+    doc: { id: data.id, name: data.name, pageCount: data.page_count, boxes: data.boxes ?? [], status: data.status },
+  });
 }
 
 export async function PATCH(req: Request, { params }: P) {
@@ -37,7 +39,11 @@ export async function DELETE(_req: Request, { params }: P) {
   if (error) return NextResponse.json({ error: "Couldn't delete." }, { status: 500 });
   // the original stays while sent requests still point at it; it is only removed when none do
   if (data?.file_path) {
-    const { count } = await service().from("signature_requests").select("id", { count: "exact", head: true }).eq("source_path", data.file_path).eq("status", "sent");
+    const { count } = await service()
+      .from("signature_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("source_path", data.file_path)
+      .eq("status", "sent");
     if (!count) await service().storage.from(BUCKET).remove([data.file_path]);
   }
   return NextResponse.json({ ok: true });

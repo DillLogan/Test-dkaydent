@@ -12,7 +12,11 @@ type Actions = {
   saveCartDetails: (payment: string | null, notes: string) => Promise<{ error?: string }>;
   placeOrder: () => Promise<void>;
 };
-export type ShopMode = { shopHref: string; cartHref: string; rep?: { pullOnline?: () => Promise<{ error?: string }>; onlineCount: number } };
+export type ShopMode = {
+  shopHref: string;
+  cartHref: string;
+  rep?: { pullOnline?: () => Promise<{ error?: string }>; onlineCount: number };
+};
 const CUSTOMER: ShopMode = { shopHref: "/shop", cartHref: "/shop/cart" };
 
 const STATUS_WORDS: Record<string, string> = {
@@ -53,8 +57,17 @@ function useCart(initial: CartRow[], actions: Actions) {
 
 function Stepper({ value, onChange, max, label }: { value: number; onChange: (n: number) => void; max?: number | null; label: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-stone-200 bg-white" role="group" aria-label={`Quantity of ${label}`}>
-      <button type="button" className="h-8 w-8 rounded-full text-lg leading-none hover:bg-stone-100" onClick={() => onChange(value - 1)} aria-label={value === 1 ? `Remove ${label}` : `One fewer ${label}`}>
+    <span
+      className="inline-flex items-center rounded-full border border-stone-200 bg-white"
+      role="group"
+      aria-label={`Quantity of ${label}`}
+    >
+      <button
+        type="button"
+        className="h-8 w-8 rounded-full text-lg leading-none hover:bg-stone-100"
+        onClick={() => onChange(value - 1)}
+        aria-label={value === 1 ? `Remove ${label}` : `One fewer ${label}`}
+      >
         {value === 1 ? "×" : "−"}
       </button>
       <input
@@ -67,7 +80,13 @@ function Stepper({ value, onChange, max, label }: { value: number; onChange: (n:
           if (n > 0) onChange(n);
         }}
       />
-      <button type="button" className="h-8 w-8 rounded-full text-lg leading-none hover:bg-stone-100 disabled:opacity-30" onClick={() => onChange(value + 1)} disabled={max !== null && max !== undefined && value >= max} aria-label={`One more ${label}`}>
+      <button
+        type="button"
+        className="h-8 w-8 rounded-full text-lg leading-none hover:bg-stone-100 disabled:opacity-30"
+        onClick={() => onChange(value + 1)}
+        disabled={max !== null && max !== undefined && value >= max}
+        aria-label={`One more ${label}`}
+      >
         +
       </button>
     </span>
@@ -86,14 +105,34 @@ function CartButton({ count, onOpen }: { count: number; onOpen: () => void }) {
     }
   }, [count]);
   return (
-    <button type="button" onClick={onOpen} className="btn relative" aria-haspopup="dialog" aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`} data-testid="cart-button">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="btn relative"
+      aria-haspopup="dialog"
+      aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
+      data-testid="cart-button"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
         <circle cx="9" cy="20" r="1.5" />
         <circle cx="18" cy="20" r="1.5" />
         <path d="M2 3h3l2.5 12.5a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6" />
       </svg>
       Cart
-      <span className={`ml-1 inline-flex min-w-6 justify-center rounded-full bg-brand-700 px-1.5 text-xs font-semibold text-white tabular-nums ${bump ? "pop-in" : ""}`} data-testid="cart-count">
+      <span
+        className={`ml-1 inline-flex min-w-6 justify-center rounded-full bg-brand-700 px-1.5 text-xs font-semibold text-white tabular-nums ${bump ? "pop-in" : ""}`}
+        data-testid="cart-count"
+      >
         {count}
       </span>
     </button>
@@ -105,7 +144,10 @@ function OnlineCart({ mode, name }: { mode: ShopMode; name: string }) {
   const [busy, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2 text-sm" data-testid="online-cart">
+    <div
+      className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2 text-sm"
+      data-testid="online-cart"
+    >
       <span className="flex-1">
         {name} has {mode.rep!.onlineCount} item{mode.rep!.onlineCount === 1 ? "" : "s"} in their own online cart.
       </span>
@@ -128,9 +170,26 @@ function OnlineCart({ mode, name }: { mode: ShopMode; name: string }) {
   );
 }
 
-const priceFor = (i: CatalogItem, cashPct: number, pay: string | null) => (pay === "cash" && cashPct ? Math.round(i.price * (1 - cashPct / 100) * 100) / 100 : i.price);
+const priceFor = (i: CatalogItem, cashPct: number, pay: string | null) =>
+  pay === "cash" && cashPct ? Math.round(i.price * (1 - cashPct / 100) * 100) / 100 : i.price;
 
-export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; orders: HistoryOrder[]; cart: CartRow[]; payment: string | null; actions: Actions; mode?: ShopMode }) {
+export function ShopBrowser({
+  me,
+  catalog,
+  orders,
+  cart,
+  payment,
+  actions,
+  mode = CUSTOMER,
+}: {
+  me: ShopMe;
+  catalog: CatalogItem[];
+  orders: HistoryOrder[];
+  cart: CartRow[];
+  payment: string | null;
+  actions: Actions;
+  mode?: ShopMode;
+}) {
   const c = useCart(cart, actions);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
@@ -141,12 +200,19 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
   const pay = payment ?? me.default_payment;
   const subtotal = inCart.reduce((n, r) => n + r.qty * priceFor(byId.get(r.unit_id)!, Number(me.cash_discount_pct), pay), 0);
   const cats = useMemo(() => Array.from(new Set(catalog.map((i) => i.category).filter(Boolean) as string[])).sort(), [catalog]);
-  const shown = catalog.filter((i) => (!cat || i.category === cat) && (!q || `${i.name} ${i.sku ?? ""} ${i.kind ?? ""}`.toLowerCase().includes(q.toLowerCase())));
+  const shown = catalog.filter(
+    (i) => (!cat || i.category === cat) && (!q || `${i.name} ${i.sku ?? ""} ${i.kind ?? ""}`.toLowerCase().includes(q.toLowerCase())),
+  );
   // Buy again: items from past orders that are still sold, most recent first
   const again = useMemo(() => {
     const seen = new Set<string>();
     const out: CatalogItem[] = [];
-    for (const o of orders) for (const l of o.lines) if (!seen.has(l.unit_id) && byId.has(l.unit_id)) { seen.add(l.unit_id); out.push(byId.get(l.unit_id)!); }
+    for (const o of orders)
+      for (const l of o.lines)
+        if (!seen.has(l.unit_id) && byId.has(l.unit_id)) {
+          seen.add(l.unit_id);
+          out.push(byId.get(l.unit_id)!);
+        }
     return out.slice(0, 10);
   }, [orders, byId]);
 
@@ -157,7 +223,13 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
   const left = (i: CatalogItem) => (i.available === null ? null : Number(i.available));
   const lowNote = (i: CatalogItem) => {
     const n = left(i);
-    return n === null ? null : n <= 0 ? <span className="text-red-700">Out of stock</span> : n <= 5 ? <span className="text-amber-700">Only {fmtQty(n)} left</span> : <>{fmtQty(n)} available</>;
+    return n === null ? null : n <= 0 ? (
+      <span className="text-red-700">Out of stock</span>
+    ) : n <= 5 ? (
+      <span className="text-amber-700">Only {fmtQty(n)} left</span>
+    ) : (
+      <>{fmtQty(n)} available</>
+    );
   };
   useEffect(() => {
     if (!open) return;
@@ -169,7 +241,14 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
   return (
     <div data-testid="shop">
       <div className="sticky top-0 z-20 -mx-4 mb-4 flex flex-wrap items-center gap-2 border-b border-stone-200 bg-stone-50/90 px-4 py-2 backdrop-blur md:-mx-8 md:px-8">
-        <input className="input min-w-40 flex-1" placeholder="Search items" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search items" data-testid="cart-search" />
+        <input
+          className="input min-w-40 flex-1"
+          placeholder="Search items"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search items"
+          data-testid="cart-search"
+        />
         <select className="input w-auto" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
           <option value="">All categories</option>
           {cats.map((x) => (
@@ -248,7 +327,8 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
             <details key={o.so_number} className="card">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm">
                 <span>
-                  {o.so_number} · {o.order_date} · {o.denied_reason ? <b className="text-red-700">Denied: {o.denied_reason}</b> : STATUS_WORDS[o.status] ?? o.status}
+                  {o.so_number} · {o.order_date} ·{" "}
+                  {o.denied_reason ? <b className="text-red-700">Denied: {o.denied_reason}</b> : (STATUS_WORDS[o.status] ?? o.status)}
                   {o.payment_type ? ` · ${o.payment_type}` : ""}
                 </span>
                 <span className="font-medium">{money(o.total)}</span>
@@ -284,7 +364,11 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
       </section>
 
       {/* the cart slides in from the right when the cart button is pressed */}
-      <div className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} onClick={() => setOpen(false)} aria-hidden="true" />
+      <div
+        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
       <aside
         className={`fixed top-0 right-0 bottom-0 z-50 flex w-[min(400px,92vw)] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none ${open ? "translate-x-0" : "translate-x-full"}`}
         role="dialog"
@@ -306,7 +390,11 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
           {inCart.map((r) => {
             const i = byId.get(r.unit_id)!;
             return (
-              <div key={r.unit_id} className="flex items-center gap-3 border-b border-stone-100 py-3 last:border-0" data-drawer-line={r.unit_id}>
+              <div
+                key={r.unit_id}
+                className="flex items-center gap-3 border-b border-stone-100 py-3 last:border-0"
+                data-drawer-line={r.unit_id}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium" title={i.name}>
                     {i.name}
@@ -328,7 +416,12 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
               {money(subtotal)}
             </span>
           </div>
-          <Link href={mode.cartHref} className={`btn btn-primary w-full ${inCart.length ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!inCart.length} data-testid="view-cart">
+          <Link
+            href={mode.cartHref}
+            className={`btn btn-primary w-full ${inCart.length ? "" : "pointer-events-none opacity-50"}`}
+            aria-disabled={!inCart.length}
+            data-testid="view-cart"
+          >
             View cart &amp; order summary
           </Link>
           <button type="button" className="btn w-full" onClick={() => setOpen(false)}>
@@ -340,7 +433,29 @@ export function ShopBrowser({ me, catalog, orders, cart, payment, actions, mode 
   );
 }
 
-export function CartView({ me, catalog, cart, payment, notes, actions, placed, placedId, error, mode = CUSTOMER }: { me: ShopMe; catalog: CatalogItem[]; cart: CartRow[]; payment: string | null; notes: string; actions: Actions; placed?: string; placedId?: string; error?: string; mode?: ShopMode }) {
+export function CartView({
+  me,
+  catalog,
+  cart,
+  payment,
+  notes,
+  actions,
+  placed,
+  placedId,
+  error,
+  mode = CUSTOMER,
+}: {
+  me: ShopMe;
+  catalog: CatalogItem[];
+  cart: CartRow[];
+  payment: string | null;
+  notes: string;
+  actions: Actions;
+  placed?: string;
+  placedId?: string;
+  error?: string;
+  mode?: ShopMode;
+}) {
   const c = useCart(cart, actions);
   const [pay, setPay] = useState<string>(payment ?? me.default_payment ?? "");
   const [note, setNote] = useState(notes);
@@ -353,7 +468,10 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
   const cashPct = Number(me.cash_discount_pct) || 0;
   const list = lines.reduce((n, { r, i }) => n + r.qty * Number(i.list_price ?? i.price), 0);
   const yours = lines.reduce((n, { r, i }) => n + r.qty * i.price, 0);
-  const cashOff = pay === "cash" && cashPct ? Math.round(lines.reduce((n, { r, i }) => n + r.qty * (i.price - priceFor(i, cashPct, "cash")), 0) * 100) / 100 : 0;
+  const cashOff =
+    pay === "cash" && cashPct
+      ? Math.round(lines.reduce((n, { r, i }) => n + r.qty * (i.price - priceFor(i, cashPct, "cash")), 0) * 100) / 100
+      : 0;
   const feePct = Number(me.card_fee_pct ?? 0);
   const goods = Math.round((yours - cashOff) * 100) / 100;
   // paying by card adds the processing fee; the invoice works it out again on the subtotal plus any tax
@@ -385,7 +503,8 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
           <p className="text-sm text-stone-600">Approved for {me.name}: it is Ready to pull. The invoice comes after delivery.</p>
         ) : (
           <p className="text-sm text-stone-600">
-            It has gone to {me.rep ? me.rep : "your sales rep"} for approval. You can follow it under Your orders on the Shop page. The invoice comes after delivery.
+            It has gone to {me.rep ? me.rep : "your sales rep"} for approval. You can follow it under Your orders on the Shop page. The
+            invoice comes after delivery.
           </p>
         )}
         <div className="flex flex-wrap justify-center gap-2">
@@ -434,7 +553,14 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
                   <div className="font-medium">{i.name}</div>
                   <div className="text-xs text-stone-500">
                     {money(i.price)} per {i.unit}
-                    {i.available !== null && (Number(i.available) <= 0 ? <span className="text-red-700"> · Out of stock now</span> : r.qty > Number(i.available) ? <span className="text-red-700"> · Only {fmtQty(Number(i.available))} left</span> : Number(i.available) <= 5 ? <span className="text-amber-700"> · Only {fmtQty(Number(i.available))} left</span> : null)}
+                    {i.available !== null &&
+                      (Number(i.available) <= 0 ? (
+                        <span className="text-red-700"> · Out of stock now</span>
+                      ) : r.qty > Number(i.available) ? (
+                        <span className="text-red-700"> · Only {fmtQty(Number(i.available))} left</span>
+                      ) : Number(i.available) <= 5 ? (
+                        <span className="text-amber-700"> · Only {fmtQty(Number(i.available))} left</span>
+                      ) : null)}
                   </div>
                   <div className="mt-1 flex gap-3 text-xs">
                     <button type="button" className="link" onClick={() => c.set(r.unit_id, r.qty, true)} data-testid="save-later">
@@ -445,12 +571,21 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
                     </button>
                   </div>
                 </div>
-                <Stepper value={r.qty} max={i.available === null ? null : Number(i.available)} label={i.name} onChange={(n) => c.set(r.unit_id, n)} />
+                <Stepper
+                  value={r.qty}
+                  max={i.available === null ? null : Number(i.available)}
+                  label={i.name}
+                  onChange={(n) => c.set(r.unit_id, n)}
+                />
                 <div className="w-24 text-right font-medium tabular-nums">{money(r.qty * i.price)}</div>
               </li>
             ))}
           </ul>
-          {gone.length > 0 && <p className="px-5 py-3 text-xs text-stone-500">{gone.length} item{gone.length === 1 ? " is" : "s are"} no longer sold and won&apos;t be ordered.</p>}
+          {gone.length > 0 && (
+            <p className="px-5 py-3 text-xs text-stone-500">
+              {gone.length} item{gone.length === 1 ? " is" : "s are"} no longer sold and won&apos;t be ordered.
+            </p>
+          )}
         </section>
 
         {saved.length > 0 && (
@@ -470,7 +605,15 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
                       )}
                     </div>
                     {i && (
-                      <button type="button" className="btn btn-sm" onClick={() => c.set(r.unit_id, Math.min(r.qty, i.available === null ? r.qty : Math.max(1, Number(i.available))), false)} disabled={i.available !== null && Number(i.available) <= 0} data-testid="move-to-cart">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() =>
+                          c.set(r.unit_id, Math.min(r.qty, i.available === null ? r.qty : Math.max(1, Number(i.available))), false)
+                        }
+                        disabled={i.available !== null && Number(i.available) <= 0}
+                        data-testid="move-to-cart"
+                      >
                         Move to cart
                       </button>
                     )}
@@ -513,9 +656,7 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
           </table>
           <dl className="space-y-1 border-t border-stone-200 pt-3 text-sm">
             <div className="flex justify-between">
-              <dt>
-                Items ({count})
-              </dt>
+              <dt>Items ({count})</dt>
               <dd className="tabular-nums">{money(list)}</dd>
             </div>
             {list - yours > 0.004 && (
@@ -543,7 +684,8 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
               </dd>
             </div>
             <p className="text-xs text-stone-500">
-              Tax, if any, and delivery are added on the invoice{cardFee > 0 ? `, and the card fee is worked out on the total with tax` : ""}.
+              Tax, if any, and delivery are added on the invoice
+              {cardFee > 0 ? `, and the card fee is worked out on the total with tax` : ""}.
               {" Prices are checked again when your rep approves the order."}
             </p>
           </dl>
@@ -557,7 +699,15 @@ export function CartView({ me, catalog, cart, payment, notes, actions, placed, p
                 <option value="check">Check</option>
               </select>
             </label>
-            <textarea className="input" rows={2} placeholder="Notes for this order (optional)" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} aria-label="Notes" />
+            <textarea
+              className="input"
+              rows={2}
+              placeholder="Notes for this order (optional)"
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Notes"
+            />
             {short.length > 0 && <p className="text-xs text-red-700">Lower the amounts marked “Only … left” before placing the order.</p>}
             <button
               type="button"

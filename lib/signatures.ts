@@ -13,7 +13,18 @@ import { createClient } from "@/lib/supabase/server";
 export const BUCKET = "signature-docs";
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
-export type Box = { id: string; page: number; x: number; y: number; w: number; h: number; type: "signature" | "initials" | "text" | "checkbox"; label?: string; fill?: boolean; underline?: boolean };
+export type Box = {
+  id: string;
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  type: "signature" | "initials" | "text" | "checkbox";
+  label?: string;
+  fill?: boolean;
+  underline?: boolean;
+};
 export type RequestRow = {
   id: string;
   doc_id: string | null;
@@ -84,8 +95,12 @@ export async function requestByToken(token: string): Promise<RequestRow | null> 
  *  - recipient email belongs to an active DKaydent login -> only when signed in as that login ("account").
  *  - otherwise -> the signer must type the same email ("email").
  */
-export async function signerCheck(r: RequestRow, typedEmail: string | null): Promise<
-  { ok: true; via: "account" | "email"; signerId: string | null } | { ok: false; status: number; error: string; needsLogin?: boolean; needsEmail?: boolean }
+export async function signerCheck(
+  r: RequestRow,
+  typedEmail: string | null,
+): Promise<
+  | { ok: true; via: "account" | "email"; signerId: string | null }
+  | { ok: false; status: number; error: string; needsLogin?: boolean; needsEmail?: boolean }
 > {
   const svc = service();
   const { data: owner } = await svc.from("profiles").select("id, active").eq("email", r.recipient_email.trim().toLowerCase()).maybeSingle();
@@ -94,14 +109,16 @@ export async function signerCheck(r: RequestRow, typedEmail: string | null): Pro
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { ok: false, status: 401, needsLogin: true, error: "This document was sent to your DKaydent account. Sign in to open it." };
+    if (!user)
+      return { ok: false, status: 401, needsLogin: true, error: "This document was sent to your DKaydent account. Sign in to open it." };
     if (!sameEmail(user.email, r.recipient_email)) {
       return { ok: false, status: 403, error: "This document was sent to a different account. Sign in with the account it was sent to." };
     }
     return { ok: true, via: "account", signerId: user.id };
   }
   if (!typedEmail) return { ok: false, status: 401, needsEmail: true, error: "Enter the email address this document was sent to." };
-  if (!sameEmail(typedEmail, r.recipient_email)) return { ok: false, status: 403, error: "That email doesn't match the address this document was sent to." };
+  if (!sameEmail(typedEmail, r.recipient_email))
+    return { ok: false, status: 403, error: "That email doesn't match the address this document was sent to." };
   return { ok: true, via: "email", signerId: null };
 }
 
@@ -110,8 +127,10 @@ async function download(path: string) {
   if (error || !data) throw new Error("The document file couldn't be found.");
   return new Uint8Array(await data.arrayBuffer());
 }
-export const sourceBytes = (r: RequestRow) => (r.source_path ? download(r.source_path) : Promise.reject(new Error("This request has no document attached.")));
-export const signedBytes = (r: RequestRow) => (r.completed_path ? download(r.completed_path) : Promise.reject(new Error("This document hasn't been signed yet.")));
+export const sourceBytes = (r: RequestRow) =>
+  r.source_path ? download(r.source_path) : Promise.reject(new Error("This request has no document attached."));
+export const signedBytes = (r: RequestRow) =>
+  r.completed_path ? download(r.completed_path) : Promise.reject(new Error("This document hasn't been signed yet."));
 
 async function flatten(src: Uint8Array, boxes: Box[], values: Record<string, string>) {
   const pdf = await PDFDocument.load(src);
@@ -145,7 +164,11 @@ async function flatten(src: Uint8Array, boxes: Box[], values: Record<string, str
     } else {
       const size = Math.min(Math.max(bh * 0.55, 8), 20);
       const font = b.type === "signature" || b.type === "initials" ? obliq : helv;
-      const safe = val.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "?").slice(0, 300);
+      const safe = val
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^\x20-\x7E]/g, "?")
+        .slice(0, 300);
       page.drawText(safe, { x: bx + 3, y: yBottom + (bh - size) / 2 + size * 0.15, size, font, color: rgb(0.1, 0.1, 0.16) });
     }
   }
@@ -156,7 +179,11 @@ async function certificate(pdf: PDFDocument, info: Record<string, string>) {
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const page = pdf.addPage([612, 792]);
-  const safe = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "?");
+  const safe = (v: unknown) =>
+    String(v ?? "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^\x20-\x7E]/g, "?");
   let y = 740;
   page.drawText("Signing certificate", { x: 54, y, size: 20, font: bold, color: rgb(0.15, 0.37, 0.22) });
   y -= 34;
@@ -164,7 +191,10 @@ async function certificate(pdf: PDFDocument, info: Record<string, string>) {
     ["Document", info.docName],
     ["Signer name (as entered)", info.name],
     ["Signer email", info.email],
-    ["How the signer was checked", info.via === "account" ? "Signed in to their DKaydent account with this email" : "Typed the email this document was sent to"],
+    [
+      "How the signer was checked",
+      info.via === "account" ? "Signed in to their DKaydent account with this email" : "Typed the email this document was sent to",
+    ],
     ["Sent by", [info.senderName, info.senderEmail].filter(Boolean).join(" - ")],
     ["IP address", info.ip],
     ["Device / browser", info.userAgent],
@@ -184,7 +214,11 @@ async function certificate(pdf: PDFDocument, info: Record<string, string>) {
 }
 
 /** Fill, flatten, add the certificate, store the signed copy and mark the request complete */
-export async function complete(r: RequestRow, values: Record<string, string>, audit: { name: string; ip: string; userAgent: string; via: "account" | "email"; signerId: string | null }) {
+export async function complete(
+  r: RequestRow,
+  values: Record<string, string>,
+  audit: { name: string; ip: string; userAgent: string; via: "account" | "email"; signerId: string | null },
+) {
   if (r.status === "completed") return r;
   // only values for this request's boxes, and sensible sizes (a drawn signature is a PNG data URL)
   const clean: Record<string, string> = {};
@@ -204,7 +238,13 @@ export async function complete(r: RequestRow, values: Record<string, string>, au
     userAgent: audit.userAgent.slice(0, 400),
     signedAt,
   };
-  await certificate(pdf, { ...full, docName: r.doc_name, requestId: r.id, senderName: r.sender_name ?? "", senderEmail: r.sender_email ?? "" });
+  await certificate(pdf, {
+    ...full,
+    docName: r.doc_name,
+    requestId: r.id,
+    senderName: r.sender_name ?? "",
+    senderEmail: r.sender_email ?? "",
+  });
   const bytes = await pdf.save();
   const path = `completed/${r.id}.pdf`;
   const svc = service();

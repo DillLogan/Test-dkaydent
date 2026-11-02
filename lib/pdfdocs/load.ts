@@ -12,7 +12,10 @@ export async function loadPrintouts(supabase: { from: (t: string) => any }, docs
     const { data } = await supabase.from("pdf_templates").select("doc, layout").in("doc", docs);
     rows = data ?? [];
   } catch {}
-  const templates = Object.fromEntries(docs.map((d) => [d, cleanTemplate(d, rows.find((r) => r.doc === d)?.layout, legacy(pc))])) as Record<DocType, Template>;
+  const templates = Object.fromEntries(docs.map((d) => [d, cleanTemplate(d, rows.find((r) => r.doc === d)?.layout, legacy(pc))])) as Record<
+    DocType,
+    Template
+  >;
   const defaults = Object.fromEntries(docs.map((d) => [d, defaultTemplate(d, legacy(pc))])) as Record<DocType, Template>;
   const business = { name: pc.header.name, address: pc.header.address, phone: pc.header.phone, footer: pc.header.footer };
   return { pc, templates, defaults, business };

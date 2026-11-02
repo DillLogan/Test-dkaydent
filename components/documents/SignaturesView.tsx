@@ -17,7 +17,8 @@ type Req = {
   audit: { name?: string } | null;
 };
 
-const when = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
+const when = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 
 /**
  * Documents to sign : upload a PDF, mark where people sign or type,
@@ -37,7 +38,10 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
-    const [d, r] = await Promise.all([fetch("/api/signatures", { cache: "no-store" }), fetch("/api/signatures/requests", { cache: "no-store" })]);
+    const [d, r] = await Promise.all([
+      fetch("/api/signatures", { cache: "no-store" }),
+      fetch("/api/signatures/requests", { cache: "no-store" }),
+    ]);
     const dj = await d.json().catch(() => ({}));
     const rj = await r.json().catch(() => ({}));
     setDocs(dj.docs ?? []);
@@ -77,7 +81,11 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
     setSendBusy(true);
     setErr("");
     try {
-      const r = await fetch(`/api/signatures/${id}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: sendEmail.trim() }) });
+      const r = await fetch(`/api/signatures/${id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: sendEmail.trim() }),
+      });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) setErr(j.error ?? "Send failed.");
       else {
@@ -98,7 +106,12 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
     load();
   }
   async function delReq(r: Req) {
-    if (!window.confirm(r.status === "sent" ? "Withdraw this request? The signing link stops working." : "Remove this signed document and its copy?")) return;
+    if (
+      !window.confirm(
+        r.status === "sent" ? "Withdraw this request? The signing link stops working." : "Remove this signed document and its copy?",
+      )
+    )
+      return;
     await fetch(`/api/signatures/requests/${r.id}`, { method: "DELETE" });
     load();
   }
@@ -115,7 +128,14 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
               ["sent", `Sent${unseen ? ` (${unseen} new)` : ""}`],
             ] as const
           ).map(([k, l]) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`rounded-full px-4 py-1.5 text-sm ${tab === k ? "bg-white font-medium shadow-sm" : "text-stone-600"}`}>
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={tab === k}
+              onClick={() => setTab(k)}
+              className={`rounded-full px-4 py-1.5 text-sm ${tab === k ? "bg-white font-medium shadow-sm" : "text-stone-600"}`}
+            >
               {l}
             </button>
           ))}
@@ -127,8 +147,15 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
         </button>
       </div>
       <p className="text-xs text-stone-500">
-        Requests are sent from your account{senderEmail ? <> (<b>{senderEmail}</b>)</> : null}; replies go to you. Someone with a DKaydent login signs while signed in to that
-        account; anyone else confirms their email on the link.
+        Requests are sent from your account
+        {senderEmail ? (
+          <>
+            {" "}
+            (<b>{senderEmail}</b>)
+          </>
+        ) : null}
+        ; replies go to you. Someone with a DKaydent login signs while signed in to that account; anyone else confirms their email on the
+        link.
       </p>
       {err && (
         <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -150,7 +177,13 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
             {sent.needsLogin ? "They have a DKaydent login, so they'll sign in to sign." : "They'll confirm their email to open it."}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input readOnly value={sent.link} className="input min-w-0 flex-1 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} aria-label="Signing link" />
+            <input
+              readOnly
+              value={sent.link}
+              className="input min-w-0 flex-1 font-mono text-xs"
+              onFocus={(e) => e.currentTarget.select()}
+              aria-label="Signing link"
+            />
             <button type="button" className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(sent.link)}>
               Copy link
             </button>
@@ -206,7 +239,16 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
                       doSend(d.id);
                     }}
                   >
-                    <input value={sendEmail} onChange={(e) => setSendEmail(e.target.value)} placeholder="recipient@email.com" type="email" required className="input min-w-48 flex-1" autoFocus aria-label="Recipient email" />
+                    <input
+                      value={sendEmail}
+                      onChange={(e) => setSendEmail(e.target.value)}
+                      placeholder="recipient@email.com"
+                      type="email"
+                      required
+                      className="input min-w-48 flex-1"
+                      autoFocus
+                      aria-label="Recipient email"
+                    />
                     <button type="submit" className="btn btn-primary" disabled={sendBusy}>
                       {sendBusy ? "Sending…" : "Send"}
                     </button>
@@ -250,7 +292,9 @@ export function SignaturesView({ senderEmail }: { senderEmail: string | null }) 
                           {!r.opened && " · new"}
                         </span>
                       ) : (
-                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">Waiting · sent {when(r.sent_at)}</span>
+                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                          Waiting · sent {when(r.sent_at)}
+                        </span>
                       )}
                     </td>
                     <td className="text-right whitespace-nowrap">

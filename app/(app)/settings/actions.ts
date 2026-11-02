@@ -51,7 +51,10 @@ export async function setCardFee(fd: FormData) {
   const raw = String(fd.get("card_fee_pct") ?? "").trim();
   const pct = Number(raw);
   if (raw === "" || !Number.isFinite(pct) || pct < 0 || pct > 10) fail(PATH, "Enter a card fee between 0 and 10 percent.");
-  const { error } = await supabase.from("app_settings").update({ card_fee_pct: Math.round(pct * 100) / 100, updated_at: new Date().toISOString() }).eq("id", true);
+  const { error } = await supabase
+    .from("app_settings")
+    .update({ card_fee_pct: Math.round(pct * 100) / 100, updated_at: new Date().toISOString() })
+    .eq("id", true);
   if (error) fail(PATH, dbMessage(error));
   revalidatePath("/", "layout");
   redirect(`${PATH}?message=${encodeURIComponent(pct ? `Card processing fee set to ${pct}%.` : "Card processing fee turned off.")}`);

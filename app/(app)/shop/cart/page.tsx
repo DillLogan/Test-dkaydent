@@ -14,12 +14,25 @@ export default async function CartPage({ searchParams }: { searchParams: SP }) {
   if (!d.me) return <div className="card text-sm text-stone-600">Your account has not been set up and verified yet.</div>;
   return (
     <>
-      <PageHeader title="Cart" subtitle="Change amounts, save items for later, and check your order summary before you place the order." back={{ href: "/shop", label: "Shop" }}>
+      <PageHeader
+        title="Cart"
+        subtitle="Change amounts, save items for later, and check your order summary before you place the order."
+        back={{ href: "/shop", label: "Shop" }}
+      >
         <Link href="/shop" className="btn">
           Keep shopping
         </Link>
       </PageHeader>
-      <CartView me={d.me} catalog={d.catalog} cart={d.cart} payment={d.payment} notes={d.notes} actions={{ setCartQty, saveCartDetails, placeOrder }} placed={placed} error={error} />
+      <CartView
+        me={d.me}
+        catalog={d.catalog}
+        cart={d.cart}
+        payment={d.payment}
+        notes={d.notes}
+        actions={{ setCartQty, saveCartDetails, placeOrder }}
+        placed={placed}
+        error={error}
+      />
     </>
   );
 }

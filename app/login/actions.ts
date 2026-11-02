@@ -15,7 +15,11 @@ export async function signIn(fd: FormData) {
   const next = String(fd.get("next") ?? "");
   // only a path on this site (e.g. a signing link), never another address
   const safeNext = /^\/(?!\/)[\w\-./?=&%]*$/.test(next) ? next : "/";
-  if (error) fail(`/login?u=${encodeURIComponent(typed.slice(0, 200))}${safeNext !== "/" ? `&next=${encodeURIComponent(safeNext)}` : ""}`, error.message);
+  if (error)
+    fail(
+      `/login?u=${encodeURIComponent(typed.slice(0, 200))}${safeNext !== "/" ? `&next=${encodeURIComponent(safeNext)}` : ""}`,
+      error.message,
+    );
   redirect(safeNext);
 }
 
@@ -28,10 +32,7 @@ export async function signUp(fd: FormData) {
   });
   if (error) fail("/login?mode=signup", error.message);
   if (!data.session) {
-    redirect(
-      "/login?message=" +
-        encodeURIComponent("Check your email to confirm your address, then sign in."),
-    );
+    redirect("/login?message=" + encodeURIComponent("Check your email to confirm your address, then sign in."));
   }
   redirect("/");
 }

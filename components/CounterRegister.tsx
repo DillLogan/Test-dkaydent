@@ -57,7 +57,7 @@ export function CounterRegister({
 
   const tierOf = (cid: string) => {
     const c = customers.find((x) => x.id === cid);
-    return c?.tier_id ? tiers.find((t) => t.id === c.tier_id) ?? null : null;
+    return c?.tier_id ? (tiers.find((t) => t.id === c.tier_id) ?? null) : null;
   };
   const priceFor = (p: CounterProduct, unitId: string, cid: string) => {
     const u = p.units.find((x) => x.id === unitId)!;
@@ -74,7 +74,17 @@ export function CounterRegister({
       const unit = p.units.find((u) => u.id === unitId) ?? p.units[0];
       const i = ls.findIndex((l) => l.product_id === p.id && l.unit_id === unit.id);
       if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + 1 } : l));
-      return [...ls, { key: `${p.id}-${Date.now()}`, product_id: p.id, unit_id: unit.id, qty: 1, unit_price: priceFor(p, unit.id, customerId), priceEdited: false }];
+      return [
+        ...ls,
+        {
+          key: `${p.id}-${Date.now()}`,
+          product_id: p.id,
+          unit_id: unit.id,
+          qty: 1,
+          unit_price: priceFor(p, unit.id, customerId),
+          priceEdited: false,
+        },
+      ];
     });
     setSearch("");
   };
@@ -105,7 +115,9 @@ export function CounterRegister({
   const change = tendered ? round2(Number(tendered) - total) : null;
   const shortages = lines.filter((l) => {
     const p = byId.get(l.product_id)!;
-    const need = lines.filter((x) => x.product_id === l.product_id).reduce((t, x) => t + x.qty * (p.units.find((u) => u.id === x.unit_id)?.factor ?? 1), 0);
+    const need = lines
+      .filter((x) => x.product_id === l.product_id)
+      .reduce((t, x) => t + x.qty * (p.units.find((u) => u.id === x.unit_id)?.factor ?? 1), 0);
     return need > p.onHand;
   });
   const cart = JSON.stringify(lines.map(({ product_id, unit_id, qty, unit_price }) => ({ product_id, unit_id, qty, unit_price })));
@@ -128,7 +140,11 @@ export function CounterRegister({
               <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-stone-200 bg-white shadow-lg">
                 {matches.map((p) => (
                   <li key={p.id}>
-                    <button type="button" onClick={() => add(p)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50">
+                    <button
+                      type="button"
+                      onClick={() => add(p)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50"
+                    >
                       <ItemThumb name={p.name} path={p.image_path} size={28} />
                       <span className="flex-1">{p.name}</span>
                       <span className={`text-xs ${p.onHand > 0 ? "text-stone-500" : "text-red-700"}`}>
@@ -141,7 +157,17 @@ export function CounterRegister({
             )}
           </div>
           <button type="button" className="btn w-full" onClick={() => setBrowse(true)} data-testid="open-inventory" aria-haspopup="dialog">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -199,7 +225,12 @@ export function CounterRegister({
                           className="input w-auto"
                           value={l.unit_id}
                           aria-label={`Unit for ${p.name}`}
-                          onChange={(e) => update(l.key, { unit_id: e.target.value, unit_price: l.priceEdited ? l.unit_price : priceFor(p, e.target.value, customerId) })}
+                          onChange={(e) =>
+                            update(l.key, {
+                              unit_id: e.target.value,
+                              unit_price: l.priceEdited ? l.unit_price : priceFor(p, e.target.value, customerId),
+                            })
+                          }
                         >
                           {p.units.map((u) => (
                             <option key={u.id} value={u.id}>
@@ -233,7 +264,12 @@ export function CounterRegister({
                       </td>
                       <td className="num">{money(l.qty * l.unit_price)}</td>
                       <td className="text-right">
-                        <button type="button" className="btn btn-sm" onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Remove ${p.name}`}>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
+                          aria-label={`Remove ${p.name}`}
+                        >
                           ×
                         </button>
                       </td>
@@ -261,7 +297,15 @@ export function CounterRegister({
         </label>
         <label className="block">
           <span className="label">Sales tax %</span>
-          <input name="tax_rate" type="number" min="0" step="0.001" className="input" value={tax} onChange={(e) => setTax(Number(e.target.value))} />
+          <input
+            name="tax_rate"
+            type="number"
+            min="0"
+            step="0.001"
+            className="input"
+            value={tax}
+            onChange={(e) => setTax(Number(e.target.value))}
+          />
         </label>
         <dl className="space-y-1 text-sm">
           <div className="flex justify-between">
@@ -327,7 +371,11 @@ export function CounterRegister({
                 Cash
               </SubmitButton>
             </div>
-            {change !== null && change >= 0 && <p className="text-sm">Change: <b>{money(change)}</b></p>}
+            {change !== null && change >= 0 && (
+              <p className="text-sm">
+                Change: <b>{money(change)}</b>
+              </p>
+            )}
             {change !== null && change < 0 && <p className="text-sm text-red-700">{money(-change)} short</p>}
           </div>
           <div className="flex items-center gap-2">
@@ -363,11 +411,17 @@ function InventoryBrowser({
   priceOf: (p: CounterProduct, unitId: string) => number;
   onAdd: (p: CounterProduct, unitId: string) => void;
 }) {
-  const cats = useMemo(() => Array.from(new Set(products.map((p) => p.category || "Other"))).sort((a, b) => a.localeCompare(b)), [products]);
+  const cats = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category || "Other"))).sort((a, b) => a.localeCompare(b)),
+    [products],
+  );
   const [cat, setCat] = useState<string>("");
-  const tab = cat && cats.includes(cat) ? cat : cats[0] ?? "";
-  const shown = products.filter((p) => (p.category || "Other") === tab).sort((a, b) => Number(b.onHand > 0) - Number(a.onHand > 0) || a.name.localeCompare(b.name));
-  const inSale = (p: CounterProduct) => lines.filter((l) => l.product_id === p.id).reduce((t, l) => t + l.qty * (p.units.find((u) => u.id === l.unit_id)?.factor ?? 1), 0);
+  const tab = cat && cats.includes(cat) ? cat : (cats[0] ?? "");
+  const shown = products
+    .filter((p) => (p.category || "Other") === tab)
+    .sort((a, b) => Number(b.onHand > 0) - Number(a.onHand > 0) || a.name.localeCompare(b.name));
+  const inSale = (p: CounterProduct) =>
+    lines.filter((l) => l.product_id === p.id).reduce((t, l) => t + l.qty * (p.units.find((u) => u.id === l.unit_id)?.factor ?? 1), 0);
   const count = lines.reduce((t, l) => t + (l.qty > 0 ? 1 : 0), 0);
   useEffect(() => {
     if (!open) return;
@@ -377,7 +431,11 @@ function InventoryBrowser({
   }, [open, onClose]);
   return (
     <>
-      <div className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`} onClick={onClose} aria-hidden="true" />
+      <div
+        className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <aside
         role="dialog"
         aria-label="Inventory"
@@ -388,7 +446,9 @@ function InventoryBrowser({
       >
         <div className="flex items-center justify-between gap-2 border-b border-stone-200 px-4 py-3">
           <span className="font-semibold">Inventory</span>
-          <span className="flex-1 text-sm text-stone-500">{count ? `${count} line${count === 1 ? "" : "s"} in this sale` : "Tap a unit to add it to the sale"}</span>
+          <span className="flex-1 text-sm text-stone-500">
+            {count ? `${count} line${count === 1 ? "" : "s"} in this sale` : "Tap a unit to add it to the sale"}
+          </span>
           <button type="button" className="btn btn-primary btn-sm" onClick={onClose} data-testid="inventory-done">
             Done
           </button>
@@ -407,7 +467,10 @@ function InventoryBrowser({
             </button>
           ))}
         </div>
-        <div className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 overflow-y-auto p-4" role="tabpanel">
+        <div
+          className="grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 overflow-y-auto p-4"
+          role="tabpanel"
+        >
           {shown.map((p) => {
             const out = p.onHand <= 0;
             const have = inSale(p);

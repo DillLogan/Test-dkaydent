@@ -5,7 +5,17 @@ import { Empty, PageHeader, Section, Stat } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
 
-type Agg = { key: string; label: string; sub?: string; qty: number; revenue: number; cost: number; returns: number; returnedCost: number; unit?: string };
+type Agg = {
+  key: string;
+  label: string;
+  sub?: string;
+  qty: number;
+  revenue: number;
+  cost: number;
+  returns: number;
+  returnedCost: number;
+  unit?: string;
+};
 
 function group<T>(rows: T[], key: (r: T) => string, init: (r: T) => Agg, add: (a: Agg, r: T) => void) {
   const m = new Map<string, Agg>();
@@ -57,14 +67,30 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
   const byProduct = group(
     sales ?? [],
     (s) => s.product_id,
-    (s) => ({ key: s.product_id, label: s.product_name, sub: s.sku, unit: s.base_unit, qty: 0, revenue: 0, cost: 0, returns: 0, returnedCost: 0 }),
+    (s) => ({
+      key: s.product_id,
+      label: s.product_name,
+      sub: s.sku,
+      unit: s.base_unit,
+      qty: 0,
+      revenue: 0,
+      cost: 0,
+      returns: 0,
+      returnedCost: 0,
+    }),
     (a, s) => {
       a.qty += Number(s.qty_base);
       a.revenue += Number(s.revenue);
       a.cost += Number(s.cost);
     },
   );
-  mergeReturns(byProduct, rets ?? [], (r) => r.product_id, (r) => ({ key: r.product_id, label: r.product_name, sub: r.sku, unit: r.base_unit }), true);
+  mergeReturns(
+    byProduct,
+    rets ?? [],
+    (r) => r.product_id,
+    (r) => ({ key: r.product_id, label: r.product_name, sub: r.sku, unit: r.base_unit }),
+    true,
+  );
   byProduct.sort((a, b) => b.revenue - a.revenue);
 
   const byCustomer = group(
@@ -77,13 +103,26 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
       a.cost += Number(s.cost);
     },
   );
-  mergeReturns(byCustomer, rets ?? [], (r) => r.customer_id, (r) => ({ key: r.customer_id, label: r.customer_name }), false);
+  mergeReturns(
+    byCustomer,
+    rets ?? [],
+    (r) => r.customer_id,
+    (r) => ({ key: r.customer_id, label: r.customer_name }),
+    false,
+  );
   byCustomer.sort((a, b) => b.revenue - a.revenue);
 
   // Sell-through: sold / received in the period, per product
   const flow = new Map<string, { name: string; sku: string; unit: string; received: number; sold: number; shrunk: number }>();
   for (const m of (moves ?? []) as any[]) {
-    const f = flow.get(m.product_id) ?? { name: m.products?.name, sku: m.products?.sku, unit: m.products?.base_unit, received: 0, sold: 0, shrunk: 0 };
+    const f = flow.get(m.product_id) ?? {
+      name: m.products?.name,
+      sku: m.products?.sku,
+      unit: m.products?.base_unit,
+      received: 0,
+      sold: 0,
+      shrunk: 0,
+    };
     const q = Math.abs(Number(m.qty_base));
     if (m.kind === "receive") f.received += q;
     if (m.kind === "sale") f.sold += q;
@@ -104,8 +143,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
     const inBucket = (lots ?? []).filter((l) => l.age_days > min && l.age_days <= b.max);
     return {
       label: b.label,
-      flowers: sum(inBucket.filter((l) => l.kind === "flower"), (l) => l.value),
-      hard: sum(inBucket.filter((l) => l.kind === "hard_good"), (l) => l.value),
+      flowers: sum(
+        inBucket.filter((l) => l.kind === "flower"),
+        (l) => l.value,
+      ),
+      hard: sum(
+        inBucket.filter((l) => l.kind === "hard_good"),
+        (l) => l.value,
+      ),
       lots: inBucket.length,
     };
   });
@@ -143,10 +188,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
       </form>
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Net revenue" value={money(revenue)} hint={credits ? `${money(grossRevenue)} sold − ${money(credits)} returns` : "fulfilled in period"} />
+        <Stat
+          label="Net revenue"
+          value={money(revenue)}
+          hint={credits ? `${money(grossRevenue)} sold − ${money(credits)} returns` : "fulfilled in period"}
+        />
         <Stat label="COGS (FIFO)" value={money(cogs)} />
         <Stat label="Gross margin" value={money(revenue - cogs)} hint={pct(revenue ? (revenue - cogs) / revenue : null)} />
-        <Stat label="Shrink" value={money(shrinkValue)} hint={pct(cogs + shrinkValue ? shrinkValue / (cogs + shrinkValue) : null) + " of goods out"} tone={shrinkValue ? "warn" : undefined} />
+        <Stat
+          label="Shrink"
+          value={money(shrinkValue)}
+          hint={pct(cogs + shrinkValue ? shrinkValue / (cogs + shrinkValue) : null) + " of goods out"}
+          tone={shrinkValue ? "warn" : undefined}
+        />
         <Stat label="Inventory now" value={money(invValue)} />
       </div>
 

@@ -1,7 +1,16 @@
 /** What the printed paperwork says and shows. One shared setting, edited by the admin. */
 export type PrintConfig = {
   header: { name: string; address: string; phone: string; footer: string };
-  invoice: { showSku: boolean; showNotes: boolean; showBarcode: boolean; showResale: boolean; terms: string; note: string; customerTitle: string; officeTitle: string };
+  invoice: {
+    showSku: boolean;
+    showNotes: boolean;
+    showBarcode: boolean;
+    showResale: boolean;
+    terms: string;
+    note: string;
+    customerTitle: string;
+    officeTitle: string;
+  };
   pull: { showSku: boolean; showLot: boolean; showNotes: boolean; showBarcode: boolean; showLabelLine: boolean };
   route: { showPhone: boolean; showBoxes: boolean };
   labels: { showAddress: boolean; showRoute: boolean };
@@ -9,7 +18,16 @@ export type PrintConfig = {
 
 export const DEFAULT_CONFIG: PrintConfig = {
   header: { name: "DKaydent Wholesale", address: "", phone: "", footer: "" },
-  invoice: { showSku: true, showNotes: true, showBarcode: true, showResale: true, terms: "", note: "", customerTitle: "Customer copy", officeTitle: "Office copy" },
+  invoice: {
+    showSku: true,
+    showNotes: true,
+    showBarcode: true,
+    showResale: true,
+    terms: "",
+    note: "",
+    customerTitle: "Customer copy",
+    officeTitle: "Office copy",
+  },
   pull: { showSku: true, showLot: true, showNotes: true, showBarcode: true, showLabelLine: true },
   route: { showPhone: true, showBoxes: true },
   labels: { showAddress: true, showRoute: true },

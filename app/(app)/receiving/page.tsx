@@ -133,7 +133,10 @@ export default async function ReceivingPage({ searchParams }: { searchParams: SP
                 </div>
                 <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
                   {ws.map((w) => (
-                    <div key={w.start} className="flex flex-col gap-2 border-b border-stone-100 px-3 py-2 last:border-b-0 sm:flex-row sm:items-start">
+                    <div
+                      key={w.start}
+                      className="flex flex-col gap-2 border-b border-stone-100 px-3 py-2 last:border-b-0 sm:flex-row sm:items-start"
+                    >
                       <div className="w-28 shrink-0 pt-1 text-xs text-stone-500">
                         Week of {shortDay(w.start)}
                         {w.start === weekStart(now) && <span className="ml-1 font-semibold text-brand-700">· now</span>}
@@ -200,7 +203,11 @@ export default async function ReceivingPage({ searchParams }: { searchParams: SP
                         <Link href={`/receiving/${s.id}`} className="link">
                           {s.shipment_number}
                         </Link>
-                        {s.standing && <span className="ml-1 text-stone-400" title="From a standing order">↻</span>}
+                        {s.standing && (
+                          <span className="ml-1 text-stone-400" title="From a standing order">
+                            ↻
+                          </span>
+                        )}
                       </td>
                       <td className={s.is_late ? "font-medium text-red-700" : ""}>
                         {date(s.eta)}
@@ -230,7 +237,15 @@ export default async function ReceivingPage({ searchParams }: { searchParams: SP
           <form action={createShipment} className="card space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="ETA">
-                <input name="eta" type="date" className="input" min={addDays(now, -30)} max={horizon} required defaultValue={addDays(now, 7)} />
+                <input
+                  name="eta"
+                  type="date"
+                  className="input"
+                  min={addDays(now, -30)}
+                  max={horizon}
+                  required
+                  defaultValue={addDays(now, 7)}
+                />
                 <span className="mt-1 block text-xs text-stone-500">Up to one year out ({date(horizon)})</span>
               </Field>
               <Field label="Carrier">
@@ -252,7 +267,10 @@ export default async function ReceivingPage({ searchParams }: { searchParams: SP
               ) : (
                 <div className="grid gap-1.5 sm:grid-cols-2">
                   {openPOs.map((po: any) => (
-                    <label key={po.id} className="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50">
+                    <label
+                      key={po.id}
+                      className="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
+                    >
                       <input type="checkbox" name="po_id" value={po.id} />
                       <span className="font-medium">{po.po_number}</span>
                       <span className="truncate text-stone-600">{po.vendors?.name}</span>

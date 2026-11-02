@@ -5,7 +5,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { loginEmail } from "@/lib/username";
 import { str } from "@/lib/forms";
 
-const SAME = "If that username has a login, a reset link was sent, or your sales rep has been asked to approve a reset. Check back with them if you hear nothing.";
+const SAME =
+  "If that username has a login, a reset link was sent, or your sales rep has been asked to approve a reset. Check back with them if you hear nothing.";
 
 // same response either way so it can't be used to probe usernames
 export async function requestReset(fd: FormData) {
@@ -40,9 +41,16 @@ export async function requestReset(fd: FormData) {
         }
       }
       if (!sent) {
-        const { data: open } = await admin.from("password_requests").select("id").eq("profile_id", prof.id).eq("status", "pending").limit(1);
+        const { data: open } = await admin
+          .from("password_requests")
+          .select("id")
+          .eq("profile_id", prof.id)
+          .eq("status", "pending")
+          .limit(1);
         if (!open?.length) {
-          await admin.from("password_requests").insert({ profile_id: prof.id, customer_id: cust?.id ?? null, rep_id: cust?.rep_id ?? null });
+          await admin
+            .from("password_requests")
+            .insert({ profile_id: prof.id, customer_id: cust?.id ?? null, rep_id: cust?.rep_id ?? null });
         }
       }
     }

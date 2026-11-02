@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CUSTOM_KEY, CUSTOM_SEED_KEY, FONT_KEY, FONTS, PALETTE_KEY, PALETTES, THEME_KEY, type PaletteId, type ThemeChoice } from "@/lib/theme";
+import {
+  CUSTOM_KEY,
+  CUSTOM_SEED_KEY,
+  FONT_KEY,
+  FONTS,
+  PALETTE_KEY,
+  PALETTES,
+  THEME_KEY,
+  type PaletteId,
+  type ThemeChoice,
+} from "@/lib/theme";
 import { buildTheme, isHex, suggestSeeds, swatches } from "@/lib/themeGen";
 
 const MODES: { value: ThemeChoice; label: string; help: string }[] = [
@@ -126,7 +136,9 @@ function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-sm font-medium">Make your own</div>
-          <div className="text-xs text-stone-500">Pick one colour (or take it from a photo). The rest is worked out, with text kept easy to read.</div>
+          <div className="text-xs text-stone-500">
+            Pick one colour (or take it from a photo). The rest is worked out, with text kept easy to read.
+          </div>
         </div>
         <button type="button" className="btn" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? "Close" : active ? "Edit custom theme" : "Create custom theme"}
@@ -138,7 +150,13 @@ function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) 
             <div className="flex flex-wrap items-end gap-3">
               <label className="block">
                 <span className="label">Main colour</span>
-                <input type="color" value={accent} onChange={(e) => choose(e.target.value)} className="h-10 w-16 cursor-pointer rounded border border-stone-300 bg-transparent p-0.5" aria-label="Main colour" />
+                <input
+                  type="color"
+                  value={accent}
+                  onChange={(e) => choose(e.target.value)}
+                  className="h-10 w-16 cursor-pointer rounded border border-stone-300 bg-transparent p-0.5"
+                  aria-label="Main colour"
+                />
               </label>
               <label className="block">
                 <span className="label">Hex code</span>
@@ -157,7 +175,13 @@ function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) 
               </label>
               <label className="block">
                 <span className="label">From a photo</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onFile} className="block text-sm" aria-label="Choose a photo to take colours from" />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={onFile}
+                  className="block text-sm"
+                  aria-label="Choose a photo to take colours from"
+                />
               </label>
             </div>
             {picks.length > 0 && (
@@ -165,7 +189,15 @@ function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) 
                 <div className="label">Colours found in your photo</div>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Colours from your photo">
                   {picks.map((c) => (
-                    <button key={c} type="button" onClick={() => choose(c)} className={`h-10 w-10 rounded-full border-2 ${c === accent ? "border-stone-900" : "border-stone-200"}`} style={{ background: c }} aria-label={`Use ${c}`} aria-pressed={c === accent} />
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => choose(c)}
+                      className={`h-10 w-10 rounded-full border-2 ${c === accent ? "border-stone-900" : "border-stone-200"}`}
+                      style={{ background: c }}
+                      aria-label={`Use ${c}`}
+                      aria-pressed={c === accent}
+                    />
                   ))}
                 </div>
                 <p className="mt-1 text-xs text-stone-500">The photo is read in your browser and is not uploaded or kept.</p>
@@ -179,10 +211,16 @@ function CustomTheme({ active, onUse }: { active: boolean; onUse: () => void }) 
               <button type="button" className="btn btn-primary" onClick={saveIt} data-testid="use-custom">
                 Use this theme
               </button>
-              <span className="text-sm text-brand-700" aria-live="polite">{msg}</span>
+              <span className="text-sm text-brand-700" aria-live="polite">
+                {msg}
+              </span>
             </div>
           </div>
-          <div className="flex h-24 overflow-hidden rounded-xl border border-stone-200 self-start" aria-hidden="true" data-testid="custom-preview">
+          <div
+            className="flex h-24 overflow-hidden rounded-xl border border-stone-200 self-start"
+            aria-hidden="true"
+            data-testid="custom-preview"
+          >
             <Mini bg={sw.light[0]} surface={sw.light[1]} text={sw.light[2]} accent={sw.light[3]} />
             <Mini bg={sw.dark[0]} surface={sw.dark[0]} text={sw.light[0]} accent={sw.dark[1]} />
           </div>
@@ -318,7 +356,9 @@ export function ThemePicker() {
 
       <fieldset>
         <legend className="label">Font</legend>
-        <p className="mb-3 text-sm text-stone-500">Pick the typeface that is easiest for you to read. This is saved on this device for you only.</p>
+        <p className="mb-3 text-sm text-stone-500">
+          Pick the typeface that is easiest for you to read. This is saved on this device for you only.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="font-picker">
           {[{ id: "", name: "Palette default", family: "", help: "The font that comes with your colours" }, ...FONTS].map((f) => {
             const on = (font ?? "") === f.id;

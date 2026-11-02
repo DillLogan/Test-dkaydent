@@ -47,7 +47,9 @@ export default async function OpenOrdersPage({ searchParams }: { searchParams: S
                       {o.so_number}
                     </Link>{" "}
                     <span className="font-medium">{o.customers?.name}</span>
-                    {o.customers?.route_code && <span className="ml-2 rounded border border-stone-300 px-1.5 text-xs">{o.customers.route_code}</span>}
+                    {o.customers?.route_code && (
+                      <span className="ml-2 rounded border border-stone-300 px-1.5 text-xs">{o.customers.route_code}</span>
+                    )}
                     <div className="text-xs text-stone-500">
                       Rep: <b data-testid="order-rep">{repName(o.customers?.rep_id)}</b>
                       {isMine && " (you)"} · sent {dateTime(o.created_at)} · pays by {o.payment_type ?? "not chosen"}
@@ -66,7 +68,12 @@ export default async function OpenOrdersPage({ searchParams }: { searchParams: S
                   </Link>
                   <form action={deny} className="flex flex-1 flex-wrap items-end gap-2">
                     <input type="hidden" name="id" value={o.id} />
-                    <input name="reason" className="input min-w-48 flex-1" placeholder="Reason for denying (the customer sees this)" required />
+                    <input
+                      name="reason"
+                      className="input min-w-48 flex-1"
+                      placeholder="Reason for denying (the customer sees this)"
+                      required
+                    />
                     <button className="btn">Deny</button>
                   </form>
                 </div>

@@ -22,10 +22,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: SP 
 
   return (
     <>
-      <PageHeader
-        title="Invoices"
-        subtitle={`${invoices?.length ?? 0} shown · ${money(sum(invoices, (i) => i.total))}`}
-      >
+      <PageHeader title="Invoices" subtitle={`${invoices?.length ?? 0} shown · ${money(sum(invoices, (i) => i.total))}`}>
         <a href="/export/invoices" className="btn">
           Export CSV
         </a>

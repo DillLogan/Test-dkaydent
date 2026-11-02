@@ -16,6 +16,9 @@ export function tileColor(seed: string) {
 }
 
 export function initials(name: string) {
-  const words = name.replace(/[^A-Za-z0-9 ]/g, " ").trim().split(/\s+/);
+  const words = name
+    .replace(/[^A-Za-z0-9 ]/g, " ")
+    .trim()
+    .split(/\s+/);
   return ((words[0]?.[0] ?? "") + (words[1]?.[0] ?? "")).toUpperCase() || "?";
 }

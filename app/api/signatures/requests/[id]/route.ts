@@ -14,8 +14,13 @@ export async function GET(_req: Request, { params }: P) {
   const { data: file, error } = await service().storage.from(BUCKET).download(data.completed_path);
   if (error || !file) return NextResponse.json({ error: "The signed copy couldn't be found." }, { status: 404 });
   await service().from("signature_requests").update({ opened: true }).eq("id", id);
-  const name = (String(data.doc_name || "document").replace(/[^A-Za-z0-9 _.-]/g, "").trim() || "document") + " - signed.pdf";
-  return new Response(await file.arrayBuffer(), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" } });
+  const name =
+    (String(data.doc_name || "document")
+      .replace(/[^A-Za-z0-9 _.-]/g, "")
+      .trim() || "document") + " - signed.pdf";
+  return new Response(await file.arrayBuffer(), {
+    headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" },
+  });
 }
 
 // staff only

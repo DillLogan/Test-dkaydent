@@ -59,7 +59,13 @@ export async function advance(supabase: SupabaseClient, id: string) {
   const r = await loadRequest(supabase, id);
   if (!r || r.status !== "pending") return r;
   const age = Date.now() - Date.parse(r.created_at);
-  const req = { reqTxnId: r.req_txn_id, amount: Number(r.amount), tipEntry: r.tip_entry, invoiceRef: r.invoice_ref ?? "", providerRef: r.provider_ref };
+  const req = {
+    reqTxnId: r.req_txn_id,
+    amount: Number(r.amount),
+    tipEntry: r.tip_entry,
+    invoiceRef: r.invoice_ref ?? "",
+    providerRef: r.provider_ref,
+  };
   const provider = providerFor(r);
   if (r.provider === "valor") {
     try {

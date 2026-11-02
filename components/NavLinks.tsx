@@ -144,7 +144,14 @@ export function NavShell({
                     aria-hidden="true"
                     className={`text-stone-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
                   >
-                    <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M3 4.5 6 7.5 9 4.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
                 <div id={id} className={`nav-group grid ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`} inert={!isOpen}>

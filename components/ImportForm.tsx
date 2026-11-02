@@ -81,7 +81,8 @@ export function ImportForm({
           </ul>
           <p className="mt-2">
             Rows whose {keyCol} already exists update that record; new ones are created. Nothing is deleted.
-            {entity === "products" && " Pack units are added if missing; existing unit sizes are never changed, and a product's base unit can't change after it's created."}
+            {entity === "products" &&
+              " Pack units are added if missing; existing unit sizes are never changed, and a product's base unit can't change after it's created."}
           </p>
         </details>
       </div>
@@ -100,9 +101,7 @@ export function ImportForm({
               Missing required column{missing.length > 1 ? "s" : ""}: {missing.join(", ")}
             </div>
           )}
-          {unknown.length > 0 && (
-            <p className="text-sm text-amber-800">Ignoring unrecognized columns: {unknown.join(", ")}</p>
-          )}
+          {unknown.length > 0 && <p className="text-sm text-amber-800">Ignoring unrecognized columns: {unknown.join(", ")}</p>}
 
           <div className="table-wrap max-h-[28rem] overflow-y-auto">
             <table className="table">

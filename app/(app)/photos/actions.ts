@@ -21,7 +21,11 @@ async function store(folder: string, id: string, fd: FormData): Promise<{ path?:
 }
 
 async function removeOld(supabase: any, oldPath: string | null | undefined) {
-  if (oldPath) await supabase.storage.from(IMAGE_BUCKET).remove([oldPath]).catch(() => {});
+  if (oldPath)
+    await supabase.storage
+      .from(IMAGE_BUCKET)
+      .remove([oldPath])
+      .catch(() => {});
 }
 
 export async function uploadProductPhoto(productId: string, fd: FormData): Promise<Result> {

@@ -19,7 +19,9 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
   const [{ data: orders }, { data: vendors }, { data: upcoming }, { data: customers }] = await Promise.all([
     supabase
       .from("standing_orders")
-      .select("id, name, cadence, start_date, end_date, lead_days, active, vendors(name), customers(name), standing_order_lines(qty, unit_cost)")
+      .select(
+        "id, name, cadence, start_date, end_date, lead_days, active, vendors(name), customers(name), standing_order_lines(qty, unit_cost)",
+      )
       .order("active", { ascending: false })
       .order("name"),
     supabase.from("vendors").select("id, name").eq("active", true).order("name"),
@@ -116,7 +118,11 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
         <Section title="New standing order">
           {!vendors?.length ? (
             <Empty>
-              Add a <Link href="/vendors" className="link">vendor</Link> first.
+              Add a{" "}
+              <Link href="/vendors" className="link">
+                vendor
+              </Link>{" "}
+              first.
             </Empty>
           ) : (
             <form action={createStandingOrder} className="card grid gap-4 sm:grid-cols-3">
@@ -143,7 +149,15 @@ export default async function StandingOrdersPage({ searchParams }: { searchParam
                 </select>
               </Field>
               <Field label="First arrival">
-                <input name="start_date" type="date" className="input" min={now} max={oneYearFrom(now)} defaultValue={addDays(now, 7)} required />
+                <input
+                  name="start_date"
+                  type="date"
+                  className="input"
+                  min={now}
+                  max={oneYearFrom(now)}
+                  defaultValue={addDays(now, 7)}
+                  required
+                />
               </Field>
               <Field label="Last arrival (optional)">
                 <input name="end_date" type="date" className="input" min={now} />

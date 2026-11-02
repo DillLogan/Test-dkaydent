@@ -8,7 +8,11 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function CatalogPage({ searchParams }: { searchParams: SP }) {
   const { error, message, c } = await searchParams;
   const { supabase } = await requireRole("sales");
-  const { data: customers } = await supabase.from("customers").select("id, name, price_tier_id, discount_pct, cash_discount_pct, default_payment").eq("active", true).order("name");
+  const { data: customers } = await supabase
+    .from("customers")
+    .select("id, name, price_tier_id, discount_pct, cash_discount_pct, default_payment")
+    .eq("active", true)
+    .order("name");
   const cust = (customers ?? []).find((x) => x.id === c);
   let items: StaffItem[] = [];
   let tierName: string | null = null;
@@ -16,7 +20,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: SP }
   if (cust) {
     const [{ data, error: e }, { data: tier }] = await Promise.all([
       supabase.rpc("catalog_staff", { p_customer_id: cust.id }),
-      cust.price_tier_id ? supabase.from("price_tiers").select("name").eq("id", cust.price_tier_id).single() : Promise.resolve({ data: null }),
+      cust.price_tier_id
+        ? supabase.from("price_tiers").select("name").eq("id", cust.price_tier_id).single()
+        : Promise.resolve({ data: null }),
     ]);
     if (e) err = e.message;
     items = (data ?? []) as StaffItem[];

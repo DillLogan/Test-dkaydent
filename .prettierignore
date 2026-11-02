@@ -1,0 +1,5 @@
+public/
+supabase/
+.next/
+node_modules/
+*.sql

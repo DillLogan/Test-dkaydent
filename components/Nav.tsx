@@ -68,7 +68,16 @@ export async function Nav({ profile }: { profile: Profile }) {
           { href: "/shop/cart", label: "Cart", icon: "cart", badge: inCart },
           { href: "/settings", label: "Account", icon: "user" },
         ]}
-        groups={[{ title: "", links: [{ href: "/shop", label: "Shop" }, { href: "/settings", label: "Settings" }, { href: "/settings/customize", label: "Customize page" }] }]}
+        groups={[
+          {
+            title: "",
+            links: [
+              { href: "/shop", label: "Shop" },
+              { href: "/settings", label: "Settings" },
+              { href: "/settings/customize", label: "Customize page" },
+            ],
+          },
+        ]}
         userName={profile.full_name || profile.email || ""}
         roleLabel="Customer"
         signOut={signOut}
@@ -84,12 +93,21 @@ export async function Nav({ profile }: { profile: Profile }) {
     const { data } = await supabase.rpc("chat_unread");
     unread = (data ?? []).reduce((n: number, r: { unread: number }) => n + Number(r.unread), 0);
     if (profile.email) {
-      const { count } = await supabase.from("signature_requests").select("id", { count: "exact", head: true }).eq("status", "sent").ilike("recipient_email", profile.email.replace(/[%_\\]/g, "\\$&"));
+      const { count } = await supabase
+        .from("signature_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .ilike("recipient_email", profile.email.replace(/[%_\\]/g, "\\$&"));
       toSign = count ?? 0;
     }
     if (can(profile, "sales")) {
       // customer orders waiting on this person, as their assigned rep
-      const { data: mine } = await supabase.from("sales_orders").select("id, customers!inner(rep_id)").eq("source", "portal").eq("status", "draft").eq("customers.rep_id", profile.id);
+      const { data: mine } = await supabase
+        .from("sales_orders")
+        .select("id, customers!inner(rep_id)")
+        .eq("source", "portal")
+        .eq("status", "draft")
+        .eq("customers.rep_id", profile.id);
       waiting = mine?.length ?? 0;
       const { data: resets } = await supabase.rpc("pending_reset_count");
       resetWaiting = Number(resets ?? 0);
@@ -122,7 +140,20 @@ export async function Nav({ profile }: { profile: Profile }) {
   return (
     <NavShell
       tabs={staffTabs(profile.role, unread)}
-      groups={[...GROUPS, settings].map((g) => ({ ...g, links: g.links.map((l) => (l.href === "/messages" && unread ? { ...l, label: `Messages (${unread})` } : l.href === "/documents" && toSign ? { ...l, label: `Documents (${toSign} to sign)` } : l.href === "/sales/open" && waiting ? { ...l, label: `Open orders (${waiting})` } : l.href === "/admin/logins" && resetWaiting ? { ...l, label: `Customer logins (${resetWaiting})` } : l)) }))}
+      groups={[...GROUPS, settings].map((g) => ({
+        ...g,
+        links: g.links.map((l) =>
+          l.href === "/messages" && unread
+            ? { ...l, label: `Messages (${unread})` }
+            : l.href === "/documents" && toSign
+              ? { ...l, label: `Documents (${toSign} to sign)` }
+              : l.href === "/sales/open" && waiting
+                ? { ...l, label: `Open orders (${waiting})` }
+                : l.href === "/admin/logins" && resetWaiting
+                  ? { ...l, label: `Customer logins (${resetWaiting})` }
+                  : l,
+        ),
+      }))}
       userName={profile.full_name || profile.email || ""}
       roleLabel={ROLES.find((r) => r.value === profile.role)?.label ?? ""}
       signOut={signOut}

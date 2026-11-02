@@ -39,7 +39,16 @@ export default async function LoginPage({ searchParams }: { searchParams: SP }) 
           )}
           <label className="block">
             <span className="label">{isSignup ? "Email" : "Username or email"}</span>
-            <input name="email" type={isSignup ? "email" : "text"} defaultValue={isSignup ? undefined : u} className="input" required autoComplete="username" autoCapitalize="none" spellCheck={false} />
+            <input
+              name="email"
+              type={isSignup ? "email" : "text"}
+              defaultValue={isSignup ? undefined : u}
+              className="input"
+              required
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
           </label>
           <label className="block">
             <span className="label">Password</span>

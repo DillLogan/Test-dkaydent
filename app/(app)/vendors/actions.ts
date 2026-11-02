@@ -33,7 +33,10 @@ export async function updateVendor(id: string, fd: FormData) {
   const path = `/vendors/${id}`;
   const fields = vendorFields(fd);
   if (!fields.name) fail(path, "Vendor name is required.");
-  const { error } = await supabase.from("vendors").update({ ...fields, active: bool(fd, "active") }).eq("id", id);
+  const { error } = await supabase
+    .from("vendors")
+    .update({ ...fields, active: bool(fd, "active") })
+    .eq("id", id);
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   redirect(`${path}?message=${encodeURIComponent("Saved.")}`);

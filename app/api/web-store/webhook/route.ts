@@ -46,5 +46,5 @@ export async function POST(req: Request) {
     const r = await applyOrders(db, orders, "webhook");
     return NextResponse.json(r, { status: r.ok ? 200 : 422 });
   }
-  return NextResponse.json({ error: 'Add ?type=inventory or ?type=order to the webhook URL' }, { status: 400 });
+  return NextResponse.json({ error: "Add ?type=inventory or ?type=order to the webhook URL" }, { status: 400 });
 }

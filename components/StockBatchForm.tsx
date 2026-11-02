@@ -114,8 +114,8 @@ export function StockBatchForm({
             ))}
           </ul>
           <p className="mt-2">
-            Common headings like Quantity, Cost, Item and Expiry are recognized too. Each row becomes its own lot. The whole batch is saved together,
-            or not at all.
+            Common headings like Quantity, Cost, Item and Expiry are recognized too. Each row becomes its own lot. The whole batch is saved
+            together, or not at all.
           </p>
         </details>
       </div>
@@ -126,7 +126,9 @@ export function StockBatchForm({
             <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-800">{results.length - errors} lots ready</span>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-800">{newItems} new items</span>
             <span className="rounded-full bg-stone-100 px-3 py-1 text-stone-700">{money(value)} at cost</span>
-            <span className={`rounded-full px-3 py-1 ${errors ? "bg-red-50 text-red-800" : "bg-stone-100 text-stone-600"}`}>{errors} with errors</span>
+            <span className={`rounded-full px-3 py-1 ${errors ? "bg-red-50 text-red-800" : "bg-stone-100 text-stone-600"}`}>
+              {errors} with errors
+            </span>
           </div>
           {missing.length > 0 && (
             <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -139,7 +141,10 @@ export function StockBatchForm({
             <div className="label">Sorted into categories</div>
             <div className="flex flex-wrap gap-2">
               {byCategory.map(([c, x]) => (
-                <span key={c} className={`rounded-full border px-2.5 py-0.5 text-xs ${c === "Uncategorized" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-stone-200"}`}>
+                <span
+                  key={c}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs ${c === "Uncategorized" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-stone-200"}`}
+                >
                   {c} · {x.n}
                   {x.auto > 0 && <span className="text-stone-500"> ({x.auto} auto)</span>}
                 </span>
@@ -173,7 +178,9 @@ export function StockBatchForm({
                     </td>
                     <td>
                       {r.category ?? <span className="text-amber-700">Uncategorized</span>}
-                      {r.categorySource === "rules" && <span className="ml-1 rounded-full bg-brand-50 px-1.5 text-[11px] font-medium text-brand-700">auto</span>}
+                      {r.categorySource === "rules" && (
+                        <span className="ml-1 rounded-full bg-brand-50 px-1.5 text-[11px] font-medium text-brand-700">auto</span>
+                      )}
                     </td>
                     <td className="num">
                       {r.qty || "—"} {r.unit}
@@ -191,10 +198,10 @@ export function StockBatchForm({
             <input type="hidden" name="rows" value={JSON.stringify(raw)} />
             <input type="hidden" name="default_location" value={defaultLocation} />
             <input type="hidden" name="reference" value={reference} />
-            <SubmitButton pendingText="Receiving…">
-              Receive {results.length} lots into inventory
-            </SubmitButton>
-            {(errors > 0 || missing.length > 0) && <span className="text-sm text-red-700">Fix the errors in your file and choose it again.</span>}
+            <SubmitButton pendingText="Receiving…">Receive {results.length} lots into inventory</SubmitButton>
+            {(errors > 0 || missing.length > 0) && (
+              <span className="text-sm text-red-700">Fix the errors in your file and choose it again.</span>
+            )}
           </form>
         </>
       )}

@@ -5,8 +5,23 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
 export type Person = { id: string; name: string; email: string | null; role: string };
-export type Channel = { id: string; kind: "team" | "dm" | "group"; name: string | null; creator: string | null; unread: number; members: string[] };
-type Msg = { id: string; channel_id: string; sender_id: string; body: string; gif_url: string | null; created_at: string; chat_reactions: { user_id: string; emoji: string }[] };
+export type Channel = {
+  id: string;
+  kind: "team" | "dm" | "group";
+  name: string | null;
+  creator: string | null;
+  unread: number;
+  members: string[];
+};
+type Msg = {
+  id: string;
+  channel_id: string;
+  sender_id: string;
+  body: string;
+  gif_url: string | null;
+  created_at: string;
+  chat_reactions: { user_id: string; emoji: string }[];
+};
 type Gif = { id: string; title: string; url: string; preview?: string };
 
 const QUICK = ["👍", "❤️", "😂", "🎉", "👀", "✅"];
@@ -15,7 +30,19 @@ const MORE = ["🔥", "🙏", "😮", "😢", "💐", "🌹", "🚚", "❗", "�
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
 
-export function Messenger({ me, channels: initialChannels, people, initial, gifsConfigured }: { me: string; channels: Channel[]; people: Person[]; initial: string | null; gifsConfigured: boolean }) {
+export function Messenger({
+  me,
+  channels: initialChannels,
+  people,
+  initial,
+  gifsConfigured,
+}: {
+  me: string;
+  channels: Channel[];
+  people: Person[];
+  initial: string | null;
+  gifsConfigured: boolean;
+}) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const [channels, setChannels] = useState(initialChannels);
@@ -33,7 +60,7 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
 
   const nameOf = useCallback((id: string) => people.find((p) => p.id === id)?.name ?? "Someone", [people]);
   const label = useCallback(
-    (c: Channel) => (c.kind === "dm" ? nameOf(c.members.find((m) => m !== me) ?? "") : c.name ?? "Chat"),
+    (c: Channel) => (c.kind === "dm" ? nameOf(c.members.find((m) => m !== me) ?? "") : (c.name ?? "Chat")),
     [me, nameOf],
   );
   const current = channels.find((c) => c.id === active) ?? null;
@@ -52,7 +79,7 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
         kind: c.kind,
         name: c.name,
         creator: c.created_by,
-        unread: c.id === activeRef.current ? 0 : u.get(c.id) ?? 0,
+        unread: c.id === activeRef.current ? 0 : (u.get(c.id) ?? 0),
         members: (mem ?? []).filter((m: any) => m.channel_id === c.id).map((m: any) => m.user_id),
       })),
     );
@@ -91,10 +118,15 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
     const ch = supabase
       .channel("messenger")
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => {
-        if (activeRef.current) load(activeRef.current).then(() => { if (activeRef.current) markRead(activeRef.current); });
+        if (activeRef.current)
+          load(activeRef.current).then(() => {
+            if (activeRef.current) markRead(activeRef.current);
+          });
         refreshList();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_reactions" }, () => { if (activeRef.current) load(activeRef.current); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_reactions" }, () => {
+        if (activeRef.current) load(activeRef.current);
+      })
       .subscribe();
     const t = setInterval(() => {
       if (document.hidden) return;
@@ -129,7 +161,12 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
       ms.map((m) => {
         if (m.id !== id) return m;
         const has = m.chat_reactions.some((r) => r.user_id === me && r.emoji === emoji);
-        return { ...m, chat_reactions: has ? m.chat_reactions.filter((r) => !(r.user_id === me && r.emoji === emoji)) : [...m.chat_reactions, { user_id: me, emoji }] };
+        return {
+          ...m,
+          chat_reactions: has
+            ? m.chat_reactions.filter((r) => !(r.user_id === me && r.emoji === emoji))
+            : [...m.chat_reactions, { user_id: me, emoji }],
+        };
       }),
     );
     const { error: e } = await supabase.rpc("chat_react", { p_message: id, p_emoji: emoji });
@@ -197,8 +234,15 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
 
   let lastDay = "";
   return (
-    <div className="grid h-[calc(100dvh-7rem)] min-h-[28rem] grid-cols-1 gap-4 md:grid-cols-[17rem_1fr]" data-testid="messenger" data-unread={totalUnread}>
-      <aside className={`${mobileThread ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col rounded-2xl border border-stone-200 bg-white p-3`} aria-label="Chats">
+    <div
+      className="grid h-[calc(100dvh-7rem)] min-h-[28rem] grid-cols-1 gap-4 md:grid-cols-[17rem_1fr]"
+      data-testid="messenger"
+      data-unread={totalUnread}
+    >
+      <aside
+        className={`${mobileThread ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col rounded-2xl border border-stone-200 bg-white p-3`}
+        aria-label="Chats"
+      >
         <div className="mb-2 flex items-center justify-between px-1">
           <h1 className="text-lg font-semibold">Messages</h1>
           <button type="button" className="btn btn-sm btn-primary" onClick={() => setNewChat(true)}>
@@ -222,7 +266,10 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
         </div>
       </aside>
 
-      <section className={`${mobileThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-col rounded-2xl border border-stone-200 bg-white`} aria-label="Conversation">
+      <section
+        className={`${mobileThread ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-col rounded-2xl border border-stone-200 bg-white`}
+        aria-label="Conversation"
+      >
         {!current ? (
           <div className="m-auto text-sm text-stone-500">Pick a chat to start.</div>
         ) : (
@@ -236,7 +283,9 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
                   {current.kind === "team" ? "# " : current.kind === "dm" ? "@ " : ""}
                   {label(current)}
                 </h2>
-                {current.kind === "group" && <span className="truncate text-xs text-stone-500">{current.members.map(nameOf).join(", ")}</span>}
+                {current.kind === "group" && (
+                  <span className="truncate text-xs text-stone-500">{current.members.map(nameOf).join(", ")}</span>
+                )}
               </div>
               {current.kind === "group" && (
                 <button type="button" className="btn btn-sm" onClick={leave}>
@@ -273,11 +322,31 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
                             <b className="text-stone-700">{mine ? "You" : nameOf(m.sender_id)}</b> · {timeFmt.format(d)}
                           </div>
                         )}
-                        <div className={`rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? "bg-brand-600 text-white" : "bg-stone-100"}`} data-msg={m.body || "gif"}>
+                        <div
+                          className={`rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? "bg-brand-600 text-white" : "bg-stone-100"}`}
+                          data-msg={m.body || "gif"}
+                        >
                           {m.body}
                           {m.gif_url && (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={m.gif_url} alt="GIF" loading="lazy" className="mt-1 max-h-52 rounded-xl" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.replaceWith(Object.assign(document.createElement("a"), { href: m.gif_url!, target: "_blank", rel: "noopener noreferrer", textContent: "GIF (couldn't load, open link)", className: "underline" })); }} />
+                            <img
+                              src={m.gif_url}
+                              alt="GIF"
+                              loading="lazy"
+                              className="mt-1 max-h-52 rounded-xl"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.replaceWith(
+                                  Object.assign(document.createElement("a"), {
+                                    href: m.gif_url!,
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    textContent: "GIF (couldn't load, open link)",
+                                    className: "underline",
+                                  }),
+                                );
+                              }}
+                            />
                           )}
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -304,9 +373,19 @@ export function Messenger({ me, channels: initialChannels, people, initial, gifs
                           </button>
                         </div>
                         {picker === m.id && (
-                          <div className="z-10 mt-1 flex max-w-xs flex-wrap gap-1 rounded-xl border border-stone-200 bg-white p-2 shadow-md" role="group" aria-label="Reactions">
+                          <div
+                            className="z-10 mt-1 flex max-w-xs flex-wrap gap-1 rounded-xl border border-stone-200 bg-white p-2 shadow-md"
+                            role="group"
+                            aria-label="Reactions"
+                          >
                             {[...QUICK, ...MORE].map((e) => (
-                              <button key={e} type="button" className="rounded-lg px-1.5 py-1 text-lg hover:bg-stone-100" onClick={() => react(m.id, e)} aria-label={`React ${e}`}>
+                              <button
+                                key={e}
+                                type="button"
+                                className="rounded-lg px-1.5 py-1 text-lg hover:bg-stone-100"
+                                onClick={() => react(m.id, e)}
+                                aria-label={`React ${e}`}
+                              >
                                 {e}
                               </button>
                             ))}
@@ -398,7 +477,14 @@ function GifPicker({ configured, onPick, onClose }: { configured: boolean; onPic
     <div className="pop-in mx-3 mb-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-md" role="dialog" aria-label="Choose a GIF">
       <div className="mb-2 flex items-center justify-between gap-2">
         {configured ? (
-          <input className="input flex-1" placeholder="Search GIPHY" value={q} onChange={(e) => setQ(e.target.value)} autoFocus aria-label="Search GIFs" />
+          <input
+            className="input flex-1"
+            placeholder="Search GIPHY"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoFocus
+            aria-label="Search GIFs"
+          />
         ) : (
           <p className="text-xs text-stone-500">GIF search turns on when an admin adds a GIPHY key. For now, paste a link to a GIF.</p>
         )}
@@ -411,7 +497,13 @@ function GifPicker({ configured, onPick, onClose }: { configured: boolean; onPic
           {note && <p className="mb-1 text-xs text-red-700">{note}</p>}
           <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4" aria-busy={loading}>
             {gifs.map((g) => (
-              <button key={g.id} type="button" onClick={() => onPick(g.url)} className="overflow-hidden rounded-lg bg-stone-100" title={g.title}>
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => onPick(g.url)}
+                className="overflow-hidden rounded-lg bg-stone-100"
+                title={g.title}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={g.preview ?? g.url} alt={g.title || "GIF"} loading="lazy" className="h-20 w-full object-cover" />
               </button>
@@ -428,7 +520,13 @@ function GifPicker({ configured, onPick, onClose }: { configured: boolean; onPic
             if (okLink) onPick(link.trim());
           }}
         >
-          <input className="input flex-1" placeholder="https://media.giphy.com/…/giphy.gif" value={link} onChange={(e) => setLink(e.target.value)} aria-label="GIF link" />
+          <input
+            className="input flex-1"
+            placeholder="https://media.giphy.com/…/giphy.gif"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            aria-label="GIF link"
+          />
           <button className="btn btn-primary" disabled={!okLink}>
             Send GIF
           </button>
@@ -438,19 +536,45 @@ function GifPicker({ configured, onPick, onClose }: { configured: boolean; onPic
   );
 }
 
-function NewChat({ me, people, onClose, onDm, onGroup, error }: { me: string; people: Person[]; onClose: () => void; onDm: (id: string) => void; onGroup: (name: string, users: string[]) => void; error: string | null }) {
+function NewChat({
+  me,
+  people,
+  onClose,
+  onDm,
+  onGroup,
+  error,
+}: {
+  me: string;
+  people: Person[];
+  onClose: () => void;
+  onDm: (id: string) => void;
+  onGroup: (name: string, users: string[]) => void;
+  error: string | null;
+}) {
   const [mode, setMode] = useState<"dm" | "group">("dm");
   const [q, setQ] = useState("");
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const others = people.filter((p) => p.id !== me && (p.name + (p.email ?? "")).toLowerCase().includes(q.toLowerCase()));
   return (
-    <div className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="New chat">
+    <div
+      className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="New chat"
+    >
       <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex gap-1" role="tablist">
             {(["dm", "group"] as const).map((m) => (
-              <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`btn btn-sm ${mode === m ? "btn-primary" : ""}`}>
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
+                className={`btn btn-sm ${mode === m ? "btn-primary" : ""}`}
+              >
                 {m === "dm" ? "One person" : "Group"}
               </button>
             ))}
@@ -459,30 +583,60 @@ function NewChat({ me, people, onClose, onDm, onGroup, error }: { me: string; pe
             ✕
           </button>
         </div>
-        {mode === "group" && <input className="input mb-2" placeholder="Group name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Group name" />}
-        <input className="input mb-2" placeholder="Search people" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search people" />
+        {mode === "group" && (
+          <input
+            className="input mb-2"
+            placeholder="Group name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            aria-label="Group name"
+          />
+        )}
+        <input
+          className="input mb-2"
+          placeholder="Search people"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search people"
+        />
         <ul className="max-h-64 divide-y divide-stone-100 overflow-y-auto">
           {others.map((p) => (
             <li key={p.id}>
               {mode === "dm" ? (
-                <button type="button" className="flex w-full items-center justify-between px-2 py-2 text-left text-sm hover:bg-stone-50" onClick={() => onDm(p.id)}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-2 py-2 text-left text-sm hover:bg-stone-50"
+                  onClick={() => onDm(p.id)}
+                >
                   <span>{p.name}</span>
                   <span className="text-xs text-stone-500 capitalize">{p.role.replace("_", " ")}</span>
                 </button>
               ) : (
                 <label className="flex cursor-pointer items-center gap-3 px-2 py-2 text-sm hover:bg-stone-50">
-                  <input type="checkbox" checked={picked.includes(p.id)} onChange={(e) => setPicked(e.target.checked ? [...picked, p.id] : picked.filter((x) => x !== p.id))} />
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(p.id)}
+                    onChange={(e) => setPicked(e.target.checked ? [...picked, p.id] : picked.filter((x) => x !== p.id))}
+                  />
                   <span className="flex-1">{p.name}</span>
                   <span className="text-xs text-stone-500 capitalize">{p.role.replace("_", " ")}</span>
                 </label>
               )}
             </li>
           ))}
-          {!others.length && <li className="px-2 py-3 text-sm text-stone-500">No one else to message yet. Add users in Users &amp; roles.</li>}
+          {!others.length && (
+            <li className="px-2 py-3 text-sm text-stone-500">No one else to message yet. Add users in Users &amp; roles.</li>
+          )}
         </ul>
         {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
         {mode === "group" && (
-          <button type="button" className="btn btn-primary mt-3 w-full" disabled={!name.trim() || picked.length < 2} onClick={() => onGroup(name, picked)}>
+          <button
+            type="button"
+            className="btn btn-primary mt-3 w-full"
+            disabled={!name.trim() || picked.length < 2}
+            onClick={() => onGroup(name, picked)}
+          >
             Create group{picked.length ? ` (${picked.length + 1} people)` : ""}
           </button>
         )}

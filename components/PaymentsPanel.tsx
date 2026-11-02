@@ -1,13 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dateTime, money } from "@/lib/format";
 import { loadRequest, METHOD_LABEL } from "@/lib/payments";
-import {
-  cancelTerminalCharge,
-  recordPayment,
-  simulateTerminal,
-  startTerminalCharge,
-  voidPayment,
-} from "@/app/(app)/payments/actions";
+import { cancelTerminalCharge, recordPayment, simulateTerminal, startTerminalCharge, voidPayment } from "@/app/(app)/payments/actions";
 import { SubmitButton } from "./SubmitButton";
 import { TerminalCharge } from "./TerminalCharge";
 import { Field, Section } from "./ui";
@@ -40,7 +34,9 @@ export async function PaymentsPanel({
   const [{ data: payments }, { data: terminals }, charge] = await Promise.all([
     supabase
       .from("payments")
-      .select("id, payment_number, kind, method, amount, tip, reference, card_brand, card_last4, status, received_at, payment_terminals(name)")
+      .select(
+        "id, payment_number, kind, method, amount, tip, reference, card_brand, card_last4, status, received_at, payment_terminals(name)",
+      )
       .eq("so_id", soId)
       .order("received_at"),
     supabase.from("payment_terminals").select("id, name, model").eq("active", true).order("name"),
@@ -75,7 +71,10 @@ export async function PaymentsPanel({
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="rounded-full bg-stone-100 px-3 py-1">Total {money(total)}</span>
           <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-800">Paid {money(paid)}</span>
-          <span className={`rounded-full px-3 py-1 ${due > 0 ? "bg-amber-50 text-amber-800" : "bg-stone-100 text-stone-600"}`} data-testid="balance-due">
+          <span
+            className={`rounded-full px-3 py-1 ${due > 0 ? "bg-amber-50 text-amber-800" : "bg-stone-100 text-stone-600"}`}
+            data-testid="balance-due"
+          >
             Due {money(due)}
           </span>
         </div>
@@ -145,7 +144,16 @@ export async function PaymentsPanel({
                   </select>
                 </Field>
                 <Field label="Amount">
-                  <input name="amount" type="number" min="0.01" max={due} step="0.01" className="input" defaultValue={purpose === "deposit" ? "" : due} required />
+                  <input
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    max={due}
+                    step="0.01"
+                    className="input"
+                    defaultValue={purpose === "deposit" ? "" : due}
+                    required
+                  />
                 </Field>
                 <Field label="Reference">
                   <input name="reference" className="input" placeholder="Check #, note" />
@@ -171,7 +179,16 @@ export async function PaymentsPanel({
                       </select>
                     </Field>
                     <Field label="Amount">
-                      <input name="amount" type="number" min="0.01" max={due} step="0.01" className="input" defaultValue={purpose === "deposit" ? "" : due} required />
+                      <input
+                        name="amount"
+                        type="number"
+                        min="0.01"
+                        max={due}
+                        step="0.01"
+                        className="input"
+                        defaultValue={purpose === "deposit" ? "" : due}
+                        required
+                      />
                     </Field>
                   </div>
                   <label className="flex items-center gap-2 text-sm">

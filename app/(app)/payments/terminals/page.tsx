@@ -59,8 +59,8 @@ export default async function TerminalsPage({ searchParams }: { searchParams: SP
       <Notice message={message} />
       {!valorConfigured() && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Running on the simulator. To charge real cards, Valor must enable Valor Connect (cloud) on each terminal in their TMS and give you an
-          App ID, App Key and endpoint. Then set VALOR_MODE=live, VALOR_CONNECT_URL, VALOR_APP_ID and VALOR_APP_KEY.
+          Running on the simulator. To charge real cards, Valor must enable Valor Connect (cloud) on each terminal in their TMS and give you
+          an App ID, App Key and endpoint. Then set VALOR_MODE=live, VALOR_CONNECT_URL, VALOR_APP_ID and VALOR_APP_KEY.
         </div>
       )}
 

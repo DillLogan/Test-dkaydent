@@ -6,7 +6,11 @@ import { BadInput, cleanDoc, LIST_COLS } from "@/lib/wordsmith";
 export async function GET() {
   const a = await staffOrError();
   if (!a.ok) return a.res;
-  const { data, error } = await a.supabase.from("wordsmith_docs").select(LIST_COLS).eq("owner_id", a.profile.id).order("updated_at", { ascending: false });
+  const { data, error } = await a.supabase
+    .from("wordsmith_docs")
+    .select(LIST_COLS)
+    .eq("owner_id", a.profile.id)
+    .order("updated_at", { ascending: false });
   if (error) return NextResponse.json({ error: "Couldn't load your documents." }, { status: 500 });
   return NextResponse.json({ docs: data ?? [] });
 }

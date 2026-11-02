@@ -65,7 +65,14 @@ export function ProductFields({ product, isNew }: { product: P; isNew?: boolean 
       )}
 
       <Field label="Shelf life (days)" className="sm:col-span-2">
-        <input name="shelf_life_days" type="number" min="0" className="input" defaultValue={v("shelf_life_days")} placeholder="Sets default expiry on receipt" />
+        <input
+          name="shelf_life_days"
+          type="number"
+          min="0"
+          className="input"
+          defaultValue={v("shelf_life_days")}
+          placeholder="Sets default expiry on receipt"
+        />
       </Field>
       <Field label="Reorder point (base units)" className="sm:col-span-2">
         <input name="reorder_point_base" type="number" min="0" step="any" className="input" defaultValue={v("reorder_point_base")} />

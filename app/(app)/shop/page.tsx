@@ -15,14 +15,27 @@ export default async function ShopPage({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader
         title="Shop"
-        subtitle={me ? `Ordering for ${me.name}${me.rep ? ` · your rep is ${me.rep}` : ""}. Your cart is saved on your account; orders are sent to us for approval.` : "Your login is waiting to be set up."}
+        subtitle={
+          me
+            ? `Ordering for ${me.name}${me.rep ? ` · your rep is ${me.rep}` : ""}. Your cart is saved on your account; orders are sent to us for approval.`
+            : "Your login is waiting to be set up."
+        }
       />
       <ErrorBanner error={error} />
       <Notice message={message} />
       {!me ? (
-        <div className="card text-sm text-stone-600">Your account has not been set up and verified yet. Please contact us and we will get you started.</div>
+        <div className="card text-sm text-stone-600">
+          Your account has not been set up and verified yet. Please contact us and we will get you started.
+        </div>
       ) : (
-        <ShopBrowser me={me} catalog={d.catalog} orders={d.orders} cart={d.cart} payment={d.payment} actions={{ setCartQty, saveCartDetails, placeOrder }} />
+        <ShopBrowser
+          me={me}
+          catalog={d.catalog}
+          orders={d.orders}
+          cart={d.cart}
+          payment={d.payment}
+          actions={{ setCartQty, saveCartDetails, placeOrder }}
+        />
       )}
     </>
   );

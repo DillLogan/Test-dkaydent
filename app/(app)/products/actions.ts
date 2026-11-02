@@ -74,10 +74,7 @@ export async function addUnit(productId: string, fd: FormData) {
 export async function deleteUnit(productId: string, unitId: string) {
   const { supabase } = await requireRole("buyer");
   const path = `/products/${productId}`;
-  const { error, count } = await supabase
-    .from("product_units")
-    .delete({ count: "exact" })
-    .eq("id", unitId);
+  const { error, count } = await supabase.from("product_units").delete({ count: "exact" }).eq("id", unitId);
   if (error) fail(path, dbMessage(error));
   if (!count) fail(path, "The base unit can't be removed.");
   revalidatePath(path);

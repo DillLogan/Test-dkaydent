@@ -16,11 +16,17 @@ export async function GET(req: NextRequest) {
     ["invoices", "invoice_number", code, (id) => `/invoices/${id}`],
   ];
   for (const [table, col, value, path] of tries) {
-    const { data } = await db.from(table).select("id").ilike(col, value.replace(/[%_\\]/g, "\\$&")).limit(1);
+    const { data } = await db
+      .from(table)
+      .select("id")
+      .ilike(col, value.replace(/[%_\\]/g, "\\$&"))
+      .limit(1);
     if (data?.[0]) return go(path(data[0].id));
   }
   const { data: ret } = await db.from("returns").select("so_id").ilike("return_number", code).limit(1);
   if (ret?.[0]) return go(`/sales/${ret[0].so_id}`);
 
-  return go(`/scan?error=${encodeURIComponent(`Nothing matches “${raw}”. Scan a lot label, product SKU, or an order/invoice number.`)}&code=${encodeURIComponent(raw)}`);
+  return go(
+    `/scan?error=${encodeURIComponent(`Nothing matches “${raw}”. Scan a lot label, product SKU, or an order/invoice number.`)}&code=${encodeURIComponent(raw)}`,
+  );
 }

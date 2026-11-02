@@ -6,8 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { dbMessage, fail, num, str } from "@/lib/forms";
 
 const LIST = "/sales/recurring";
-const msg = (path: string, m: string) =>
-  `${path}?message=${encodeURIComponent(m)}`;
+const msg = (path: string, m: string) => `${path}?message=${encodeURIComponent(m)}`;
 
 export async function createRecurringSale(fd: FormData) {
   const { supabase } = await requireRole("sales");
@@ -15,8 +14,7 @@ export async function createRecurringSale(fd: FormData) {
   const customer_id = str(fd, "customer_id");
   const start_date = str(fd, "start_date");
   const back = customer_id ? `${LIST}?customer=${customer_id}` : LIST;
-  if (!name || !customer_id || !start_date)
-    fail(back, "Enter a name, customer and first ship date.");
+  if (!name || !customer_id || !start_date) fail(back, "Enter a name, customer and first ship date.");
   const { data, error } = await supabase
     .from("recurring_sales")
     .insert({
@@ -31,21 +29,12 @@ export async function createRecurringSale(fd: FormData) {
     .single();
   if (error) fail(back, dbMessage(error));
   revalidatePath(LIST);
-  redirect(
-    msg(
-      `${LIST}/${data.id}`,
-      "Recurring order created. Add the items the customer takes each time.",
-    ),
-  );
+  redirect(msg(`${LIST}/${data.id}`, "Recurring order created. Add the items the customer takes each time."));
 }
 
 // same idea as standing orders: regenerate untouched drafts
 async function replan(supabase: any, id: string, path: string) {
-  const { data: r } = await supabase
-    .from("recurring_sales")
-    .select("active")
-    .eq("id", id)
-    .single();
+  const { data: r } = await supabase.from("recurring_sales").select("active").eq("id", id).single();
   const { error: e1 } = await supabase.rpc("clear_untouched_recurring", {
     p_recurring_id: id,
   });
@@ -75,12 +64,7 @@ export async function updateRecurringSale(id: string, fd: FormData) {
     .eq("id", id);
   if (error) fail(path, dbMessage(error));
   await replan(supabase, id, path);
-  redirect(
-    msg(
-      path,
-      "Saved. Planned orders you haven't edited follow the new schedule.",
-    ),
-  );
+  redirect(msg(path, "Saved. Planned orders you haven't edited follow the new schedule."));
 }
 
 export async function addRecurringLine(id: string, fd: FormData) {
@@ -89,11 +73,8 @@ export async function addRecurringLine(id: string, fd: FormData) {
   const product_id = str(fd, "product_id");
   const unit_id = str(fd, "unit_id");
   const qty = num(fd, "qty");
-  if (!product_id || !unit_id || !qty || qty <= 0)
-    fail(path, "Choose a product and unit, and enter a quantity.");
-  const { error } = await supabase
-    .from("recurring_sale_lines")
-    .insert({ recurring_id: id, product_id, unit_id, qty });
+  if (!product_id || !unit_id || !qty || qty <= 0) fail(path, "Choose a product and unit, and enter a quantity.");
+  const { error } = await supabase.from("recurring_sale_lines").insert({ recurring_id: id, product_id, unit_id, qty });
   if (error) fail(path, dbMessage(error));
   await replan(supabase, id, path);
   redirect(path);
@@ -102,19 +83,13 @@ export async function addRecurringLine(id: string, fd: FormData) {
 export async function removeRecurringLine(id: string, lineId: string) {
   const { supabase } = await requireRole("sales");
   const path = `${LIST}/${id}`;
-  const { error } = await supabase
-    .from("recurring_sale_lines")
-    .delete()
-    .eq("id", lineId);
+  const { error } = await supabase.from("recurring_sale_lines").delete().eq("id", lineId);
   if (error) fail(path, dbMessage(error));
   await replan(supabase, id, path);
   redirect(path);
 }
 
-export async function setRecurringState(
-  id: string,
-  action: "pause" | "resume" | "end",
-) {
+export async function setRecurringState(id: string, action: "pause" | "resume" | "end") {
   const { supabase } = await requireRole("sales");
   const path = `${LIST}/${id}`;
   const { data, error } = await supabase.rpc("set_recurring_sale_state", {
@@ -144,7 +119,5 @@ export async function skipRecurringSale(soId: string, back: string) {
   if (error) fail(back, dbMessage(error));
   revalidatePath("/sales");
   revalidatePath(back.split("?")[0]);
-  redirect(
-    `${back}${back.includes("?") ? "&" : "?"}message=${encodeURIComponent("Skipped.")}`,
-  );
+  redirect(`${back}${back.includes("?") ? "&" : "?"}message=${encodeURIComponent("Skipped.")}`);
 }

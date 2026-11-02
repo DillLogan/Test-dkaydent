@@ -4,15 +4,7 @@ import { can } from "@/lib/roles";
 import { addDays, date, money, sum, today } from "@/lib/format";
 import { createSO } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
-import {
-  Empty,
-  ErrorBanner,
-  PageHeader,
-  Section,
-  STATUS_LABELS,
-  StatusBadge,
-  Tabs,
-} from "@/components/ui";
+import { Empty, ErrorBanner, PageHeader, Section, STATUS_LABELS, StatusBadge, Tabs } from "@/components/ui";
 
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -28,19 +20,13 @@ const FILTERS: Record<string, string[] | null> = {
   all: null,
 };
 
-export default async function SalesPage({
-  searchParams,
-}: {
-  searchParams: SP;
-}) {
+export default async function SalesPage({ searchParams }: { searchParams: SP }) {
   const { status = "open", customer, error } = await searchParams;
   const { supabase, profile } = await getSession();
 
   let query = supabase
     .from("sales_orders")
-    .select(
-      "id, so_number, status, order_date, ship_date, must_check, source, customers(name), sales_order_lines(qty, unit_price)",
-    )
+    .select("id, so_number, status, order_date, ship_date, must_check, source, customers(name), sales_order_lines(qty, unit_price)")
     .order(status === "recurring" ? "ship_date" : "created_at", {
       ascending: status === "recurring",
     })
@@ -51,24 +37,15 @@ export default async function SalesPage({
   const soon = addDays(today(), 7);
   if (status === "recurring") query = query.not("recurring_id", "is", null);
   else if (status === "open" || status === "draft")
-    query = query.or(
-      `recurring_id.is.null,status.neq.draft,customized.eq.true,ship_date.lte.${soon}`,
-    );
+    query = query.or(`recurring_id.is.null,status.neq.draft,customized.eq.true,ship_date.lte.${soon}`);
   const [{ data: orders }, { data: customers }] = await Promise.all([
     query,
-    supabase
-      .from("customers")
-      .select("id, name")
-      .eq("active", true)
-      .order("name"),
+    supabase.from("customers").select("id, name").eq("active", true).order("name"),
   ]);
 
   return (
     <>
-      <PageHeader
-        title="Sales orders"
-        subtitle="Draft → Ready to pull → Pulled → Completed → Invoiced"
-      >
+      <PageHeader title="Sales orders" subtitle="Draft → Ready to pull → Pulled → Completed → Invoiced">
         <Link href="/sales/recurring" className="btn">
           Recurring orders
         </Link>
@@ -89,18 +66,10 @@ export default async function SalesPage({
               first.
             </Empty>
           ) : (
-            <form
-              action={createSO}
-              className="card flex flex-wrap items-end gap-3"
-            >
+            <form action={createSO} className="card flex flex-wrap items-end gap-3">
               <label className="min-w-56 flex-1">
                 <span className="label">Customer</span>
-                <select
-                  name="customer_id"
-                  className="input"
-                  defaultValue={customer ?? ""}
-                  required
-                >
+                <select name="customer_id" className="input" defaultValue={customer ?? ""} required>
                   <option value="" disabled>
                     Choose…
                   </option>
@@ -113,12 +82,7 @@ export default async function SalesPage({
               </label>
               <label>
                 <span className="label">Ship / pickup date</span>
-                <input
-                  name="ship_date"
-                  type="date"
-                  className="input"
-                  defaultValue={today()}
-                />
+                <input name="ship_date" type="date" className="input" defaultValue={today()} />
               </label>
               <SubmitButton>Create draft order</SubmitButton>
             </form>
@@ -131,10 +95,7 @@ export default async function SalesPage({
         items={Object.keys(FILTERS).map((k) => ({
           key: k,
           href: `/sales?status=${k}`,
-          label:
-            k === "recurring"
-              ? "Recurring (planned)"
-              : STATUS_LABELS[k] ?? k[0].toUpperCase() + k.slice(1),
+          label: k === "recurring" ? "Recurring (planned)" : (STATUS_LABELS[k] ?? k[0].toUpperCase() + k.slice(1)),
         }))}
       />
 
@@ -157,17 +118,16 @@ export default async function SalesPage({
               {orders.map((o: any) => (
                 <tr key={o.id}>
                   <td>
-                    <Link
-                      href={`/sales/${o.id}`}
-                      className="link font-medium whitespace-nowrap"
-                    >
+                    <Link href={`/sales/${o.id}`} className="link font-medium whitespace-nowrap">
                       {o.so_number}
                     </Link>
                     {o.source === "web" && (
                       <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">Web</span>
                     )}
                     {o.source === "portal" && (
-                      <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">Customer cart</span>
+                      <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
+                        Customer cart
+                      </span>
                     )}
                     {o.must_check && (
                       <span className="ml-2 rounded border border-red-600 px-1 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap text-red-600">
@@ -181,14 +141,7 @@ export default async function SalesPage({
                   </td>
                   <td>{date(o.order_date)}</td>
                   <td>{date(o.ship_date)}</td>
-                  <td className="num">
-                    {money(
-                      sum(
-                        o.sales_order_lines,
-                        (l: any) => l.qty * l.unit_price,
-                      ),
-                    )}
-                  </td>
+                  <td className="num">{money(sum(o.sales_order_lines, (l: any) => l.qty * l.unit_price))}</td>
                 </tr>
               ))}
             </tbody>

@@ -4,13 +4,7 @@ import { can } from "@/lib/roles";
 import { loadCatalog } from "@/lib/catalog";
 import { money, qty } from "@/lib/format";
 import { loadRequest } from "@/lib/payments";
-import {
-  cancelTerminalCharge,
-  counterCancel,
-  counterCheckout,
-  counterRetry,
-  simulateTerminal,
-} from "../payments/actions";
+import { cancelTerminalCharge, counterCancel, counterCheckout, counterRetry, simulateTerminal } from "../payments/actions";
 import { CounterRegister, type CounterProduct } from "@/components/CounterRegister";
 import { TerminalCharge } from "@/components/TerminalCharge";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -24,7 +18,10 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
   const canSell = can(profile, "sales");
 
   const header = (
-    <PageHeader title="Counter sale" subtitle="Ring up walk-in and will-call sales. Take card on a Valor terminal, or cash, check or other.">
+    <PageHeader
+      title="Counter sale"
+      subtitle="Ring up walk-in and will-call sales. Take card on a Valor terminal, or cash, check or other."
+    >
       <Link href="/payments" className="btn">
         Payments
       </Link>
@@ -43,9 +40,7 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
   // Finished sale: receipt
   const finishedInvoiceId =
     done ??
-    (sale
-      ? (await supabase.from("invoices").select("id").eq("so_id", sale).neq("status", "void").maybeSingle()).data?.id
-      : undefined);
+    (sale ? (await supabase.from("invoices").select("id").eq("so_id", sale).neq("status", "void").maybeSingle()).data?.id : undefined);
   if (finishedInvoiceId) {
     const { data: inv } = await supabase
       .from("invoices")
@@ -53,7 +48,11 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
       .eq("id", finishedInvoiceId)
       .single();
     const [{ data: lines }, { data: pays }] = await Promise.all([
-      supabase.from("sales_order_lines").select("id, qty, unit_price, products(name), product_units(name)").eq("so_id", inv!.so_id).order("created_at"),
+      supabase
+        .from("sales_order_lines")
+        .select("id, qty, unit_price, products(name), product_units(name)")
+        .eq("so_id", inv!.so_id)
+        .order("created_at"),
       supabase.from("payments").select("id, method, amount, tip, card_brand, card_last4").eq("so_id", inv!.so_id).eq("status", "completed"),
     ]);
     const req = charge ? await loadRequest(supabase, charge) : null;
@@ -69,7 +68,9 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
             <div className="text-sm text-stone-500">
               {inv!.invoice_number} · {(inv as any).customers?.name} · {inv!.status === "paid" ? "Paid" : "Balance due"}
             </div>
-            {change && <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-lg font-semibold text-amber-900">Change due: {money(change)}</div>}
+            {change && (
+              <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-lg font-semibold text-amber-900">Change due: {money(change)}</div>
+            )}
           </div>
           <ul className="divide-y divide-stone-100 text-sm">
             {(lines ?? []).map((l: any) => (
@@ -136,10 +137,19 @@ export default async function CounterPage({ searchParams }: { searchParams: SP }
           {so?.status === "confirmed" && (!req || req.status !== "pending") && (
             <Section title={`${so.so_number} · ${money(subtotal)} before tax`}>
               <form action={counterRetry.bind(null, sale)} className="card space-y-3">
-                <p className="text-sm text-stone-600">Nothing has been charged and no stock has been taken yet. Try again, or take another kind of payment.</p>
+                <p className="text-sm text-stone-600">
+                  Nothing has been charged and no stock has been taken yet. Try again, or take another kind of payment.
+                </p>
                 <label className="block max-w-40">
                   <span className="label">Sales tax %</span>
-                  <input name="tax_rate" type="number" min="0" step="0.001" className="input" defaultValue={req ? Number((req as any).tax_rate ?? 0) : 0} />
+                  <input
+                    name="tax_rate"
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    className="input"
+                    defaultValue={req ? Number((req as any).tax_rate ?? 0) : 0}
+                  />
                 </label>
                 <div className="flex flex-wrap items-center gap-2">
                   {(terminals ?? []).length > 0 && (

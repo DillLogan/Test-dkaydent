@@ -11,7 +11,11 @@ export default async function KnowledgeBasePage() {
   const { articles, categories } = await loadKb(supabase);
   return (
     <>
-      <PageHeader title="Knowledge base" subtitle="How things work and why. Search it, or add what your team knows." back={{ href: "/settings", label: "Settings" }}>
+      <PageHeader
+        title="Knowledge base"
+        subtitle="How things work and why. Search it, or add what your team knows."
+        back={{ href: "/settings", label: "Settings" }}
+      >
         <Link href="/settings/tutorials" className="btn">
           Tutorials
         </Link>

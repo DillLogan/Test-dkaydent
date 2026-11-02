@@ -94,7 +94,12 @@ export const removePoint = (pts: Pt[], i: number): Pt[] => (pts.length <= 3 ? pt
 /** A shape is usable if it has 3+ points on the plan and some area */
 export function validShape(pts: unknown): pts is Pt[] {
   if (!Array.isArray(pts) || pts.length < 3 || pts.length > 60) return false;
-  if (!pts.every((p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 100))) return false;
+  if (
+    !pts.every(
+      (p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 100),
+    )
+  )
+    return false;
   const b = bbox(pts as Pt[]);
   return b.w > 0.2 && b.h > 0.2;
 }

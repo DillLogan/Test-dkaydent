@@ -57,7 +57,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
   }
   const products = [...byProduct.values()].sort((a, b) => a.name.localeCompare(b.name));
   const qs = (extra: Record<string, string>) =>
-    "/inventory?" + new URLSearchParams({ ...(Object.fromEntries(Object.entries(sp).filter(([, v]) => v)) as Record<string, string>), ...extra }).toString();
+    "/inventory?" +
+    new URLSearchParams({
+      ...(Object.fromEntries(Object.entries(sp).filter(([, v]) => v)) as Record<string, string>),
+      ...extra,
+    }).toString();
 
   return (
     <>
@@ -186,7 +190,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
       ) : lotView === "cards" ? (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" data-testid="lot-cards">
           {rows.map((l) => (
-            <li key={l.lot_id} className="lift group overflow-hidden rounded-2xl border border-stone-200/80 bg-white" style={{ boxShadow: "var(--shadow-soft)" }}>
+            <li
+              key={l.lot_id}
+              className="lift group overflow-hidden rounded-2xl border border-stone-200/80 bg-white"
+              style={{ boxShadow: "var(--shadow-soft)" }}
+            >
               <Link href={`/inventory/lots/${l.lot_id}`} className="block">
                 <div className="relative">
                   <ItemPhoto path={l.lot_image || l.product_image} name={l.product_name} category={l.category} />

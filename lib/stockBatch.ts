@@ -23,13 +23,35 @@ export const STOCK_COLUMNS: { key: string; required?: boolean; help: string }[] 
 
 // Accept common spreadsheet headings
 const ALIASES: Record<string, string> = {
-  item: "name", product: "name", item_name: "name", product_name: "name", description: "name",
-  quantity: "qty", count: "qty", cost: "unit_cost", price: "unit_cost", unit_price: "unit_cost", cost_per_unit: "unit_cost",
-  loc: "location", area: "location", bin: "location", expiry: "expires_at", expires: "expires_at", expiration: "expires_at",
-  exp: "expires_at", lot: "lot_code", type: "kind", pack_units: "units", uom: "unit",
+  item: "name",
+  product: "name",
+  item_name: "name",
+  product_name: "name",
+  description: "name",
+  quantity: "qty",
+  count: "qty",
+  cost: "unit_cost",
+  price: "unit_cost",
+  unit_price: "unit_cost",
+  cost_per_unit: "unit_cost",
+  loc: "location",
+  area: "location",
+  bin: "location",
+  expiry: "expires_at",
+  expires: "expires_at",
+  expiration: "expires_at",
+  exp: "expires_at",
+  lot: "lot_code",
+  type: "kind",
+  pack_units: "units",
+  uom: "unit",
 };
 export const normalizeHeader = (h: string) => {
-  const k = h.trim().toLowerCase().replace(/[\s\-/]+/g, "_").replace(/[^a-z0-9_]/g, "");
+  const k = h
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-/]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
   return ALIASES[k] ?? k;
 };
 
@@ -88,11 +110,15 @@ export function validateStockRows(
       category = rule.category;
       categorySource = "rules";
     }
-    const kindRaw = (r.kind ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const kindRaw = (r.kind ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
     if (kindRaw && !["flower", "hard_good"].includes(kindRaw)) errors.push('kind must be "flower" or "hard_good"');
-    const kind = (["flower", "hard_good"].includes(kindRaw) ? kindRaw : rule?.kind ?? "flower") as StockRow["kind"];
+    const kind = (["flower", "hard_good"].includes(kindRaw) ? kindRaw : (rule?.kind ?? "flower")) as StockRow["kind"];
 
-    const baseUnit = known?.baseUnit ?? earlierNew?.baseUnit ?? ((r.base_unit ?? "").trim().toLowerCase() || (kind === "hard_good" ? "each" : "stem"));
+    const baseUnit =
+      known?.baseUnit ?? earlierNew?.baseUnit ?? ((r.base_unit ?? "").trim().toLowerCase() || (kind === "hard_good" ? "each" : "stem"));
     let packUnits: { name: string; factor: number }[] = [];
     if (isNew && !earlierNew) {
       const parsed = parseUnits(r.units ?? "");

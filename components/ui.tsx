@@ -52,7 +52,9 @@ export function ErrorBanner({ error }: { error?: string | null }) {
 export function Notice({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <div role="status" className="settle-in mb-5 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-3.5 text-sm text-brand-800">{message}</div>
+    <div role="status" className="settle-in mb-5 rounded-2xl border border-brand-100 bg-brand-50 px-5 py-3.5 text-sm text-brand-800">
+      {message}
+    </div>
   );
 }
 
@@ -136,7 +138,9 @@ export function Stat({
   const body = (
     <>
       <div className="text-sm text-stone-500">{label}</div>
-      <div className={`font-display mt-1 text-[2rem] leading-tight tabular-nums ${color}`}>{typeof value === "string" || typeof value === "number" ? <CountUp text={String(value)} /> : value}</div>
+      <div className={`font-display mt-1 text-[2rem] leading-tight tabular-nums ${color}`}>
+        {typeof value === "string" || typeof value === "number" ? <CountUp text={String(value)} /> : value}
+      </div>
       {hint && <div className="mt-1 text-xs text-stone-500">{hint}</div>}
     </>
   );
@@ -157,15 +161,7 @@ export function Empty({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Field({
-  label,
-  children,
-  className = "",
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`block ${className}`}>
       <span className="label">{label}</span>

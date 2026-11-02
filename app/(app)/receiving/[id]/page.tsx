@@ -3,14 +3,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { addDays, date, dateTime, money, qty, today, oneYearFrom } from "@/lib/format";
-import {
-  addPOToShipment,
-  receiveShipment,
-  removePOFromShipment,
-  setShipmentStatus,
-  skipOccurrence,
-  updateShipment,
-} from "../actions";
+import { addPOToShipment, receiveShipment, removePOFromShipment, setShipmentStatus, skipOccurrence, updateShipment } from "../actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ItemThumb } from "@/components/ItemThumb";
 import { ReceiveSpot } from "@/components/ReceiveSpot";
@@ -73,7 +66,14 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
 
   // customer orders made when direct-ship POs on this shipment were received
   const { data: made } = poRows.length
-    ? await supabase.from("sales_orders").select("id, so_number, from_po_id").in("from_po_id", poRows.map((p) => p.id)).order("created_at")
+    ? await supabase
+        .from("sales_orders")
+        .select("id, so_number, from_po_id")
+        .in(
+          "from_po_id",
+          poRows.map((p) => p.id),
+        )
+        .order("created_at")
     : { data: [] as { id: string; so_number: string; from_po_id: string }[] };
 
   // Original receipts from this shipment's POs
@@ -173,7 +173,9 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
         </ol>
       )}
 
-      <Section title={`Purchase orders (${poRows.length}) · ${money(poRows.reduce((t, p) => t + (p.status === "cancelled" ? 0 : p.landed), 0))} landed`}>
+      <Section
+        title={`Purchase orders (${poRows.length}) · ${money(poRows.reduce((t, p) => t + (p.status === "cancelled" ? 0 : p.landed), 0))} landed`}
+      >
         {poRows.length === 0 ? (
           <Empty>No purchase orders on this shipment yet.</Empty>
         ) : (
@@ -228,9 +230,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                           {qty(l.qty)} {l.product_units.name} @ {money(l.unit_cost)}
                         </span>
                         {Number(l.qty_received_base) > 0 && (
-                          <span className="text-xs text-brand-700">
-                            {qty(Number(l.qty_received_base) / l.factor)} received
-                          </span>
+                          <span className="text-xs text-brand-700">{qty(Number(l.qty_received_base) / l.factor)} received</span>
                         )}
                       </li>
                     ))}
@@ -263,11 +263,18 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
 
       {open && canPlan && pending.length > 0 && (
         <Section title="Receive shipment">
-          <form action={receiveShipment.bind(null, id, pending.map((l) => l.id))} className="card space-y-4">
+          <form
+            action={receiveShipment.bind(
+              null,
+              id,
+              pending.map((l) => l.id),
+            )}
+            className="card space-y-4"
+          >
             <p className="text-sm text-stone-600">
-              Everything on the shipment, in one go. Each line starts at All; choose Some for a line that came in short, or None if it didn&apos;t come.
-              What didn&apos;t come stays open on its PO and the shipment stays open until it&apos;s received, moved or closed short. Locations start
-              at each item&apos;s home area.
+              Everything on the shipment, in one go. Each line starts at All; choose Some for a line that came in short, or None if it
+              didn&apos;t come. What didn&apos;t come stays open on its PO and the shipment stays open until it&apos;s received, moved or
+              closed short. Locations start at each item&apos;s home area.
               {drafts > 0 && ` ${drafts} draft PO${drafts === 1 ? " is" : "s are"} marked ordered when you receive.`}
             </p>
             <div className="table-wrap">
@@ -285,7 +292,10 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                 </thead>
                 <tbody>
                   {pending.map((l) => {
-                    const home = (l.products.product_homes ?? []).map((h: { location_id: string }) => h.location_id).find((x: string) => locIds.has(x)) ?? receivingDock;
+                    const home =
+                      (l.products.product_homes ?? [])
+                        .map((h: { location_id: string }) => h.location_id)
+                        .find((x: string) => locIds.has(x)) ?? receivingDock;
                     return (
                       <tr key={l.id}>
                         <td className="text-xs whitespace-nowrap text-stone-500">{l.po.po_number}</td>
@@ -299,10 +309,22 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
                           {qty(l.remaining)} {l.product_units.name}
                         </td>
                         <td>
-                          <ReceiveQty lineId={l.id} remaining={l.remaining} unit={l.product_units.name} name={`${l.products.name} on ${l.po.po_number}`} />
+                          <ReceiveQty
+                            lineId={l.id}
+                            remaining={l.remaining}
+                            unit={l.product_units.name}
+                            name={`${l.products.name} on ${l.po.po_number}`}
+                          />
                         </td>
                         <td>
-                          <ReceiveSpot lineId={l.id} name={l.products.name} locations={locs} sections={sections ?? []} homes={l.products.product_homes ?? []} defaultLoc={home} />
+                          <ReceiveSpot
+                            lineId={l.id}
+                            name={l.products.name}
+                            locations={locs}
+                            sections={sections ?? []}
+                            homes={l.products.product_homes ?? []}
+                            defaultLoc={home}
+                          />
                         </td>
                         <td>
                           <input

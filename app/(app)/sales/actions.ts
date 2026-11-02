@@ -86,10 +86,7 @@ export async function setSOStatus(id: string, status: "draft" | "confirmed" | "c
   const { supabase } = await requireRole("sales");
   const path = `/sales/${id}`;
   if (status === "confirmed") {
-    const { count } = await supabase
-      .from("sales_order_lines")
-      .select("id", { count: "exact", head: true })
-      .eq("so_id", id);
+    const { count } = await supabase.from("sales_order_lines").select("id", { count: "exact", head: true }).eq("so_id", id);
     if (!count) fail(path, "Add at least one line before confirming.");
   }
   const { error } = await supabase.from("sales_orders").update({ status }).eq("id", id);
@@ -176,7 +173,9 @@ export async function fulfillSOPicked(id: string, fd: FormData) {
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   revalidatePath("/inventory");
-  redirect(`${path}?message=${encodeURIComponent("Marked pulled from the lots you picked. Delivery/Order Management can now complete it.")}`);
+  redirect(
+    `${path}?message=${encodeURIComponent("Marked pulled from the lots you picked. Delivery/Order Management can now complete it.")}`,
+  );
 }
 
 export async function createReturn(id: string, lineIds: string[], fd: FormData) {
@@ -192,7 +191,9 @@ export async function createReturn(id: string, lineIds: string[], fd: FormData) 
   revalidatePath(path);
   revalidatePath("/inventory");
   revalidatePath("/returns");
-  redirect(`${path}?message=${encodeURIComponent(`${r?.return_number ?? "Return"} recorded. Customer credit $${Number(r?.total ?? 0).toFixed(2)}.`)}`);
+  redirect(
+    `${path}?message=${encodeURIComponent(`${r?.return_number ?? "Return"} recorded. Customer credit $${Number(r?.total ?? 0).toFixed(2)}.`)}`,
+  );
 }
 
 export async function setCreditStatus(returnId: string, status: "open" | "applied" | "refunded", back: string) {

@@ -38,7 +38,15 @@ export function VendorFields({ vendor }: { vendor: R }) {
   );
 }
 
-export function CustomerFields({ customer, tiers, reps }: { customer: R; tiers: { id: string; name: string }[]; reps: { id: string; name: string }[] }) {
+export function CustomerFields({
+  customer,
+  tiers,
+  reps,
+}: {
+  customer: R;
+  tiers: { id: string; name: string }[];
+  reps: { id: string; name: string }[];
+}) {
   const v = (k: string) => customer?.[k] ?? "";
   return (
     <div className="grid gap-4 sm:grid-cols-6">
@@ -56,7 +64,15 @@ export function CustomerFields({ customer, tiers, reps }: { customer: R; tiers: 
         </select>
       </Field>
       <Field label="Route (1–3 letters)" className="sm:col-span-2">
-        <input name="route_code" className="input uppercase" defaultValue={v("route_code")} maxLength={3} pattern="[A-Za-z]{1,3}" title="One to three letters" placeholder="NOR" />
+        <input
+          name="route_code"
+          className="input uppercase"
+          defaultValue={v("route_code")}
+          maxLength={3}
+          pattern="[A-Za-z]{1,3}"
+          title="One to three letters"
+          placeholder="NOR"
+        />
       </Field>
       <Field label="Sales rep" className="sm:col-span-2">
         <select name="rep_id" className="input" defaultValue={v("rep_id")}>
@@ -80,7 +96,15 @@ export function CustomerFields({ customer, tiers, reps }: { customer: R; tiers: 
         <input name="discount_pct" type="number" min="0" max="100" step="0.01" className="input" defaultValue={v("discount_pct") || 0} />
       </Field>
       <Field label="Cash discount % (cash orders only)" className="sm:col-span-3">
-        <input name="cash_discount_pct" type="number" min="0" max="100" step="0.01" className="input" defaultValue={v("cash_discount_pct") || 0} />
+        <input
+          name="cash_discount_pct"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          className="input"
+          defaultValue={v("cash_discount_pct") || 0}
+        />
       </Field>
       <Field label="Contact" className="sm:col-span-2">
         <input name="contact_name" className="input" defaultValue={v("contact_name")} />
@@ -95,7 +119,13 @@ export function CustomerFields({ customer, tiers, reps }: { customer: R; tiers: 
         <textarea name="address" rows={2} className="input" defaultValue={v("address")} />
       </Field>
       <Field label="Delivery address (if different)" className="sm:col-span-3">
-        <textarea name="delivery_address" rows={2} className="input" defaultValue={v("delivery_address")} placeholder="Leave blank to deliver to the location address" />
+        <textarea
+          name="delivery_address"
+          rows={2}
+          className="input"
+          defaultValue={v("delivery_address")}
+          placeholder="Leave blank to deliver to the location address"
+        />
       </Field>
       <Field label="Payment terms (days)" className="sm:col-span-2">
         <input name="payment_terms_days" type="number" min="0" className="input" defaultValue={v("payment_terms_days") || 30} />

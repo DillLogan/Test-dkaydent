@@ -52,11 +52,22 @@ export function oklchToHex(L: number, C: number, h: number): string {
   for (let i = 0; i < 40; i++) {
     const lin = oklchToLinear(L, c, h);
     if (lin.every((v) => v >= -0.0005 && v <= 1.0005)) {
-      return "#" + lin.map((v) => Math.round(clamp(fromLin(clamp(v, 0, 1)), 0, 1) * 255).toString(16).padStart(2, "0")).join("");
+      return (
+        "#" +
+        lin
+          .map((v) =>
+            Math.round(clamp(fromLin(clamp(v, 0, 1)), 0, 1) * 255)
+              .toString(16)
+              .padStart(2, "0"),
+          )
+          .join("")
+      );
     }
     c *= 0.93;
   }
-  const g = Math.round(clamp(fromLin(clamp(L * L * L, 0, 1)), 0, 1) * 255).toString(16).padStart(2, "0");
+  const g = Math.round(clamp(fromLin(clamp(L * L * L, 0, 1)), 0, 1) * 255)
+    .toString(16)
+    .padStart(2, "0");
   return "#" + g + g + g;
 }
 
@@ -103,7 +114,18 @@ export function buildTheme(seed: ThemeSeed): Theme {
   const lightWhite = oklchToHex(0.997, cN * 0.25, hN);
   const lS: Record<string, number> = hi
     ? { "50": 0.965, "100": 0.93, "200": 0.78, "300": 0.66, "400": 0.55, "500": 0.44, "600": 0.35, "700": 0.27, "800": 0.19, "900": 0.1 }
-    : { "50": 0.962, "100": 0.936, "200": 0.896, "300": 0.835, "400": 0.7, "500": 0.55, "600": 0.44, "700": 0.36, "800": 0.29, "900": 0.22 };
+    : {
+        "50": 0.962,
+        "100": 0.936,
+        "200": 0.896,
+        "300": 0.835,
+        "400": 0.7,
+        "500": 0.55,
+        "600": 0.44,
+        "700": 0.36,
+        "800": 0.29,
+        "900": 0.22,
+      };
   const light: Vars = { "--color-white": lightWhite };
   for (const s of STONE) light[`--color-stone-${s}`] = oklchToHex(lS[s], s === "50" ? cN * 0.7 : cN, hN);
   light["--color-stone-500"] = solve(lS["500"], cN, hN, [lightWhite, light["--color-stone-50"]], hi ? 7 : 4.6, -1).hex;
@@ -139,7 +161,10 @@ export function buildTheme(seed: ThemeSeed): Theme {
 
 /** Screen-only CSS for a palette id (print stays black and white) */
 export function themeCss(id: string, t: Theme): string {
-  const body = (v: Vars) => Object.entries(v).map(([k, x]) => `${k}:${x}`).join(";");
+  const body = (v: Vars) =>
+    Object.entries(v)
+      .map(([k, x]) => `${k}:${x}`)
+      .join(";");
   return `@media screen{:root[data-palette="${id}"]{${body(t.light)}}:root[data-theme="dark"][data-palette="${id}"]{${body(t.dark)}}}`;
 }
 
@@ -165,7 +190,9 @@ export function suggestSeeds(data: ArrayLike<number>): string[] {
     const [L, C, h] = hexToOklch(hex);
     if (C < 0.045 || L < 0.2 || L > 0.92) continue;
     const b = bins[Math.floor(h / (360 / BINS)) % BINS];
-    b.n++; b.L += L; b.C += C;
+    b.n++;
+    b.L += L;
+    b.C += C;
     b.x += Math.cos((h * Math.PI) / 180);
     b.y += Math.sin((h * Math.PI) / 180);
   }
@@ -174,5 +201,7 @@ export function suggestSeeds(data: ArrayLike<number>): string[] {
     .filter((o) => o.b.n > 0)
     .sort((p, q) => q.score - p.score)
     .slice(0, 5)
-    .map(({ b }) => oklchToHex(clamp(b.L / b.n, 0.4, 0.7), clamp(b.C / b.n, 0.06, 0.17), ((Math.atan2(b.y, b.x) * 180) / Math.PI + 360) % 360));
+    .map(({ b }) =>
+      oklchToHex(clamp(b.L / b.n, 0.4, 0.7), clamp(b.C / b.n, 0.06, 0.17), ((Math.atan2(b.y, b.x) * 180) / Math.PI + 360) % 360),
+    );
 }

@@ -8,7 +8,9 @@
 const PT_PER_PX = 0.75;
 function halfPoints(size) {
   if (!size) return undefined;
-  const m = String(size).trim().match(/^([\d.]+)\s*(pt|px)?$/i);
+  const m = String(size)
+    .trim()
+    .match(/^([\d.]+)\s*(pt|px)?$/i);
   if (!m) return undefined;
   const pt = (m[2] || "pt").toLowerCase() === "px" ? parseFloat(m[1]) * PT_PER_PX : parseFloat(m[1]);
   return Math.round(pt * 2);
@@ -17,9 +19,18 @@ function hexColor(c) {
   if (!c) return undefined;
   let s = String(c).trim();
   const rgb = s.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (rgb) return rgb.slice(1, 4).map((n) => Number(n).toString(16).padStart(2, "0")).join("").toUpperCase();
+  if (rgb)
+    return rgb
+      .slice(1, 4)
+      .map((n) => Number(n).toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
   if (s.startsWith("#")) s = s.slice(1);
-  if (s.length === 3) s = s.split("").map((ch) => ch + ch).join("");
+  if (s.length === 3)
+    s = s
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
   return /^[0-9a-f]{6}$/i.test(s) ? s.toUpperCase() : undefined;
 }
 function firstFont(f) {
@@ -39,7 +50,10 @@ export async function exportDocx(json, title) {
   const runsFor = (nodes = [], extra = {}) => {
     const out = [];
     for (const n of nodes) {
-      if (n.type === "hardBreak") { out.push(new TextRun({ break: 1 })); continue; }
+      if (n.type === "hardBreak") {
+        out.push(new TextRun({ break: 1 }));
+        continue;
+      }
       if (n.type !== "text") continue;
       const marks = n.marks || [];
       const has = (t) => marks.some((m) => m.type === t);
@@ -67,17 +81,23 @@ export async function exportDocx(json, title) {
       const align = ALIGN[n.attrs?.textAlign];
       switch (n.type) {
         case "paragraph":
-          out.push(new Paragraph({
-            children: runsFor(n.content, ctx),
-            alignment: align,
-            indent: ctx.quote ? { left: 720 } : undefined,
-            ...(ctx.list ? (ctx.list.ordered
-              ? { numbering: { reference: "ws-numbers", level: ctx.list.level, instance: ctx.list.instance } }
-              : { bullet: { level: ctx.list.level } }) : {}),
-          }));
+          out.push(
+            new Paragraph({
+              children: runsFor(n.content, ctx),
+              alignment: align,
+              indent: ctx.quote ? { left: 720 } : undefined,
+              ...(ctx.list
+                ? ctx.list.ordered
+                  ? { numbering: { reference: "ws-numbers", level: ctx.list.level, instance: ctx.list.instance } }
+                  : { bullet: { level: ctx.list.level } }
+                : {}),
+            }),
+          );
           break;
         case "heading":
-          out.push(new Paragraph({ children: runsFor(n.content), heading: HEAD[n.attrs?.level] || HeadingLevel.HEADING_1, alignment: align }));
+          out.push(
+            new Paragraph({ children: runsFor(n.content), heading: HEAD[n.attrs?.level] || HeadingLevel.HEADING_1, alignment: align }),
+          );
           break;
         case "blockquote":
           out.push(...blocks(n.content, { ...ctx, quote: true, italics: true }));
@@ -98,7 +118,8 @@ export async function exportDocx(json, title) {
             const kids = li.content || [];
             kids.forEach((k, idx) => {
               if (k.type === "paragraph" && idx === 0) out.push(...blocks([k], { ...ctx, list: { ordered, level, instance } }));
-              else if (k.type === "paragraph") out.push(new Paragraph({ children: runsFor(k.content), indent: { left: 720 * (level + 1) } }));
+              else if (k.type === "paragraph")
+                out.push(new Paragraph({ children: runsFor(k.content), indent: { left: 720 * (level + 1) } }));
               else out.push(...blocks([k], { ...ctx, list: { ordered, level, instance } }));
             });
           }
@@ -117,27 +138,41 @@ export async function exportDocx(json, title) {
     creator: "BrightStar Wordsmith",
     styles: { default: { document: { run: { font: "Calibri", size: 24 } } } },
     numbering: {
-      config: [{
-        reference: "ws-numbers",
-        levels: [0, 1, 2, 3, 4].map((level) => ({
-          level, format: [LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER, LevelFormat.LOWER_ROMAN, LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER][level],
-          text: `%${level + 1}.`, alignment: AlignmentType.START,
-          style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
-        })),
-      }],
+      config: [
+        {
+          reference: "ws-numbers",
+          levels: [0, 1, 2, 3, 4].map((level) => ({
+            level,
+            format: [LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER, LevelFormat.LOWER_ROMAN, LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER][
+              level
+            ],
+            text: `%${level + 1}.`,
+            alignment: AlignmentType.START,
+            style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
+          })),
+        },
+      ],
     },
-    sections: [{
-      // US Letter, 1-inch margins (twips)
-      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
-      children: children.length ? children : [new Paragraph("")],
-    }],
+    sections: [
+      {
+        // US Letter, 1-inch margins (twips)
+        properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+        children: children.length ? children : [new Paragraph("")],
+      },
+    ],
   });
   const blob = await Packer.toBlob(doc);
-  const name = (String(title || "Document").replace(/[\\/:*?"<>|]+/g, " ").trim() || "Document") + ".docx";
+  const name =
+    (String(title || "Document")
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .trim() || "Document") + ".docx";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
@@ -146,9 +181,16 @@ export async function importDocxHtml(file) {
   const mod = await import("mammoth/mammoth.browser.min.js");
   const mammoth = mod.default || mod;
   const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.convertToHtml({ arrayBuffer }, {
-    convertImage: mammoth.images.imgElement(() => Promise.resolve({ src: "" })),
-    styleMap: ["p[style-name='Title'] => h1:fresh", "p[style-name='Subtitle'] => h2:fresh", "p[style-name='Quote'] => blockquote > p:fresh"],
-  });
+  const result = await mammoth.convertToHtml(
+    { arrayBuffer },
+    {
+      convertImage: mammoth.images.imgElement(() => Promise.resolve({ src: "" })),
+      styleMap: [
+        "p[style-name='Title'] => h1:fresh",
+        "p[style-name='Subtitle'] => h2:fresh",
+        "p[style-name='Quote'] => blockquote > p:fresh",
+      ],
+    },
+  );
   return result.value.replace(/<img[^>]*>/gi, "");
 }

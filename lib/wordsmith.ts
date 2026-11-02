@@ -7,11 +7,13 @@ export class BadInput extends Error {}
 
 export function cleanDoc(b: Record<string, unknown>, partial: boolean) {
   const out: Record<string, unknown> = {};
-  if (b.title !== undefined || !partial) out.title = (typeof b.title === "string" ? b.title.trim().slice(0, 200) : "") || "Untitled document";
+  if (b.title !== undefined || !partial)
+    out.title = (typeof b.title === "string" ? b.title.trim().slice(0, 200) : "") || "Untitled document";
   if (b.content !== undefined || !partial) {
     const c = b.content ?? { type: "doc", content: [] };
     if (typeof c !== "object" || Array.isArray(c)) throw new BadInput("Document content is invalid.");
-    if (JSON.stringify(c).length > MAX_CONTENT_CHARS) throw new BadInput("This document is too large to save. Split it into two documents.");
+    if (JSON.stringify(c).length > MAX_CONTENT_CHARS)
+      throw new BadInput("This document is too large to save. Split it into two documents.");
     out.content = c;
   }
   if (b.diary !== undefined || !partial) {

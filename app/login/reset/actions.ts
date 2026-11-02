@@ -39,9 +39,18 @@ export async function resetApproved(fd: FormData) {
   const { data: prof } = await admin.from("profiles").select("id").eq("email", loginEmail(typed)).eq("role", "customer").maybeSingle();
   const since = new Date(Date.now() - APPROVAL_HOURS * 3600_000).toISOString();
   const { data: req } = prof
-    ? await admin.from("password_requests").select("id").eq("profile_id", prof.id).eq("status", "approved").gte("decided_at", since).order("decided_at", { ascending: false }).limit(1).maybeSingle()
+    ? await admin
+        .from("password_requests")
+        .select("id")
+        .eq("profile_id", prof.id)
+        .eq("status", "approved")
+        .gte("decided_at", since)
+        .order("decided_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
     : { data: null };
-  if (!prof || !req) fail(path, "No approved reset found for that username. Ask your sales rep to approve it (it stays valid for 24 hours).");
+  if (!prof || !req)
+    fail(path, "No approved reset found for that username. Ask your sales rep to approve it (it stays valid for 24 hours).");
   const { error } = await admin.auth.admin.updateUserById(prof.id, { password: next });
   if (error) fail(path, error.message);
   await admin.from("password_requests").update({ status: "used", used_at: new Date().toISOString() }).eq("id", req.id);

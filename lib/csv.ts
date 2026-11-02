@@ -55,7 +55,12 @@ export function parseCSV(text: string): string[][] {
 export function parseCSVObjects(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const [head, ...body] = parseCSV(text);
   if (!head) return { headers: [], rows: [] };
-  const headers = head.map((h) => h.trim().toLowerCase().replace(/[\s-]+/g, "_"));
+  const headers = head.map((h) =>
+    h
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_"),
+  );
   return {
     headers,
     rows: body.map((r) => Object.fromEntries(headers.map((h, i) => [h, (r[i] ?? "").trim()]))),

@@ -11,4 +11,5 @@ export function splitSpot(v: unknown): { sectionId: string | null; shelf: string
   return { sectionId: sectionId || null, shelf: shelf || null };
 }
 
-export const spotText = (section?: string | null, shelf?: string | null) => [section, shelf ? `Shelf ${shelf}` : ""].filter(Boolean).join(" · ");
+export const spotText = (section?: string | null, shelf?: string | null) =>
+  [section, shelf ? `Shelf ${shelf}` : ""].filter(Boolean).join(" · ");

@@ -56,12 +56,7 @@ const simulator: TerminalProvider = {
 };
 
 export function valorConfigured() {
-  return (
-    process.env.VALOR_MODE === "live" &&
-    !!process.env.VALOR_CONNECT_URL &&
-    !!process.env.VALOR_APP_ID &&
-    !!process.env.VALOR_APP_KEY
-  );
+  return process.env.VALOR_MODE === "live" && !!process.env.VALOR_CONNECT_URL && !!process.env.VALOR_APP_ID && !!process.env.VALOR_APP_KEY;
 }
 
 export function getProvider(): TerminalProvider {

@@ -55,7 +55,7 @@ export function ItemCell({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <ItemThumb path={path} name={typeof name === "string" ? name : sku ?? "?"} category={category} size={34} />
+      <ItemThumb path={path} name={typeof name === "string" ? name : (sku ?? "?")} category={category} size={34} />
       <div className="min-w-0">
         {children ?? name}
         {sku && <div className="text-xs text-stone-500 tabular-nums">{sku}</div>}

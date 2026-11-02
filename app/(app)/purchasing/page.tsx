@@ -25,7 +25,9 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
 
   let query = supabase
     .from("purchase_orders")
-    .select("id, po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name), customers(name), purchase_order_lines(qty, unit_cost)")
+    .select(
+      "id, po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name), customers(name), purchase_order_lines(qty, unit_cost)",
+    )
     .order(status === "planned" ? "expected_date" : "created_at", { ascending: status === "planned" })
     .limit(200);
   const statuses = FILTERS[status] ?? null;
@@ -52,7 +54,11 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
         <Section title="New purchase order">
           {!vendors?.length ? (
             <Empty>
-              Add a <Link href="/vendors" className="link">vendor</Link> first.
+              Add a{" "}
+              <Link href="/vendors" className="link">
+                vendor
+              </Link>{" "}
+              first.
             </Empty>
           ) : (
             <form action={createPO} className="card flex flex-wrap items-end gap-3">
@@ -116,8 +122,7 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
             </thead>
             <tbody>
               {pos.map((po: any) => {
-                const late =
-                  ["ordered", "partially_received"].includes(po.status) && po.expected_date && po.expected_date < today();
+                const late = ["ordered", "partially_received"].includes(po.status) && po.expected_date && po.expected_date < today();
                 return (
                   <tr key={po.id}>
                     <td>
@@ -140,9 +145,7 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
                     <td className={late ? "font-medium text-red-700" : ""}>{date(po.expected_date)}</td>
                     <td className="num">
                       {money(
-                        sum(po.purchase_order_lines, (l: any) => l.qty * l.unit_cost) +
-                          Number(po.freight_cost) +
-                          Number(po.other_cost),
+                        sum(po.purchase_order_lines, (l: any) => l.qty * l.unit_cost) + Number(po.freight_cost) + Number(po.other_cost),
                       )}
                     </td>
                   </tr>

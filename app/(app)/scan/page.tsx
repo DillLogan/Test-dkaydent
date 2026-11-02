@@ -9,7 +9,10 @@ export default async function ScanPage({ searchParams }: { searchParams: SP }) {
   await getSession();
   return (
     <>
-      <PageHeader title="Scan" subtitle="Scan a lot label to move, write off or count it. Scan a SKU, PO, order or invoice number to open it." />
+      <PageHeader
+        title="Scan"
+        subtitle="Scan a lot label to move, write off or count it. Scan a SKU, PO, order or invoice number to open it."
+      />
       <ErrorBanner error={error} />
       <div className="card max-w-xl space-y-4">
         <ScanRouter />
@@ -20,7 +23,9 @@ export default async function ScanPage({ searchParams }: { searchParams: SP }) {
           <li>
             <strong>Phone or tablet:</strong> tap <em>Camera</em> and point at the label. The browser will ask for camera permission once.
           </li>
-          <li>To fill an order from specific lots, open the order and use <em>Hand-pick lots / scan to pick</em>.</li>
+          <li>
+            To fill an order from specific lots, open the order and use <em>Hand-pick lots / scan to pick</em>.
+          </li>
         </ul>
       </div>
     </>

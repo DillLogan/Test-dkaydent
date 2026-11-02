@@ -43,7 +43,15 @@ export function openEntry(diary) {
 // close the current entry (freezes its count) and open a new one
 export function startNewEntry(diary, totalWords, now = new Date()) {
   const out = diary.map((e) => (e.closedAt ? e : { ...e, closedAt: now.toISOString(), words: totalWords - (e.baseline || 0) }));
-  out.push({ id: newEntryId(), kind: "day", date: todayLocal(now), startedAt: now.toISOString(), closedAt: null, baseline: totalWords, words: 0 });
+  out.push({
+    id: newEntryId(),
+    kind: "day",
+    date: todayLocal(now),
+    startedAt: now.toISOString(),
+    closedAt: null,
+    baseline: totalWords,
+    words: 0,
+  });
   return out;
 }
 
@@ -55,7 +63,7 @@ export function ensureToday(diary, totalWords, now = new Date()) {
 }
 
 export function entryWords(e, totalWords) {
-  return e.closedAt ? (e.words || 0) : totalWords - (e.baseline || 0);
+  return e.closedAt ? e.words || 0 : totalWords - (e.baseline || 0);
 }
 
 export function docText(doc) {
@@ -68,7 +76,10 @@ export function wordsBySection(doc, markName = "diaryDay") {
     if (!node.isTextblock) return true;
     let prev = null;
     node.forEach((child) => {
-      if (!child.isText) { prev = null; return; }
+      if (!child.isText) {
+        prev = null;
+        return;
+      }
       const m = child.marks.find((x) => x.type.name === markName);
       const id = m?.attrs.entry || "_none";
       if (!parts[id]) parts[id] = [];
@@ -91,9 +102,11 @@ export function wordsBySection(doc, markName = "diaryDay") {
  */
 export const DiaryDay = Mark.create({
   name: "diaryDay",
-  inclusive: false,      // typing right after an older section starts today's text
+  inclusive: false, // typing right after an older section starts today's text
   spanning: true,
-  addOptions() { return { getEntry: () => null }; },
+  addOptions() {
+    return { getEntry: () => null };
+  },
   addAttributes() {
     return {
       entry: {
@@ -103,8 +116,12 @@ export const DiaryDay = Mark.create({
       },
     };
   },
-  parseHTML() { return [{ tag: "span[data-entry]" }]; },
-  renderHTML({ HTMLAttributes }) { return ["span", mergeAttributes(HTMLAttributes, { class: "ws-day" }), 0]; },
+  parseHTML() {
+    return [{ tag: "span[data-entry]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes(HTMLAttributes, { class: "ws-day" }), 0];
+  },
   addProseMirrorPlugins() {
     const type = this.type;
     const getEntry = () => this.options.getEntry();
@@ -121,7 +138,8 @@ export const DiaryDay = Mark.create({
             ranges = ranges.map((r) => ({ from: tr.mapping.map(r.from, -1), to: tr.mapping.map(r.to, 1) }));
             tr.mapping.maps.forEach((map, i) => {
               map.forEach((_os, _oe, ns, ne) => {
-                let from = ns, to = ne;
+                let from = ns,
+                  to = ne;
                 for (let j = i + 1; j < tr.mapping.maps.length; j++) {
                   from = tr.mapping.maps[j].map(from, -1);
                   to = tr.mapping.maps[j].map(to, 1);
@@ -134,7 +152,8 @@ export const DiaryDay = Mark.create({
           const tr = state.tr;
           const size = state.doc.content.size;
           for (const r of ranges) {
-            const from = Math.max(0, r.from), to = Math.min(size, r.to);
+            const from = Math.max(0, r.from),
+              to = Math.min(size, r.to);
             if (to <= from) continue;
             state.doc.nodesBetween(from, to, (node, pos) => {
               if (!node.isText) return true;

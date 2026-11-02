@@ -16,7 +16,11 @@ function customerFields(fd: FormData) {
     price_tier_id: str(fd, "price_tier_id"),
     discount_pct: Math.min(100, Math.max(0, num(fd, "discount_pct") ?? 0)),
     cash_discount_pct: Math.min(100, Math.max(0, num(fd, "cash_discount_pct") ?? 0)),
-    route_code: (str(fd, "route_code") ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) || null,
+    route_code:
+      (str(fd, "route_code") ?? "")
+        .toUpperCase()
+        .replace(/[^A-Z]/g, "")
+        .slice(0, 3) || null,
     rep_id: str(fd, "rep_id"),
     default_payment: ["cash", "card", "check"].includes(str(fd, "default_payment") ?? "") ? str(fd, "default_payment") : null,
     payment_terms_days: int(fd, "payment_terms_days") ?? 30,
@@ -40,7 +44,10 @@ export async function updateCustomer(id: string, fd: FormData) {
   const path = `/customers/${id}`;
   const fields = customerFields(fd);
   if (!fields.name) fail(path, "Business name is required.");
-  const { error } = await supabase.from("customers").update({ ...fields, active: bool(fd, "active") }).eq("id", id);
+  const { error } = await supabase
+    .from("customers")
+    .update({ ...fields, active: bool(fd, "active") })
+    .eq("id", id);
   if (error) fail(path, dbMessage(error));
   revalidatePath(path);
   redirect(`${path}?message=${encodeURIComponent("Saved.")}`);

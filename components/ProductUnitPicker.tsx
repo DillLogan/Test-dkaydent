@@ -34,8 +34,7 @@ export function ProductUnitPicker({
   const pickUnit = (p?: PickerProduct) => {
     if (!p || p.units.length === 0) return "";
     const sorted = [...p.units].sort((a, b) => a.factor - b.factor);
-    return (defaultUnit === "largest" ? sorted[sorted.length - 1] : sorted[0])
-      .id;
+    return (defaultUnit === "largest" ? sorted[sorted.length - 1] : sorted[0]).id;
   };
 
   const [filter, setFilter] = useState("");
@@ -46,9 +45,7 @@ export function ProductUnitPicker({
 
   const visible = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    const list = f
-      ? products.filter((p) => p.label.toLowerCase().includes(f))
-      : products;
+    const list = f ? products.filter((p) => p.label.toLowerCase().includes(f)) : products;
     // keep the selected product in the list so the select stays valid
     return product && !list.includes(product) ? [product, ...list] : list;
   }, [filter, products, product]);
@@ -63,12 +60,7 @@ export function ProductUnitPicker({
     <div className="grid gap-3 sm:grid-cols-12">
       <label className="block sm:col-span-5">
         <span className="label">Product</span>
-        <input
-          className="input mb-1"
-          placeholder="Filter by SKU or name…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+        <input className="input mb-1" placeholder="Filter by SKU or name…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <select
           name="product_id"
           className="input"
@@ -85,20 +77,11 @@ export function ProductUnitPicker({
             </option>
           ))}
         </select>
-        {product?.note && (
-          <span className="mt-1 block text-xs text-stone-500">
-            {product.note}
-          </span>
-        )}
+        {product?.note && <span className="mt-1 block text-xs text-stone-500">{product.note}</span>}
       </label>
       <label className="block sm:col-span-2">
         <span className="label">Unit</span>
-        <select
-          name="unit_id"
-          className="input"
-          value={unitId}
-          onChange={(e) => setUnitId(e.target.value)}
-        >
+        <select name="unit_id" className="input" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
           {product?.units.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -109,14 +92,7 @@ export function ProductUnitPicker({
       </label>
       <label className="block sm:col-span-2">
         <span className="label">Qty</span>
-        <input
-          name="qty"
-          type="number"
-          min="0"
-          step="any"
-          required
-          className="input"
-        />
+        <input name="qty" type="number" min="0" step="any" required className="input" />
       </label>
       {!hidePrice && (
         <label className="block sm:col-span-3">

@@ -18,9 +18,18 @@ export async function savePrintouts(fd: FormData) {
   const config = mergeConfig({
     ...cur,
     header: { name: t(fd, "h_name"), address: t(fd, "h_address"), phone: t(fd, "h_phone"), footer: t(fd, "h_footer") },
-    invoice: { ...cur.invoice, terms: t(fd, "i_terms"), note: t(fd, "i_note"), customerTitle: t(fd, "i_customerTitle"), officeTitle: t(fd, "i_officeTitle") },
+    invoice: {
+      ...cur.invoice,
+      terms: t(fd, "i_terms"),
+      note: t(fd, "i_note"),
+      customerTitle: t(fd, "i_customerTitle"),
+      officeTitle: t(fd, "i_officeTitle"),
+    },
   });
-  const { error } = await supabase.from("print_config").update({ config, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", 1);
+  const { error } = await supabase
+    .from("print_config")
+    .update({ config, updated_by: user.id, updated_at: new Date().toISOString() })
+    .eq("id", 1);
   if (error) fail(PATH, dbMessage(error));
   revalidatePath("/", "layout");
   redirect(`${PATH}?message=${encodeURIComponent("Company details saved.")}`);

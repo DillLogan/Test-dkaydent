@@ -37,7 +37,10 @@ export function VendorReturn({ info }: { info: ReturnInfo }) {
     <div className="space-y-3" data-testid="vendor-return">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-stone-500">Vendor</dt>
-        <dd>{info.vendor ?? "— (not received against a purchase order)"}{info.contact ? ` · ${info.contact}` : ""}</dd>
+        <dd>
+          {info.vendor ?? "— (not received against a purchase order)"}
+          {info.contact ? ` · ${info.contact}` : ""}
+        </dd>
         <dt className="text-stone-500">Vendor email</dt>
         <dd>{info.vendorEmail ?? <span className="text-amber-700">None on file. Add one on the vendor.</span>}</dd>
         {lines.map((l) => {

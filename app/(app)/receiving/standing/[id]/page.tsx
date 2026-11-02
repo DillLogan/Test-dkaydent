@@ -78,7 +78,11 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
               </SubmitButton>
             </form>
             <form action={setStandingState.bind(null, id, "end")}>
-              <SubmitButton className="btn btn-danger" confirm="End this standing order? Planned deliveries you haven't edited will be removed." pendingText="…">
+              <SubmitButton
+                className="btn btn-danger"
+                confirm="End this standing order? Planned deliveries you haven't edited will be removed."
+                pendingText="…"
+              >
                 End
               </SubmitButton>
             </form>
@@ -144,7 +148,9 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
         )}
       </Section>
 
-      <Section title={`Planned deliveries (${(occ ?? []).filter((o) => o.status !== "cancelled" && o.occurrence_date >= now).length} ahead)`}>
+      <Section
+        title={`Planned deliveries (${(occ ?? []).filter((o) => o.status !== "cancelled" && o.occurrence_date >= now).length} ahead)`}
+      >
         {!occ?.length ? (
           <Empty>{so.active ? "Add items to plan the next 12 months." : "Nothing planned while paused."}</Empty>
         ) : (
@@ -189,7 +195,11 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
                         <td className="text-right">
                           {o.status === "draft" && (
                             <form action={skipOccurrence.bind(null, o.id, `/receiving/standing/${id}`)}>
-                              <SubmitButton className="btn btn-sm" confirm={`Skip the ${date(o.occurrence_date)} delivery?`} pendingText="…">
+                              <SubmitButton
+                                className="btn btn-sm"
+                                confirm={`Skip the ${date(o.occurrence_date)} delivery?`}
+                                pendingText="…"
+                              >
                                 Skip
                               </SubmitButton>
                             </form>
@@ -204,8 +214,8 @@ export default async function StandingOrderPage({ params, searchParams }: Props)
           </div>
         )}
         <p className="mt-2 text-xs text-stone-500">
-          Open a PO to change one delivery&apos;s quantities or prices; that delivery is then marked edited and kept if you pause, end, or change the
-          standing order.
+          Open a PO to change one delivery&apos;s quantities or prices; that delivery is then marked edited and kept if you pause, end, or
+          change the standing order.
         </p>
       </Section>
 

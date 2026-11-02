@@ -11,7 +11,17 @@ import { renderDoc } from "@/lib/pdfdocs/render";
 import { routeData } from "@/lib/pdfdocs/data";
 import type { Template } from "@/lib/pdfdocs/types";
 
-export type RouteOrder = { id: string; number: string; customer: string; address: string; status: string; ships?: string | null; route?: string | null; boxes?: number | null; phone?: string | null };
+export type RouteOrder = {
+  id: string;
+  number: string;
+  customer: string;
+  address: string;
+  status: string;
+  ships?: string | null;
+  route?: string | null;
+  boxes?: number | null;
+  phone?: string | null;
+};
 type Shop = { id: string; name: string; address: string };
 
 declare global {
@@ -85,7 +95,9 @@ export function RouteBuilder(props: {
   async function geocodeAll(): Promise<Record<string, LatLng>> {
     const have = { ...coords };
     if (!mapsKey) return have;
-    const need = [...new Set([shop.address, ...stops.map((id) => byId.get(id)?.address ?? "")].filter(Boolean))].filter((a) => !have[geoKey(a)]);
+    const need = [...new Set([shop.address, ...stops.map((id) => byId.get(id)?.address ?? "")].filter(Boolean))].filter(
+      (a) => !have[geoKey(a)],
+    );
     if (!need.length) return have;
     const g = await loadMaps(mapsKey);
     const geocoder = new g.maps.Geocoder();
@@ -113,16 +125,29 @@ export function RouteBuilder(props: {
       const have = await geocodeAll();
       setCoords(have);
       const o = have[geoKey(shop.address)];
-      if (!o) throw new Error(shop.address ? "Couldn't find the shop address. Check it in Maps & shop addresses." : "Add this shop's address in Maps & shop addresses first.");
+      if (!o)
+        throw new Error(
+          shop.address
+            ? "Couldn't find the shop address. Check it in Maps & shop addresses."
+            : "Add this shop's address in Maps & shop addresses first.",
+        );
       const d = (id: string) => {
         const c = have[geoKey(byId.get(id)?.address)];
         return c ? miles(o, c) : null;
       };
-      const sorted = closestFirst(stops.map((id) => ({ id })), (s) => d(s.id)).map((s) => s.id);
+      const sorted = closestFirst(
+        stops.map((id) => ({ id })),
+        (s) => d(s.id),
+      ).map((s) => s.id);
       setStops(sorted);
       setMode("optimized");
       const unknown = sorted.filter((id) => d(id) === null).length;
-      setMsg({ ok: true, text: unknown ? `Sorted closest to farthest. ${unknown} stop(s) have no findable address and were put last.` : "Sorted closest to farthest from the shop." });
+      setMsg({
+        ok: true,
+        text: unknown
+          ? `Sorted closest to farthest. ${unknown} stop(s) have no findable address and were put last.`
+          : "Sorted closest to farthest from the shop.",
+      });
     } catch (e: any) {
       setMsg({ ok: false, text: e?.message ?? "Couldn't sort." });
     } finally {
@@ -174,11 +199,13 @@ export function RouteBuilder(props: {
     setExtra((x) => (x.some((e) => e.id === o.id) ? x : [...x, { ...o, ships: o.ships && o.ships !== date ? o.ships : null }]));
     setStops((st) => [...st, o.id]);
     setMode("manual");
-    setMsg({ ok: true, text: `Added ${o.number} (${o.customer})${o.ships && o.ships !== date ? ` — it ships ${o.ships}, not ${date}` : ""}. Save the route to keep it.` });
+    setMsg({
+      ok: true,
+      text: `Added ${o.number} (${o.customer})${o.ships && o.ships !== date ? ` — it ships ${o.ships}, not ${date}` : ""}. Save the route to keep it.`,
+    });
   }
 
-  const nav = (next: { date?: string; shop?: string }) =>
-    router.push(`/routing?date=${next.date ?? date}&shop=${next.shop ?? shop.id}`);
+  const nav = (next: { date?: string; shop?: string }) => router.push(`/routing?date=${next.date ?? date}&shop=${next.shop ?? shop.id}`);
 
   return (
     <div className="space-y-5">
@@ -215,13 +242,18 @@ export function RouteBuilder(props: {
       </div>
 
       {msg && (
-        <div role="status" className={`rounded-2xl border px-5 py-3 text-sm print:hidden ${msg.ok ? "border-brand-100 bg-brand-50 text-brand-800" : "border-red-200 bg-red-50 text-red-800"}`}>
+        <div
+          role="status"
+          className={`rounded-2xl border px-5 py-3 text-sm print:hidden ${msg.ok ? "border-brand-100 bg-brand-50 text-brand-800" : "border-red-200 bg-red-50 text-red-800"}`}
+        >
           {msg.text}
         </div>
       )}
 
       {!orders.length && !stops.length ? (
-        <p className="text-sm text-stone-500">No completed orders ship from {shop.name} on this day. The orders manager completes them on the order page.</p>
+        <p className="text-sm text-stone-500">
+          No completed orders ship from {shop.name} on this day. The orders manager completes them on the order page.
+        </p>
       ) : (
         <>
           <div className="flex flex-wrap gap-2 print:hidden">
@@ -246,10 +278,13 @@ export function RouteBuilder(props: {
           </div>
           {!mapsKey && canEdit && (
             <p className="text-xs text-stone-500 print:hidden">
-              No Google Maps key yet, so Optimize can only use addresses already looked up. Add the key in Maps &amp; shop addresses to turn on live lookup and the map.
+              No Google Maps key yet, so Optimize can only use addresses already looked up. Add the key in Maps &amp; shop addresses to turn
+              on live lookup and the map.
             </p>
           )}
-          {mapsKey && <div ref={mapEl} className="h-72 rounded-2xl border border-stone-200 bg-stone-100 print:hidden" aria-label="Route map" />}
+          {mapsKey && (
+            <div ref={mapEl} className="h-72 rounded-2xl border border-stone-200 bg-stone-100 print:hidden" aria-label="Route map" />
+          )}
 
           {props.sheet && (
             <PdfModal
@@ -262,22 +297,37 @@ export function RouteBuilder(props: {
                 renderDoc(
                   props.sheet!,
                   routeData({
-                    business: { name: props.print?.header.name ?? "", address: props.print?.header.address ?? "", phone: props.print?.header.phone ?? "", footer: props.print?.header.footer ?? "" },
+                    business: {
+                      name: props.print?.header.name ?? "",
+                      address: props.print?.header.address ?? "",
+                      phone: props.print?.header.phone ?? "",
+                      footer: props.print?.header.footer ?? "",
+                    },
                     day: date,
                     code: props.routeCode,
                     shop: shop.name,
                     driver,
                     start: shop.address,
-                    stops: stops.map((id) => byId.get(id)!).filter(Boolean).map((o) => ({ customer: o.customer, address: o.address, order: o.number, phone: o.phone, boxes: o.boxes })),
+                    stops: stops
+                      .map((id) => byId.get(id)!)
+                      .filter(Boolean)
+                      .map((o) => ({ customer: o.customer, address: o.address, order: o.number, phone: o.phone, boxes: o.boxes })),
                   }),
                   { title: `Route sheet ${date}` },
                 )
               }
             />
           )}
-          <section aria-label="Route sheet" data-testid="route-sheet" className="rounded-2xl border border-stone-200 bg-white p-5 text-stone-900 print:border-0 print:p-0">
+          <section
+            aria-label="Route sheet"
+            data-testid="route-sheet"
+            className="rounded-2xl border border-stone-200 bg-white p-5 text-stone-900 print:border-0 print:p-0"
+          >
             <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-stone-900 pb-2">
-              <h2 className="text-lg font-bold">Route sheet · {date}{props.routeCode ? ` · Route ${props.routeCode}` : ""}</h2>
+              <h2 className="text-lg font-bold">
+                Route sheet · {date}
+                {props.routeCode ? ` · Route ${props.routeCode}` : ""}
+              </h2>
               <div className="text-sm">
                 {shop.name}
                 {driver && ` · Driver: ${driver}`}
@@ -296,11 +346,15 @@ export function RouteBuilder(props: {
                 const d = dist(id);
                 return (
                   <li key={id} className="flex items-start gap-3 py-2" data-stop={o.number}>
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-900 text-xs font-bold text-white">{i + 1}</span>
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-900 text-xs font-bold text-white">
+                      {i + 1}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">
                         {o.customer} <span className="font-mono text-xs text-stone-500">{o.number}</span>
-                        {o.ships && o.ships !== date && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">ships {o.ships}</span>}
+                        {o.ships && o.ships !== date && (
+                          <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">ships {o.ships}</span>
+                        )}
                       </div>
                       <div className="text-sm">{o.address || <span className="text-amber-700">No delivery address</span>}</div>
                       {(props.print?.route.showPhone ?? true) && o.phone && <div className="text-xs text-stone-600">{o.phone}</div>}
@@ -317,10 +371,19 @@ export function RouteBuilder(props: {
                         <button className="btn btn-sm" aria-label={`Move ${o.customer} up`} onClick={() => move(i, -1)} disabled={i === 0}>
                           ↑
                         </button>
-                        <button className="btn btn-sm" aria-label={`Move ${o.customer} down`} onClick={() => move(i, 1)} disabled={i === stops.length - 1}>
+                        <button
+                          className="btn btn-sm"
+                          aria-label={`Move ${o.customer} down`}
+                          onClick={() => move(i, 1)}
+                          disabled={i === stops.length - 1}
+                        >
                           ↓
                         </button>
-                        <button className="btn btn-sm" aria-label={`Remove ${o.customer} from route`} onClick={() => setStops(stops.filter((s) => s !== id))}>
+                        <button
+                          className="btn btn-sm"
+                          aria-label={`Remove ${o.customer} from route`}
+                          onClick={() => setStops(stops.filter((s) => s !== id))}
+                        >
                           ✕
                         </button>
                       </span>
@@ -333,14 +396,21 @@ export function RouteBuilder(props: {
             {stops.length > 0 && (
               <p className="mt-3 border-t-2 border-stone-900 pt-2 text-sm font-semibold" data-testid="route-boxes">
                 {stops.length} stop{stops.length === 1 ? "" : "s"}
-                {(props.print?.route.showBoxes ?? true) && ` · ${stops.reduce((n, id) => n + (byId.get(id)?.boxes ?? 0), 0)} boxes expected`}
-                {(props.print?.route.showBoxes ?? true) && stops.some((id) => byId.get(id)?.boxes == null) ? " (some orders have no label count yet)" : ""}
+                {(props.print?.route.showBoxes ?? true) &&
+                  ` · ${stops.reduce((n, id) => n + (byId.get(id)?.boxes ?? 0), 0)} boxes expected`}
+                {(props.print?.route.showBoxes ?? true) && stops.some((id) => byId.get(id)?.boxes == null)
+                  ? " (some orders have no label count yet)"
+                  : ""}
               </p>
             )}
             {props.print?.header.footer && <p className="mt-3 text-xs text-stone-600">{props.print.header.footer}</p>}
           </section>
 
-          {missing > 0 && <p className="text-xs text-amber-700 print:hidden">{missing} stop(s) have no delivery address. Add one on the order or customer.</p>}
+          {missing > 0 && (
+            <p className="text-xs text-amber-700 print:hidden">
+              {missing} stop(s) have no delivery address. Add one on the order or customer.
+            </p>
+          )}
 
           {off.length > 0 && (
             <section className="print:hidden" aria-label="Not on this route">
@@ -352,7 +422,13 @@ export function RouteBuilder(props: {
                       {o.customer} <span className="font-mono text-xs text-stone-500">{o.number}</span>
                     </span>
                     {canEdit && (
-                      <button className="btn btn-sm" onClick={() => { setStops([...stops, o.id]); setMode("manual"); }}>
+                      <button
+                        className="btn btn-sm"
+                        onClick={() => {
+                          setStops([...stops, o.id]);
+                          setMode("manual");
+                        }}
+                      >
                         Add to route
                       </button>
                     )}

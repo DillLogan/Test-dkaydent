@@ -30,7 +30,9 @@ const PRODUCT_COLS: Column<R>[] = [
   { key: "active" },
   { key: "notes" },
 ];
-const VENDOR_COLS: Column<R>[] = ["name", "kind", "contact_name", "email", "phone", "country", "payment_terms", "notes", "active"].map((key) => ({ key }));
+const VENDOR_COLS: Column<R>[] = ["name", "kind", "contact_name", "email", "phone", "country", "payment_terms", "notes", "active"].map(
+  (key) => ({ key }),
+);
 const CUSTOMER_COLS: Column<R>[] = [
   { key: "name" },
   { key: "price_tier", get: (r) => r.price_tiers?.name ?? r.price_tier ?? "" },
@@ -129,7 +131,9 @@ const SPECS: Record<string, Spec> = {
   "purchase-orders": async (db) => {
     const { data } = await db
       .from("purchase_order_lines")
-      .select("*, purchase_orders(po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name)), products(sku, name, base_unit), product_units(name, factor)")
+      .select(
+        "*, purchase_orders(po_number, status, order_date, expected_date, freight_cost, other_cost, vendors(name)), products(sku, name, base_unit), product_units(name, factor)",
+      )
       .order("created_at", { ascending: false })
       .limit(20000);
     return {
@@ -175,7 +179,10 @@ const SPECS: Record<string, Spec> = {
         { key: "unit_price" },
         { key: "extended", get: (r) => (Number(r.qty) * Number(r.unit_price)).toFixed(2) },
         { key: "fifo_cost", get: (r) => (r.cost_total === null ? "" : Number(r.cost_total).toFixed(2)) },
-        { key: "margin", get: (r) => (r.cost_total === null ? "" : (Number(r.qty) * Number(r.unit_price) - Number(r.cost_total)).toFixed(2)) },
+        {
+          key: "margin",
+          get: (r) => (r.cost_total === null ? "" : (Number(r.qty) * Number(r.unit_price) - Number(r.cost_total)).toFixed(2)),
+        },
       ],
     };
   },
@@ -208,7 +215,9 @@ const SPECS: Record<string, Spec> = {
   returns: async (db) => {
     const { data } = await db
       .from("return_lines")
-      .select("*, returns(return_number, created_at, reason, credit_status, customers(name), sales_orders(so_number)), products(sku, name, base_unit)")
+      .select(
+        "*, returns(return_number, created_at, reason, credit_status, customers(name), sales_orders(so_number)), products(sku, name, base_unit)",
+      )
       .limit(20000);
     return {
       rows: (data ?? []).sort((a, b) => String(b.returns?.created_at).localeCompare(String(a.returns?.created_at))),
@@ -287,25 +296,91 @@ const SPECS: Record<string, Spec> = {
   "template-products": async () => ({
     columns: PRODUCT_COLS,
     rows: [
-      { sku: "RO-EXP-50", name: "Rose Explorer 50cm", kind: "flower", category: "Roses", variety: "Explorer", color: "Red", grade: "Select", stem_length_cm: 50, base_unit: "stem", units: "bunch=25; box=300", shelf_life_days: 10, reorder_point_base: 300, active: true, notes: "" },
-      { sku: "HG-CUBE-4", name: "Glass Cube 4in", kind: "hard_good", category: "Vases", base_unit: "each", units: "case=24", reorder_point_base: 48, active: true },
+      {
+        sku: "RO-EXP-50",
+        name: "Rose Explorer 50cm",
+        kind: "flower",
+        category: "Roses",
+        variety: "Explorer",
+        color: "Red",
+        grade: "Select",
+        stem_length_cm: 50,
+        base_unit: "stem",
+        units: "bunch=25; box=300",
+        shelf_life_days: 10,
+        reorder_point_base: 300,
+        active: true,
+        notes: "",
+      },
+      {
+        sku: "HG-CUBE-4",
+        name: "Glass Cube 4in",
+        kind: "hard_good",
+        category: "Vases",
+        base_unit: "each",
+        units: "case=24",
+        reorder_point_base: 48,
+        active: true,
+      },
     ],
   }),
   "template-stock": async () => ({
-    columns: ["sku", "name", "qty", "unit", "unit_cost", "location", "category", "kind", "base_unit", "units", "shelf_life_days", "expires_at", "lot_code"].map((key) => ({ key })),
+    columns: [
+      "sku",
+      "name",
+      "qty",
+      "unit",
+      "unit_cost",
+      "location",
+      "category",
+      "kind",
+      "base_unit",
+      "units",
+      "shelf_life_days",
+      "expires_at",
+      "lot_code",
+    ].map((key) => ({ key })),
     rows: [
       { sku: "RO-FRE-60", qty: 4, unit: "box", unit_cost: 104.5, location: "Cooler 1", lot_code: "ANDES-7781" },
-      { sku: "PE-SAR-BN", name: "Peony Sarah Bernhardt", qty: 6, unit: "bunch", unit_cost: 18, location: "Cooler 2", units: "bunch=10; box=50", shelf_life_days: 6 },
+      {
+        sku: "PE-SAR-BN",
+        name: "Peony Sarah Bernhardt",
+        qty: 6,
+        unit: "bunch",
+        unit_cost: 18,
+        location: "Cooler 2",
+        units: "bunch=10; box=50",
+        shelf_life_days: 6,
+      },
       { sku: "HG-CUBE-4", name: "Glass Cube 4in", qty: 2, unit: "case", unit_cost: 30, location: "Hard Goods Shelf A", units: "case=24" },
     ],
   }),
   "template-vendors": async () => ({
     columns: VENDOR_COLS,
-    rows: [{ name: "Example Farms", kind: "grower", contact_name: "Ana", email: "orders@example.com", country: "Colombia", payment_terms: "Net 15", active: true }],
+    rows: [
+      {
+        name: "Example Farms",
+        kind: "grower",
+        contact_name: "Ana",
+        email: "orders@example.com",
+        country: "Colombia",
+        payment_terms: "Net 15",
+        active: true,
+      },
+    ],
   }),
   "template-customers": async () => ({
     columns: CUSTOMER_COLS,
-    rows: [{ name: "Example Florist", price_tier: "Retail Florist", contact_name: "Jamie", email: "jamie@example.com", payment_terms_days: 30, active: true }],
+    rows: [
+      {
+        name: "Example Florist",
+        price_tier: "Retail Florist",
+        contact_name: "Jamie",
+        email: "jamie@example.com",
+        payment_terms_days: 30,
+        active: true,
+      },
+    ],
   }),
 };
 

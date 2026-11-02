@@ -13,7 +13,12 @@ export async function createPO(fd: FormData) {
   if (!vendor_id) fail("/purchasing", "Choose a vendor.");
   const { data, error } = await supabase
     .from("purchase_orders")
-    .insert({ vendor_id, expected_date: str(fd, "expected_date"), notes: str(fd, "notes"), direct_customer_id: str(fd, "direct_customer_id") })
+    .insert({
+      vendor_id,
+      expected_date: str(fd, "expected_date"),
+      notes: str(fd, "notes"),
+      direct_customer_id: str(fd, "direct_customer_id"),
+    })
     .select("id")
     .single();
   if (error) fail("/purchasing", dbMessage(error));
@@ -69,10 +74,7 @@ export async function setPOStatus(id: string, status: "draft" | "ordered" | "can
   const { supabase } = await requireRole("buyer");
   const path = `/purchasing/${id}`;
   if (status === "ordered") {
-    const { count } = await supabase
-      .from("purchase_order_lines")
-      .select("id", { count: "exact", head: true })
-      .eq("po_id", id);
+    const { count } = await supabase.from("purchase_order_lines").select("id", { count: "exact", head: true }).eq("po_id", id);
     if (!count) fail(path, "Add at least one line before marking the PO as ordered.");
     const { data: po } = await supabase.from("purchase_orders").select("order_date").eq("id", id).single();
     const { error } = await supabase

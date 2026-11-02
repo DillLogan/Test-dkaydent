@@ -7,7 +7,12 @@ import { dbMessage, fail } from "@/lib/forms";
 
 export async function repSetCartQty(customerId: string, unitId: string, qty: number, saved?: boolean) {
   const { supabase } = await requireRole("sales");
-  const { data, error } = await supabase.rpc("rep_cart_set", { p_customer_id: customerId, p_unit_id: unitId, p_qty: Math.max(0, Math.floor(Number(qty) || 0)), p_saved: saved ?? null });
+  const { data, error } = await supabase.rpc("rep_cart_set", {
+    p_customer_id: customerId,
+    p_unit_id: unitId,
+    p_qty: Math.max(0, Math.floor(Number(qty) || 0)),
+    p_saved: saved ?? null,
+  });
   if (error) return { error: dbMessage(error) };
   revalidatePath("/customer-shop");
   return { available: (data as { available?: number } | null)?.available };
@@ -32,7 +37,11 @@ export async function repPlaceOrder(customerId: string) {
   const back = `/customer-shop/cart?c=${customerId}`;
   const { data: id, error } = await supabase.rpc("rep_cart_checkout", { p_customer_id: customerId });
   if (error) fail(back, dbMessage(error));
-  const { data: so } = await supabase.from("sales_orders").select("so_number").eq("id", id as string).single();
+  const { data: so } = await supabase
+    .from("sales_orders")
+    .select("so_number")
+    .eq("id", id as string)
+    .single();
   revalidatePath("/customer-shop");
   revalidatePath("/sales");
   redirect(`${back}&placed=${encodeURIComponent(so?.so_number ?? "")}&so=${encodeURIComponent(String(id))}`);

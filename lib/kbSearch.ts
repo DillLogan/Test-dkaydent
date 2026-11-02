@@ -7,12 +7,56 @@
  * Every word must match somewhere; if nothing matches all of them, documents matching most of them are shown as partial.
  * The whole phrase appearing in the title or text adds a bonus.
  */
-export type KbDoc = { id: string; kind: "article" | "tutorial"; title: string; category: string; text: string[]; href?: string; custom?: boolean };
+export type KbDoc = {
+  id: string;
+  kind: "article" | "tutorial";
+  title: string;
+  category: string;
+  text: string[];
+  href?: string;
+  custom?: boolean;
+};
 export type KbHit = { doc: KbDoc; score: number; partial: boolean; terms: string[] };
 
-const STOP = new Set(["a", "an", "the", "to", "of", "and", "or", "is", "are", "in", "on", "for", "how", "do", "does", "i", "my", "can", "what", "with", "it", "be", "at", "by", "from", "when", "where", "why", "you", "your"]);
+const STOP = new Set([
+  "a",
+  "an",
+  "the",
+  "to",
+  "of",
+  "and",
+  "or",
+  "is",
+  "are",
+  "in",
+  "on",
+  "for",
+  "how",
+  "do",
+  "does",
+  "i",
+  "my",
+  "can",
+  "what",
+  "with",
+  "it",
+  "be",
+  "at",
+  "by",
+  "from",
+  "when",
+  "where",
+  "why",
+  "you",
+  "your",
+]);
 
-export const words = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[a-z0-9]+/g) ?? [];
+export const words = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .match(/[a-z0-9]+/g) ?? [];
 
 /** A rough English stem, enough to match roses/rose, printing/print, labels/label, boxes/box, pulled/pull */
 export function stem(w: string) {
@@ -68,7 +112,10 @@ export function searchKb(docs: KbDoc[], q: string): KbHit[] {
   const full = scored.filter((x) => x.matched === terms.length);
   const pool = full.length ? full : scored.filter((x) => x.matched > 0 && x.matched >= Math.ceil(terms.length / 2));
   return pool
-    .sort((a, b) => b.score - a.score || (a.doc.kind === b.doc.kind ? a.doc.title.localeCompare(b.doc.title) : a.doc.kind === "article" ? -1 : 1))
+    .sort(
+      (a, b) =>
+        b.score - a.score || (a.doc.kind === b.doc.kind ? a.doc.title.localeCompare(b.doc.title) : a.doc.kind === "article" ? -1 : 1),
+    )
     .map((x) => ({ doc: x.doc, score: x.score, partial: !full.length, terms }));
 }
 

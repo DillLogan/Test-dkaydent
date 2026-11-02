@@ -38,7 +38,10 @@ export default async function InvoicePage({ params, searchParams }: Props) {
   const paid = (paidRows ?? []).reduce((t, p) => t + Number(p.amount), 0);
   const pc = await loadPrintConfig(supabase);
   const canEdit = can(profile, "sales", "orders_manager");
-  const so = inv.sales_orders as unknown as { delivery_address: string | null; shop_layouts: { name: string; address: string | null } | null } | null;
+  const so = inv.sales_orders as unknown as {
+    delivery_address: string | null;
+    shop_layouts: { name: string; address: string | null } | null;
+  } | null;
   const overdue = inv.status === "open" && inv.due_at < today();
   const c = inv.customers;
 
@@ -78,142 +81,154 @@ export default async function InvoicePage({ params, searchParams }: Props) {
       <Notice message={message} />
 
       {[pc.invoice.customerTitle, pc.invoice.officeTitle].map((copyLabel, ci) => (
-      <article
-        key={copyLabel}
-        data-copy={copyLabel}
-        className={`card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none ${ci === 1 ? "hidden print:block [break-before:page]" : ""}`}
-      >
-        <div className="mb-2 hidden text-right text-xs font-semibold tracking-wider text-[#57534e] uppercase print:block">{copyLabel}</div>
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="font-display text-xl text-brand-700">{pc.header.name}</div>
-            {pc.header.address && <div className="whitespace-pre-line text-sm">{pc.header.address}</div>}
-            {pc.header.phone && <div className="text-sm">{pc.header.phone}</div>}
+        <article
+          key={copyLabel}
+          data-copy={copyLabel}
+          className={`card mx-auto max-w-3xl p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none ${ci === 1 ? "hidden print:block [break-before:page]" : ""}`}
+        >
+          <div className="mb-2 hidden text-right text-xs font-semibold tracking-wider text-[#57534e] uppercase print:block">
+            {copyLabel}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-semibold">Invoice</div>
-            <div className="tabular-nums">{inv.invoice_number}</div>
-            <div className="mt-1 print:hidden">
-              <StatusBadge status={overdue ? "overdue" : inv.status} />
+          <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="font-display text-xl text-brand-700">{pc.header.name}</div>
+              {pc.header.address && <div className="whitespace-pre-line text-sm">{pc.header.address}</div>}
+              {pc.header.phone && <div className="text-sm">{pc.header.phone}</div>}
             </div>
-          </div>
-        </header>
-
-        <div className="mb-8 grid gap-6 sm:grid-cols-3" data-testid="invoice-addresses">
-          <div>
-            <div className="label">Bill to · location</div>
-            <div className="font-medium">{c?.name}</div>
-            {c?.contact_name && <div>{c.contact_name}</div>}
-            {c?.address && <div className="whitespace-pre-line text-sm">{c.address}</div>}
-            {c?.email && <div className="text-sm">{c.email}</div>}
-            {pc.invoice.showResale && c?.resale_certificate && <div className="mt-1 text-xs text-stone-500">Resale cert #{c.resale_certificate}</div>}
-          </div>
-          <div>
-            <div className="label">Deliver to</div>
-            <div className="whitespace-pre-line text-sm" data-testid="invoice-delivery">
-              {so?.delivery_address || c?.delivery_address || c?.address || "Pickup"}
+            <div className="text-right">
+              <div className="text-2xl font-semibold">Invoice</div>
+              <div className="tabular-nums">{inv.invoice_number}</div>
+              <div className="mt-1 print:hidden">
+                <StatusBadge status={overdue ? "overdue" : inv.status} />
+              </div>
             </div>
-            {so?.shop_layouts && (
-              <>
-                <div className="label mt-3">Ships from</div>
-                <div className="text-sm font-medium">{so.shop_layouts.name}</div>
-                {so.shop_layouts.address && <div className="whitespace-pre-line text-sm">{so.shop_layouts.address}</div>}
-              </>
-            )}
-          </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:text-right">
-            <dt className="text-stone-500">Issued</dt>
-            <dd>{date(inv.issued_at)}</dd>
-            <dt className="text-stone-500">Due</dt>
-            <dd className={overdue ? "font-medium text-red-700" : ""}>{date(inv.due_at)}</dd>
-            <dt className="text-stone-500">Terms</dt>
-            <dd>Net {c?.payment_terms_days}</dd>
-            <dt className="text-stone-500">Order</dt>
-            <dd>
-              <Link href={`/sales/${inv.so_id}`} className="link print:text-stone-900 print:no-underline">
-                {inv.sales_orders?.so_number}
-              </Link>
-            </dd>
-            {inv.paid_at && (
-              <>
-                <dt className="text-stone-500">Paid</dt>
-                <dd>{date(inv.paid_at)}</dd>
-              </>
-            )}
-          </dl>
-        </div>
+          </header>
 
-        <table className="table mb-6">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th className="num">Qty</th>
-              <th className="num">Price</th>
-              <th className="num">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(lines ?? []).map((l: any) => (
-              <tr key={l.id}>
-                <td>
-                  {l.products?.name}
-                  {pc.invoice.showSku && <div className="text-xs text-stone-500 tabular-nums">{l.products?.sku}</div>}
-                </td>
-                <td className="num">
-                  {qty(l.qty)} {l.product_units?.name}
-                </td>
-                <td className="num">{money(l.unit_price)}</td>
-                <td className="num">{money(Number(l.qty) * Number(l.unit_price))}</td>
+          <div className="mb-8 grid gap-6 sm:grid-cols-3" data-testid="invoice-addresses">
+            <div>
+              <div className="label">Bill to · location</div>
+              <div className="font-medium">{c?.name}</div>
+              {c?.contact_name && <div>{c.contact_name}</div>}
+              {c?.address && <div className="whitespace-pre-line text-sm">{c.address}</div>}
+              {c?.email && <div className="text-sm">{c.email}</div>}
+              {pc.invoice.showResale && c?.resale_certificate && (
+                <div className="mt-1 text-xs text-stone-500">Resale cert #{c.resale_certificate}</div>
+              )}
+            </div>
+            <div>
+              <div className="label">Deliver to</div>
+              <div className="whitespace-pre-line text-sm" data-testid="invoice-delivery">
+                {so?.delivery_address || c?.delivery_address || c?.address || "Pickup"}
+              </div>
+              {so?.shop_layouts && (
+                <>
+                  <div className="label mt-3">Ships from</div>
+                  <div className="text-sm font-medium">{so.shop_layouts.name}</div>
+                  {so.shop_layouts.address && <div className="whitespace-pre-line text-sm">{so.shop_layouts.address}</div>}
+                </>
+              )}
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:text-right">
+              <dt className="text-stone-500">Issued</dt>
+              <dd>{date(inv.issued_at)}</dd>
+              <dt className="text-stone-500">Due</dt>
+              <dd className={overdue ? "font-medium text-red-700" : ""}>{date(inv.due_at)}</dd>
+              <dt className="text-stone-500">Terms</dt>
+              <dd>Net {c?.payment_terms_days}</dd>
+              <dt className="text-stone-500">Order</dt>
+              <dd>
+                <Link href={`/sales/${inv.so_id}`} className="link print:text-stone-900 print:no-underline">
+                  {inv.sales_orders?.so_number}
+                </Link>
+              </dd>
+              {inv.paid_at && (
+                <>
+                  <dt className="text-stone-500">Paid</dt>
+                  <dd>{date(inv.paid_at)}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+
+          <table className="table mb-6">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th className="num">Qty</th>
+                <th className="num">Price</th>
+                <th className="num">Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(lines ?? []).map((l: any) => (
+                <tr key={l.id}>
+                  <td>
+                    {l.products?.name}
+                    {pc.invoice.showSku && <div className="text-xs text-stone-500 tabular-nums">{l.products?.sku}</div>}
+                  </td>
+                  <td className="num">
+                    {qty(l.qty)} {l.product_units?.name}
+                  </td>
+                  <td className="num">{money(l.unit_price)}</td>
+                  <td className="num">{money(Number(l.qty) * Number(l.unit_price))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-stone-500">Subtotal</span>
-            <span className="tabular-nums">{money(inv.subtotal)}</span>
+          <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-stone-500">Subtotal</span>
+              <span className="tabular-nums">{money(inv.subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-500">Tax ({Number(inv.tax_rate)}%)</span>
+              <span className="tabular-nums">{money(inv.tax)}</span>
+            </div>
+            {Number(inv.card_fee) > 0 && (
+              <div className="flex justify-between" data-testid="card-fee">
+                <span className="text-stone-500">Card processing fee ({Number(inv.card_fee_rate)}%)</span>
+                <span className="tabular-nums">{money(inv.card_fee)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold">
+              <span>{paid > 0 ? "Total" : "Total due"}</span>
+              <span className="tabular-nums">{money(inv.total)}</span>
+            </div>
+            {paid > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Paid</span>
+                  <span className="tabular-nums">−{money(paid)}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>Balance due</span>
+                  <span className="tabular-nums">{money(Math.max(0, Number(inv.total) - paid))}</span>
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex justify-between">
-            <span className="text-stone-500">Tax ({Number(inv.tax_rate)}%)</span>
-            <span className="tabular-nums">{money(inv.tax)}</span>
-          </div>
-          {Number(inv.card_fee) > 0 && (
-            <div className="flex justify-between" data-testid="card-fee">
-              <span className="text-stone-500">Card processing fee ({Number(inv.card_fee_rate)}%)</span>
-              <span className="tabular-nums">{money(inv.card_fee)}</span>
+
+          {pc.invoice.showNotes && inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
+          {pc.invoice.terms && (
+            <p className="mt-6 whitespace-pre-line text-xs text-stone-600" data-testid="invoice-terms">
+              {pc.invoice.terms}
+            </p>
+          )}
+          {pc.invoice.note && (
+            <p className="mt-3 whitespace-pre-line text-sm" data-testid="invoice-note">
+              {pc.invoice.note}
+            </p>
+          )}
+
+          {pc.invoice.showBarcode && (
+            <div className="mt-8 ml-auto w-56 break-inside-avoid" data-testid="invoice-barcode">
+              <Barcode value={inv.invoice_number} className="h-12 w-full" />
+              <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
             </div>
           )}
-          <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold">
-            <span>{paid > 0 ? "Total" : "Total due"}</span>
-            <span className="tabular-nums">{money(inv.total)}</span>
-          </div>
-          {paid > 0 && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-stone-500">Paid</span>
-                <span className="tabular-nums">−{money(paid)}</span>
-              </div>
-              <div className="flex justify-between font-semibold">
-                <span>Balance due</span>
-                <span className="tabular-nums">{money(Math.max(0, Number(inv.total) - paid))}</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {pc.invoice.showNotes && inv.sales_orders?.notes && <p className="mt-8 text-sm text-stone-600">{inv.sales_orders.notes}</p>}
-        {pc.invoice.terms && <p className="mt-6 whitespace-pre-line text-xs text-stone-600" data-testid="invoice-terms">{pc.invoice.terms}</p>}
-        {pc.invoice.note && <p className="mt-3 whitespace-pre-line text-sm" data-testid="invoice-note">{pc.invoice.note}</p>}
-
-        {pc.invoice.showBarcode && (
-          <div className="mt-8 ml-auto w-56 break-inside-avoid" data-testid="invoice-barcode">
-            <Barcode value={inv.invoice_number} className="h-12 w-full" />
-            <div className="mt-1 text-center font-mono text-xs tracking-wider">{inv.invoice_number}</div>
-          </div>
-        )}
-        {pc.header.footer && <p className="mt-6 whitespace-pre-line text-center text-xs text-stone-600">{pc.header.footer}</p>}
-      </article>
+          {pc.header.footer && <p className="mt-6 whitespace-pre-line text-center text-xs text-stone-600">{pc.header.footer}</p>}
+        </article>
       ))}
 
       {inv.status !== "void" && (

@@ -16,7 +16,11 @@ export default async function CustomerCartPage({ searchParams }: { searchParams:
   if (!d) redirect("/customer-shop");
   return (
     <>
-      <PageHeader title={`Cart for ${d.me.name}`} subtitle="Check the order summary with the customer, then place the order. It is approved and ready to pull." back={{ href: `/customer-shop?c=${c}`, label: d.me.name }}>
+      <PageHeader
+        title={`Cart for ${d.me.name}`}
+        subtitle="Check the order summary with the customer, then place the order. It is approved and ready to pull."
+        back={{ href: `/customer-shop?c=${c}`, label: d.me.name }}
+      >
         <Link href={`/customer-shop?c=${c}`} className="btn">
           Keep shopping
         </Link>
@@ -30,8 +34,16 @@ export default async function CustomerCartPage({ searchParams }: { searchParams:
         placed={placed}
         placedId={so}
         error={error}
-        actions={{ setCartQty: repSetCartQty.bind(null, c), saveCartDetails: repSaveCartDetails.bind(null, c), placeOrder: repPlaceOrder.bind(null, c) }}
-        mode={{ shopHref: `/customer-shop?c=${c}`, cartHref: `/customer-shop/cart?c=${c}`, rep: { onlineCount: d.onlineCount, pullOnline: repPullOnline.bind(null, c) } }}
+        actions={{
+          setCartQty: repSetCartQty.bind(null, c),
+          saveCartDetails: repSaveCartDetails.bind(null, c),
+          placeOrder: repPlaceOrder.bind(null, c),
+        }}
+        mode={{
+          shopHref: `/customer-shop?c=${c}`,
+          cartHref: `/customer-shop/cart?c=${c}`,
+          rep: { onlineCount: d.onlineCount, pullOnline: repPullOnline.bind(null, c) },
+        }}
       />
     </>
   );

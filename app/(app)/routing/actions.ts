@@ -16,14 +16,18 @@ export async function saveRoute(input: {
   routeCode?: string;
 }): Promise<Result> {
   const { supabase, profile } = await getSession();
-  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
+  if (!can(profile, "orders_manager", "warehouse"))
+    return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { ok: false, error: "Pick a day." };
   const stops = [...new Set(input.stops)].slice(0, 200);
   const { error } = await supabase.from("route_sheets").upsert(
     {
       route_date: input.date,
       layout_id: input.layoutId,
-      route_code: (input.routeCode ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3),
+      route_code: (input.routeCode ?? "")
+        .toUpperCase()
+        .replace(/[^A-Z]/g, "")
+        .slice(0, 3),
       stops,
       mode: input.mode === "optimized" ? "optimized" : "manual",
       driver: input.driver?.trim().slice(0, 80) || null,
@@ -54,7 +58,8 @@ export type ScannedStop = { id: string; number: string; customer: string; addres
 
 export async function scanRouteOrder(raw: string): Promise<{ ok: true; order: ScannedStop } | { ok: false; error: string }> {
   const { supabase, profile } = await getSession();
-  if (!can(profile, "orders_manager", "warehouse")) return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
+  if (!can(profile, "orders_manager", "warehouse"))
+    return { ok: false, error: "Only Delivery/Order Management or warehouse can change routes." };
   const code = raw.trim().toUpperCase().slice(0, 40);
   if (!code) return { ok: false, error: "Scan an invoice or order barcode." };
   let soId: string | null = null;
@@ -71,7 +76,8 @@ export async function scanRouteOrder(raw: string): Promise<{ ok: true; order: Sc
     .eq("id", soId)
     .maybeSingle();
   if (!o) return { ok: false, error: "Order not found." };
-  if (o.status !== "completed" && o.status !== "invoiced") return { ok: false, error: `${o.so_number} is ${o.status}; only completed or invoiced orders go on a route.` };
+  if (o.status !== "completed" && o.status !== "invoiced")
+    return { ok: false, error: `${o.so_number} is ${o.status}; only completed or invoiced orders go on a route.` };
   return {
     ok: true,
     order: {

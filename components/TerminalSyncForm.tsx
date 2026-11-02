@@ -58,7 +58,9 @@ export function TerminalSyncForm({
         if (saved) m[it.key] = { ...saved, source: "saved" };
         else {
           const p = (it.sku && bySku.get(it.sku.toLowerCase())) || (it.name && byName.get(it.name.toLowerCase()));
-          m[it.key] = p ? { product_id: p.id, unit_id: p.units[0].id, source: it.sku && bySku.has(it.sku.toLowerCase()) ? "sku" : "name" } : null;
+          m[it.key] = p
+            ? { product_id: p.id, unit_id: p.units[0].id, source: it.sku && bySku.has(it.sku.toLowerCase()) ? "sku" : "name" }
+            : null;
         }
       }
     return m;
@@ -66,20 +68,26 @@ export function TerminalSyncForm({
   const choice = (key: string) => picked[key] ?? auto[key] ?? null;
   const items = useMemo(() => {
     const seen = new Map<string, { key: string; name: string; sku: string; count: number }>();
-    for (const t of txns) for (const it of t.items) {
-      const x = seen.get(it.key) ?? { key: it.key, name: it.name, sku: it.sku, count: 0 };
-      x.count++;
-      seen.set(it.key, x);
-    }
+    for (const t of txns)
+      for (const it of t.items) {
+        const x = seen.get(it.key) ?? { key: it.key, name: it.name, sku: it.sku, count: 0 };
+        x.count++;
+        seen.set(it.key, x);
+      }
     return [...seen.values()];
   }, [txns]);
 
   const plan = txns.map((t) => {
     if (t.skipped) return { t, kind: "skip" as const, why: t.skipped };
     if (known.has(t.txn_id)) return { t, kind: "skip" as const, why: "Already synced" };
-    if (t.invoice_ref && refs.has(t.invoice_ref.toUpperCase())) return { t, kind: "payment" as const, why: `Pays ${t.invoice_ref.toUpperCase()}` };
+    if (t.invoice_ref && refs.has(t.invoice_ref.toUpperCase()))
+      return { t, kind: "payment" as const, why: `Pays ${t.invoice_ref.toUpperCase()}` };
     if (t.items.length === 0)
-      return { t, kind: "error" as const, why: t.invoice_ref ? `No open invoice or order ${t.invoice_ref}` : "No items and no invoice number" };
+      return {
+        t,
+        kind: "error" as const,
+        why: t.invoice_ref ? `No open invoice or order ${t.invoice_ref}` : "No items and no invoice number",
+      };
     const missing = t.items.filter((it) => !choice(it.key));
     if (missing.length) return { t, kind: "error" as const, why: `Match ${missing.map((m) => m.name || m.sku).join(", ")} below` };
     return { t, kind: "sale" as const, why: `Sale of ${t.items.length} item${t.items.length === 1 ? "" : "s"}` };
@@ -130,9 +138,9 @@ export function TerminalSyncForm({
           {fileName && <span className="text-sm text-stone-600">{fileName}</span>}
         </div>
         <p className="text-sm text-stone-600">
-          Export transactions from the Valor portal (Reports → Transactions) or your Valor POS, then choose the file. Sales with an invoice or order
-          number are applied to it. Itemized sales become counter sales and take stock (oldest lots first). Declined, voided and refunded rows are
-          skipped, and transactions already synced are never added twice.
+          Export transactions from the Valor portal (Reports → Transactions) or your Valor POS, then choose the file. Sales with an invoice
+          or order number are applied to it. Itemized sales become counter sales and take stock (oldest lots first). Declined, voided and
+          refunded rows are skipped, and transactions already synced are never added twice.
         </p>
         {unknownCols.length > 0 && <p className="text-xs text-stone-500">Ignoring columns: {unknownCols.join(", ")}</p>}
       </div>
@@ -181,7 +189,8 @@ export function TerminalSyncForm({
                               value={c?.product_id ?? ""}
                               onChange={(e) => {
                                 const np = byId.get(e.target.value);
-                                if (np) setPicked((x) => ({ ...x, [it.key]: { product_id: np.id, unit_id: np.units[0].id, source: "picked" } }));
+                                if (np)
+                                  setPicked((x) => ({ ...x, [it.key]: { product_id: np.id, unit_id: np.units[0].id, source: "picked" } }));
                               }}
                             >
                               <option value="">Choose a product…</option>
@@ -198,7 +207,9 @@ export function TerminalSyncForm({
                                 className="input w-auto"
                                 aria-label={`Unit for ${it.name || it.sku}`}
                                 value={c!.unit_id}
-                                onChange={(e) => setPicked((x) => ({ ...x, [it.key]: { product_id: p.id, unit_id: e.target.value, source: "picked" } }))}
+                                onChange={(e) =>
+                                  setPicked((x) => ({ ...x, [it.key]: { product_id: p.id, unit_id: e.target.value, source: "picked" } }))
+                                }
                               >
                                 {p.units.map((u) => (
                                   <option key={u.id} value={u.id}>
@@ -253,7 +264,14 @@ export function TerminalSyncForm({
             <input type="hidden" name="payload" value={payload} />
             <label>
               <span className="label">Sales tax % on itemized sales</span>
-              <input type="number" min="0" step="0.001" className="input w-28" value={tax} onChange={(e) => setTax(Number(e.target.value))} />
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                className="input w-28"
+                value={tax}
+                onChange={(e) => setTax(Number(e.target.value))}
+              />
             </label>
             <SubmitButton pendingText="Syncing…">
               Sync {ready.length} transaction{ready.length === 1 ? "" : "s"}

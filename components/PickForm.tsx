@@ -98,8 +98,7 @@ export function PickForm({ lines, action }: { lines: PickLine[]; action: (fd: Fo
           <div key={l.id} className="table-wrap">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-stone-200 bg-stone-50 px-3 py-2">
               <div>
-                <span className="font-medium">{l.product}</span>{" "}
-                <span className="text-xs text-stone-500 tabular-nums">{l.sku}</span>
+                <span className="font-medium">{l.product}</span> <span className="text-xs text-stone-500 tabular-nums">{l.sku}</span>
               </div>
               <div className={`text-sm tabular-nums ${ok ? "text-brand-700" : "font-medium text-amber-700"}`}>
                 Picked {fmt(totals[l.id])} of {fmt(l.need)} {l.base_unit}
@@ -139,9 +138,7 @@ export function PickForm({ lines, action }: { lines: PickLine[]; action: (fd: Fo
                             step="any"
                             className="input ml-auto w-24 text-right"
                             value={qty[key] ?? 0}
-                            onChange={(e) =>
-                              setQty({ ...qty, [key]: Math.max(0, Math.min(lot.available, Number(e.target.value) || 0)) })
-                            }
+                            onChange={(e) => setQty({ ...qty, [key]: Math.max(0, Math.min(lot.available, Number(e.target.value) || 0)) })}
                           />
                         </td>
                       </tr>

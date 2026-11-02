@@ -14,7 +14,11 @@ export default async function PullTicketPage({ params }: Props) {
   const { supabase } = await getSession();
 
   const [{ data: so }, { data: lines }, { data: layouts }] = await Promise.all([
-    supabase.from("sales_orders").select("id, so_number, status, ship_date, notes, must_check, label_count, customers(name)").eq("id", id).maybeSingle(),
+    supabase
+      .from("sales_orders")
+      .select("id, so_number, status, ship_date, notes, must_check, label_count, customers(name)")
+      .eq("id", id)
+      .maybeSingle(),
     supabase
       .from("sales_order_lines")
       .select("id, product_id, qty, products(sku, name, base_unit), product_units(name, factor)")
@@ -28,7 +32,9 @@ export default async function PullTicketPage({ params }: Props) {
   const { data: lots } = productIds.length
     ? await supabase
         .from("lots")
-        .select("id, lot_code, product_id, location_id, received_at, created_at, expires_at, qty_on_hand_base, held_for_line, locations(name, layout_id)")
+        .select(
+          "id, lot_code, product_id, location_id, received_at, created_at, expires_at, qty_on_hand_base, held_for_line, locations(name, layout_id)",
+        )
         .in("product_id", productIds)
         .gt("qty_on_hand_base", 0)
     : { data: [] as any[] };
@@ -72,17 +78,39 @@ export default async function PullTicketPage({ params }: Props) {
   const customer = (so.customers as unknown as { name: string } | null)?.name ?? "";
   const { templates, business } = await loadPrintouts(supabase, ["pull"]);
   const done = so.status !== "draft" && so.status !== "confirmed";
-  const row = (r: TicketRow) => ({ name: r.name, sku: r.sku, section: r.section, shelf: r.shelf, lot: r.lotCode, exp: r.expiresAt ? date(r.expiresAt) : null, qty: ticketQty(r) });
+  const row = (r: TicketRow) => ({
+    name: r.name,
+    sku: r.sku,
+    section: r.section,
+    shelf: r.shelf,
+    lot: r.lotCode,
+    exp: r.expiresAt ? date(r.expiresAt) : null,
+    qty: ticketQty(r),
+  });
   const data = pullData({
     business,
-    so: { number: so.so_number, customer, ships: so.ship_date ? date(so.ship_date) : "-", lines: lines?.length ?? 0, notes: so.notes, boxes: so.label_count, mustCheck: !!so.must_check },
-    groups: ticket.shops.flatMap((shop) => shop.sections.map((sec) => ({ shop: showShop ? shop.name : undefined, location: sec.name, rows: sec.rows.map(row) }))),
+    so: {
+      number: so.so_number,
+      customer,
+      ships: so.ship_date ? date(so.ship_date) : "-",
+      lines: lines?.length ?? 0,
+      notes: so.notes,
+      boxes: so.label_count,
+      mustCheck: !!so.must_check,
+    },
+    groups: ticket.shops.flatMap((shop) =>
+      shop.sections.map((sec) => ({ shop: showShop ? shop.name : undefined, location: sec.name, rows: sec.rows.map(row) })),
+    ),
     short: ticket.short.map(row),
   });
 
   return (
     <>
-      <PageHeader title={`Pull ticket · ${so.so_number}`} subtitle="A PDF: items grouped by location, section and shelf" back={{ href: `/sales/${id}`, label: so.so_number }} />
+      <PageHeader
+        title={`Pull ticket · ${so.so_number}`}
+        subtitle="A PDF: items grouped by location, section and shelf"
+        back={{ href: `/sales/${id}`, label: so.so_number }}
+      />
       {done && (
         <div role="status" className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           This order is {so.status}; the ticket shows where its items are in stock now.

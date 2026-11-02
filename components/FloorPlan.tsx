@@ -108,16 +108,23 @@ export function FloorPlan(props: {
   const { actions, canEdit, canAssign } = props;
   const layoutId = props.layout.id;
   const router = useRouter();
-  const withSections = (a: PlanArea[], secs: PlanSection[]): PlanArea[] => [...a, ...secs.filter((x) => x.area).map((x) => ({ ...x.area!, parent: x.locationId }))];
+  const withSections = (a: PlanArea[], secs: PlanSection[]): PlanArea[] => [
+    ...a,
+    ...secs.filter((x) => x.area).map((x) => ({ ...x.area!, parent: x.locationId })),
+  ];
   const [areas, setAreas] = useState<PlanArea[]>(() => withSections(props.areas, props.sections));
-  const [secForm, setSecForm] = useState<null | { mode: "new"; locationId?: string } | { mode: "edit"; id: string } | { mode: "rename"; id: string }>(null);
+  const [secForm, setSecForm] = useState<
+    null | { mode: "new"; locationId?: string } | { mode: "edit"; id: string } | { mode: "rename"; id: string }
+  >(null);
   const [secError, setSecError] = useState<string | null>(null);
   const [doors, setDoors] = useState<PlanDoor[]>(props.doors);
   const [selectedDoor, setSelectedDoor] = useState<string | null>(null);
   const [layoutForm, setLayoutForm] = useState<null | "new" | "rename" | "delete">(null);
   const [items, setItems] = useState<PlanItem[]>(props.items);
   const [aspect, setAspect] = useState(props.aspect);
-  const [feet, setFeet] = useState<{ w: number; h: number } | null>(props.widthFt && props.heightFt ? { w: props.widthFt, h: props.heightFt } : null);
+  const [feet, setFeet] = useState<{ w: number; h: number } | null>(
+    props.widthFt && props.heightFt ? { w: props.widthFt, h: props.heightFt } : null,
+  );
   const [vertex, setVertex] = useState<number | null>(null);
   const [planPx, setPlanPx] = useState(800);
   const [editing, setEditing] = useState(false);
@@ -252,7 +259,10 @@ export function FloorPlan(props: {
       const dy = snapY(b.y + p[1] - d.p0[1]) - b.y;
       setPoints(d.id, translate(d.start, dx, dy));
     } else if (d.mode === "vertex") {
-      setPoints(d.id, d.start.map((q, i) => (i === d.vi ? ([snapX(p[0]), snapY(p[1])] as Pt) : q)));
+      setPoints(
+        d.id,
+        d.start.map((q, i) => (i === d.vi ? ([snapX(p[0]), snapY(p[1])] as Pt) : q)),
+      );
     } else if (d.mode === "scale") {
       const b = d.box;
       let x1 = b.x;
@@ -345,11 +355,17 @@ export function FloorPlan(props: {
       const pb = bbox(pa.points);
       const w = Math.max(stepX * 4, pb.w * 0.4);
       const h = Math.max(stepY * 4, pb.h * 0.5);
-      return { points: clampPts(rectPoints(snapX(pb.x + pb.w / 2 - w / 2), snapY(pb.y + pb.h / 2 - h / 2), snapX(w), snapY(h))), color: pa.color };
+      return {
+        points: clampPts(rectPoints(snapX(pb.x + pb.w / 2 - w / 2), snapY(pb.y + pb.h / 2 - h / 2), snapX(w), snapY(h))),
+        color: pa.color,
+      };
     }
     const w = parent ? (scale ? Math.min(40, 6 / scale.x) : 14) : scale ? Math.min(60, 10 / scale.x) : 20;
     const h = parent ? (scale ? Math.min(40, 4 / scale.y) : 10) : scale ? Math.min(60, 8 / scale.y) : 16;
-    return { points: clampPts(rectPoints(snapX(50 - w / 2), snapY(50 - h / 2), snapX(w), snapY(h))), color: AREA_COLORS[areas.length % AREA_COLORS.length] };
+    return {
+      points: clampPts(rectPoints(snapX(50 - w / 2), snapY(50 - h / 2), snapX(w), snapY(h))),
+      color: AREA_COLORS[areas.length % AREA_COLORS.length],
+    };
   }
   function place(loc: { id: string; name: string; parent?: string }) {
     const { points, color } = spotFor(loc.parent);
@@ -410,7 +426,10 @@ export function FloorPlan(props: {
   function unplace(a: PlanArea) {
     setAreas((all) => all.filter((x) => x.id !== a.id));
     setSelected(null);
-    run(() => actions.removeArea(a.id), () => setAreas((all) => [...all, a]));
+    run(
+      () => actions.removeArea(a.id),
+      () => setAreas((all) => [...all, a]),
+    );
   }
   function resizeTo(a: PlanArea, fd: FormData) {
     const b = bbox(a.points);
@@ -443,7 +462,10 @@ export function FloorPlan(props: {
   function setHome(it: PlanItem, locId: string | null) {
     const prev = it.home;
     setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: locId } : x)));
-    run(() => actions.setHome(it.id, layoutId, locId), () => setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: prev } : x))));
+    run(
+      () => actions.setHome(it.id, layoutId, locId),
+      () => setItems((all) => all.map((x) => (x.id === it.id ? { ...x, home: prev } : x))),
+    );
   }
   async function onBackground(file?: File) {
     if (!file) return;
@@ -476,19 +498,28 @@ export function FloorPlan(props: {
     start(async () => {
       const r = await actions.addDoor(layoutId, { kind, label, ...spot });
       if (r.error || !r.id) return setError(r.error ?? "Couldn't add it.");
-      setDoors((all) => [...all, { id: r.id!, kind: kind as PlanDoor["kind"], label: label.trim().replace(/\s+/g, " "), side: spot.side as DoorSide, pos: spot.pos }]);
+      setDoors((all) => [
+        ...all,
+        { id: r.id!, kind: kind as PlanDoor["kind"], label: label.trim().replace(/\s+/g, " "), side: spot.side as DoorSide, pos: spot.pos },
+      ]);
       setSelectedDoor(r.id);
       setSelected(null);
     });
   }
   function editDoor(d: PlanDoor, patch: Partial<PlanDoor>) {
     setDoors((all) => all.map((x) => (x.id === d.id ? { ...x, ...patch } : x)));
-    run(() => actions.saveDoor(d.id, patch), () => setDoors((all) => all.map((x) => (x.id === d.id ? d : x))));
+    run(
+      () => actions.saveDoor(d.id, patch),
+      () => setDoors((all) => all.map((x) => (x.id === d.id ? d : x))),
+    );
   }
   function dropDoor(d: PlanDoor) {
     setDoors((all) => all.filter((x) => x.id !== d.id));
     setSelectedDoor(null);
-    run(() => actions.removeDoor(d.id), () => setDoors((all) => [...all, d]));
+    run(
+      () => actions.removeDoor(d.id),
+      () => setDoors((all) => [...all, d]),
+    );
   }
   function layoutSubmit(fd: FormData) {
     setError(null);
@@ -546,14 +577,29 @@ export function FloorPlan(props: {
           </label>
           {canEdit && (
             <>
-              <button type="button" className="btn btn-sm" onClick={() => setLayoutForm(layoutForm === "new" ? null : "new")} aria-expanded={layoutForm === "new"}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setLayoutForm(layoutForm === "new" ? null : "new")}
+                aria-expanded={layoutForm === "new"}
+              >
                 + New layout
               </button>
-              <button type="button" className="btn btn-sm" onClick={() => setLayoutForm(layoutForm === "rename" ? null : "rename")} aria-expanded={layoutForm === "rename"}>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setLayoutForm(layoutForm === "rename" ? null : "rename")}
+                aria-expanded={layoutForm === "rename"}
+              >
                 Rename
               </button>
               {others.length > 0 && (
-                <button type="button" className="btn btn-sm btn-danger" onClick={() => setLayoutForm(layoutForm === "delete" ? null : "delete")} aria-expanded={layoutForm === "delete"}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger"
+                  onClick={() => setLayoutForm(layoutForm === "delete" ? null : "delete")}
+                  aria-expanded={layoutForm === "delete"}
+                >
                   Delete layout
                 </button>
               )}
@@ -572,7 +618,8 @@ export function FloorPlan(props: {
             {layoutForm === "delete" ? (
               <>
                 <p className="w-full text-stone-600">
-                  Delete <b>{props.layout.name}</b>? Its entries and exits are removed and its sections move, unplaced, to the layout you pick. Items lose their home area in this shop.
+                  Delete <b>{props.layout.name}</b>? Its entries and exits are removed and its sections move, unplaced, to the layout you
+                  pick. Items lose their home area in this shop.
                 </p>
                 <label className="min-w-48">
                   <span className="label">Move its sections to</span>
@@ -650,12 +697,25 @@ export function FloorPlan(props: {
             </button>
           )}
           {canEdit && editing && (
-            <button type="button" className="btn" onClick={() => { setSecError(null); setSecForm({ mode: "new", locationId: area && !area.parent ? area.id : undefined }); }} data-testid="add-section">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setSecError(null);
+                setSecForm({ mode: "new", locationId: area && !area.parent ? area.id : undefined });
+              }}
+              data-testid="add-section"
+            >
               + Add section
             </button>
           )}
           {canEdit && (
-            <button type="button" className={`btn ${editing ? "btn-primary" : ""}`} onClick={() => setEditing((v) => !v)} aria-pressed={editing}>
+            <button
+              type="button"
+              className={`btn ${editing ? "btn-primary" : ""}`}
+              onClick={() => setEditing((v) => !v)}
+              aria-pressed={editing}
+            >
               {editing ? "Done editing" : "Edit layout"}
             </button>
           )}
@@ -671,8 +731,8 @@ export function FloorPlan(props: {
         {editing && (
           <div className="card flex flex-wrap items-center gap-3 text-sm">
             <p className="w-full text-stone-500">
-              Drag an area to move it. Select it to get handles: corners and edges resize, the round handle on top rotates, the dots
-              are its corners (drag them, double-click one to remove it) and the + on each edge adds a corner. Drag entries and exits along the
+              Drag an area to move it. Select it to get handles: corners and edges resize, the round handle on top rotates, the dots are its
+              corners (drag them, double-click one to remove it) and the + on each edge adds a corner. Drag entries and exits along the
               walls.
             </p>
             <form
@@ -738,7 +798,12 @@ export function FloorPlan(props: {
               <div className="flex flex-wrap items-center gap-1">
                 <span className="label mb-0">Place section</span>
                 {unplacedSections.map((x) => (
-                  <button key={x.id} type="button" className="btn btn-sm" onClick={() => place({ id: x.id, name: x.name, parent: x.locationId })}>
+                  <button
+                    key={x.id}
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => place({ id: x.id, name: x.name, parent: x.locationId })}
+                  >
                     + {x.name} <span className="text-stone-500">({locName(x.locationId)})</span>
                   </button>
                 ))}
@@ -757,7 +822,14 @@ export function FloorPlan(props: {
                 <option value="entry">Entry</option>
                 <option value="exit">Exit</option>
               </select>
-              <input name="label" className="input w-40 py-1 text-xs" placeholder="Label, e.g. Front door" required maxLength={60} aria-label="Entry or exit label" />
+              <input
+                name="label"
+                className="input w-40 py-1 text-xs"
+                placeholder="Label, e.g. Front door"
+                required
+                maxLength={60}
+                aria-label="Entry or exit label"
+              />
               <button type="submit" className="btn btn-sm">
                 + Add
               </button>
@@ -785,13 +857,13 @@ export function FloorPlan(props: {
         >
           {/* floor image and grid are clipped to the plan; handles may reach past its edge */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-          {props.backgroundUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={props.backgroundUrl} alt="Shop floor" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-          ) : scale ? null : (
-            <div className="plan-grid pointer-events-none absolute inset-0" />
-          )}
-          {scale && !props.backgroundUrl && <FeetGrid aspect={aspect} widthFt={feet!.w} heightFt={feet!.h} />}
+            {props.backgroundUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={props.backgroundUrl} alt="Shop floor" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+            ) : scale ? null : (
+              <div className="plan-grid pointer-events-none absolute inset-0" />
+            )}
+            {scale && !props.backgroundUrl && <FeetGrid aspect={aspect} widthFt={feet!.w} heightFt={feet!.h} />}
           </div>
           <svg
             viewBox={`0 0 ${vbW} 100`}
@@ -823,7 +895,9 @@ export function FloorPlan(props: {
                   points={toSvg(a.points, aspect)}
                   role="button"
                   tabIndex={0}
-                  aria-label={a.parent ? `${a.name}, section in ${locName(a.parent)}` : `${a.name}${count ? `, ${count} items stored` : ""}`}
+                  aria-label={
+                    a.parent ? `${a.name}, section in ${locName(a.parent)}` : `${a.name}${count ? `, ${count} items stored` : ""}`
+                  }
                   aria-pressed={isSel}
                   className={`plan-shape ${editing ? "cursor-move" : "cursor-pointer"} ${mark?.kind === "home" || mark?.kind === "home-stock" ? "shape-pulse" : ""}`}
                   style={{
@@ -872,7 +946,15 @@ export function FloorPlan(props: {
                       vectorEffect="non-scaling-stroke"
                       pointerEvents="none"
                     />
-                    <line x1={cxU} y1={edgeY} x2={cxU} y2={top} stroke="var(--color-stone-500)" vectorEffect="non-scaling-stroke" pointerEvents="none" />
+                    <line
+                      x1={cxU}
+                      y1={edgeY}
+                      x2={cxU}
+                      y2={top}
+                      stroke="var(--color-stone-500)"
+                      vectorEffect="non-scaling-stroke"
+                      pointerEvents="none"
+                    />
                     <circle
                       data-rotate={area.id}
                       cx={cxU}
@@ -880,7 +962,14 @@ export function FloorPlan(props: {
                       r={r * 1.15}
                       className="plan-handle cursor-grab"
                       onPointerDown={(e) =>
-                        startShape(e, { kind: "shape", id: area.id, mode: "rotate", start: area.points, a0: angleOf(centroid(area.points, aspect), toPlan(e), aspect), moved: false })
+                        startShape(e, {
+                          kind: "shape",
+                          id: area.id,
+                          mode: "rotate",
+                          start: area.points,
+                          a0: angleOf(centroid(area.points, aspect), toPlan(e), aspect),
+                          moved: false,
+                        })
                       }
                     >
                       <title>Drag to rotate</title>
@@ -897,7 +986,16 @@ export function FloorPlan(props: {
                         className="plan-handle plan-handle-square"
                         style={{ cursor: h.cursor }}
                         onPointerDown={(e) =>
-                          startShape(e, { kind: "shape", id: area.id, mode: "scale", start: area.points, box: b, handle: h.h, p0: toPlanRaw(e), moved: false })
+                          startShape(e, {
+                            kind: "shape",
+                            id: area.id,
+                            mode: "scale",
+                            start: area.points,
+                            box: b,
+                            handle: h.h,
+                            p0: toPlanRaw(e),
+                            moved: false,
+                          })
                         }
                       />
                     ))}
@@ -971,7 +1069,9 @@ export function FloorPlan(props: {
                 >
                   <span className="text-[11px] leading-tight font-semibold whitespace-nowrap text-stone-900">{a.name}</span>
                   <span className="text-[10px] whitespace-nowrap text-stone-700">
-                    {editing && isSel ? sizeText(bbox(a.points)) : `${shelves ? `${shelves} shel${shelves === 1 ? "f" : "ves"}` : "No shelves"}${n ? ` · ${n} item${n === 1 ? "" : "s"}` : ""}`}
+                    {editing && isSel
+                      ? sizeText(bbox(a.points))
+                      : `${shelves ? `${shelves} shel${shelves === 1 ? "f" : "ves"}` : "No shelves"}${n ? ` · ${n} item${n === 1 ? "" : "s"}` : ""}`}
                   </span>
                 </div>
               );
@@ -993,7 +1093,11 @@ export function FloorPlan(props: {
                       mark.kind === "away" ? "bg-amber-50 text-amber-800" : "bg-brand-50 text-brand-800"
                     }`}
                   >
-                    {mark.kind === "home" ? "Home · none here" : mark.kind === "home-stock" ? `Home · ${fmt(mark.q)}` : `${fmt(mark.q)} here`}
+                    {mark.kind === "home"
+                      ? "Home · none here"
+                      : mark.kind === "home-stock"
+                        ? `Home · ${fmt(mark.q)}`
+                        : `${fmt(mark.q)} here`}
                   </span>
                 )}
               </div>
@@ -1008,9 +1112,10 @@ export function FloorPlan(props: {
                   : d.side === "left"
                     ? { top: `${d.pos}%`, left: 2, transform: "translateY(-50%)" }
                     : { top: `${d.pos}%`, right: 2, transform: "translateY(-50%)" };
-            const arrow = d.kind === "entry"
-              ? { top: "↓", bottom: "↑", left: "→", right: "←" }[d.side]
-              : { top: "↑", bottom: "↓", left: "←", right: "→" }[d.side];
+            const arrow =
+              d.kind === "entry"
+                ? { top: "↓", bottom: "↑", left: "→", right: "←" }[d.side]
+                : { top: "↑", bottom: "↓", left: "←", right: "→" }[d.side];
             return (
               <button
                 key={d.id}
@@ -1032,12 +1137,17 @@ export function FloorPlan(props: {
           })}
           {areas.length === 0 && (
             <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-stone-600">
-              {canEdit ? (editing ? "Tap + Add section to put the first section on the plan." : "Click Edit layout, then tap + Add section.") : "No areas placed yet. Ask Warehouse or Admin to set up the plan."}
+              {canEdit
+                ? editing
+                  ? "Tap + Add section to put the first section on the plan."
+                  : "Click Edit layout, then tap + Add section."
+                : "No areas placed yet. Ask Warehouse or Admin to set up the plan."}
             </div>
           )}
         </div>
         <p className="text-xs text-stone-500">
-          Areas are your stock locations. Pulsing = an item&apos;s home area. Amber = stock sitting outside its home area. Green pills are entries, amber pills are exits.
+          Areas are your stock locations. Pulsing = an item&apos;s home area. Amber = stock sitting outside its home area. Green pills are
+          entries, amber pills are exits.
         </p>
       </div>
 
@@ -1046,7 +1156,9 @@ export function FloorPlan(props: {
           <div className="card space-y-3 text-sm" data-testid="door-panel">
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold">{door.label}</h3>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold text-white ${door.kind === "entry" ? "bg-brand-700" : "bg-amber-700"}`}>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold text-white ${door.kind === "entry" ? "bg-brand-700" : "bg-amber-700"}`}
+              >
                 {door.kind === "entry" ? "Entry" : "Exit"}
               </span>
             </div>
@@ -1058,7 +1170,10 @@ export function FloorPlan(props: {
                 onSubmit={(e) => {
                   e.preventDefault();
                   const fd = new FormData(e.currentTarget);
-                  editDoor(door, { kind: String(fd.get("kind")) as PlanDoor["kind"], label: String(fd.get("label")).trim().replace(/\s+/g, " ") });
+                  editDoor(door, {
+                    kind: String(fd.get("kind")) as PlanDoor["kind"],
+                    label: String(fd.get("label")).trim().replace(/\s+/g, " "),
+                  });
                 }}
               >
                 <label className="block">
@@ -1160,7 +1275,15 @@ export function FloorPlan(props: {
                   )}
                 </div>
                 {canEdit && (
-                  <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setSecForm({ mode: "edit", id: area.id }); }} data-testid="edit-section">
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => {
+                      setSecError(null);
+                      setSecForm({ mode: "edit", id: area.id });
+                    }}
+                    data-testid="edit-section"
+                  >
                     Edit section
                   </button>
                 )}
@@ -1169,10 +1292,26 @@ export function FloorPlan(props: {
               canEdit && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-1.5">
-                    <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setSecForm({ mode: "rename", id: area.id }); }} data-testid="rename-location">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => {
+                        setSecError(null);
+                        setSecForm({ mode: "rename", id: area.id });
+                      }}
+                      data-testid="rename-location"
+                    >
                       Rename
                     </button>
-                    <button type="button" className="btn btn-sm" onClick={() => { setSecError(null); setEditing(true); setSecForm({ mode: "new", locationId: area.id }); }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => {
+                        setSecError(null);
+                        setEditing(true);
+                        setSecForm({ mode: "new", locationId: area.id });
+                      }}
+                    >
                       + Add section here
                     </button>
                   </div>
@@ -1182,7 +1321,12 @@ export function FloorPlan(props: {
                       {props.sections
                         .filter((x) => x.locationId === area.id)
                         .map((x) => (
-                          <button key={x.id} type="button" className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-700 hover:bg-stone-200" onClick={() => setSelected(x.id)}>
+                          <button
+                            key={x.id}
+                            type="button"
+                            className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-700 hover:bg-stone-200"
+                            onClick={() => setSelected(x.id)}
+                          >
                             {x.name}
                           </button>
                         ))}
@@ -1245,17 +1389,27 @@ export function FloorPlan(props: {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="label mb-0">Rotate</span>
                   {[-90, -15, 15, 90].map((deg) => (
-                    <button key={deg} type="button" className="btn btn-sm" onClick={() => saveShape(area, rotate(area.points, deg, aspect))} aria-label={`Rotate ${deg}°`}>
+                    <button
+                      key={deg}
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => saveShape(area, rotate(area.points, deg, aspect))}
+                      aria-label={`Rotate ${deg}°`}
+                    >
                       {deg < 0 ? "↺" : "↻"} {Math.abs(deg)}°
                     </button>
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <button type="button" className="btn btn-sm" onClick={() => {
-                    const b = bbox(area.points);
-                    setVertex(null);
-                    saveShape(area, rectPoints(b.x, b.y, b.w, b.h));
-                  }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => {
+                      const b = bbox(area.points);
+                      setVertex(null);
+                      saveShape(area, rectPoints(b.x, b.y, b.w, b.h));
+                    }}
+                  >
                     Make rectangle
                   </button>
                   {vertex !== null && area.points.length > 3 && (
@@ -1267,14 +1421,18 @@ export function FloorPlan(props: {
                     Remove from plan
                   </button>
                 </div>
-                <p className="text-xs text-stone-500">{area.points.length} corners · {sizeText(bbox(area.points))}</p>
+                <p className="text-xs text-stone-500">
+                  {area.points.length} corners · {sizeText(bbox(area.points))}
+                </p>
               </div>
             )}
             {area.parent ? (
               <div>
                 <div className="label">Recorded here</div>
                 {items.filter((i) => (i.sectionStock?.[area.id] ?? 0) > 0).length === 0 ? (
-                  <p className="text-sm text-stone-500">No stock recorded in this section. Set a lot&apos;s section and shelf on its page.</p>
+                  <p className="text-sm text-stone-500">
+                    No stock recorded in this section. Set a lot&apos;s section and shelf on its page.
+                  </p>
                 ) : (
                   <ul className="space-y-1.5">
                     {items
@@ -1294,53 +1452,59 @@ export function FloorPlan(props: {
                 )}
               </div>
             ) : (
-            <>
-            <div>
-              <div className="label">Stored here now</div>
-              {(stockIn[area.id] ?? []).length === 0 ? (
-                <p className="text-sm text-stone-500">Nothing on hand here.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {(stockIn[area.id] ?? []).map(({ item: it, qty }) => (
-                    <li key={it.id} className="flex items-center gap-2 text-sm">
-                      <ItemThumb path={it.image} name={it.name} category={it.category} size={28} />
-                      <button type="button" className="link min-w-0 flex-1 truncate text-left" onClick={() => setFound(it.id)}>
-                        {it.name}
-                      </button>
-                      <span className={`tabular-nums ${it.home && it.home !== area.id ? "font-medium text-amber-700" : ""}`}>
-                        {fmt(qty)} {it.baseUnit}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <div className="label">Belongs here</div>
-              {items.filter((i) => i.home === area.id).length === 0 ? (
-                <p className="text-sm text-stone-500">No items have this as their home area.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {items
-                    .filter((i) => i.home === area.id)
-                    .map((it) => {
-                      const here = it.stock[area.id] ?? 0;
-                      const elsewhere = Object.entries(it.stock).filter(([l, q]) => q > 0 && l !== area.id);
-                      return (
-                        <li key={it.id} className="flex items-center justify-between gap-2 text-sm">
-                          <button type="button" className="link truncate text-left" onClick={() => setFound(it.id)}>
+              <>
+                <div>
+                  <div className="label">Stored here now</div>
+                  {(stockIn[area.id] ?? []).length === 0 ? (
+                    <p className="text-sm text-stone-500">Nothing on hand here.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {(stockIn[area.id] ?? []).map(({ item: it, qty }) => (
+                        <li key={it.id} className="flex items-center gap-2 text-sm">
+                          <ItemThumb path={it.image} name={it.name} category={it.category} size={28} />
+                          <button type="button" className="link min-w-0 flex-1 truncate text-left" onClick={() => setFound(it.id)}>
                             {it.name}
                           </button>
-                          <span className={`text-xs ${elsewhere.length ? "font-medium text-amber-700" : here ? "text-brand-700" : "text-stone-500"}`}>
-                            {elsewhere.length ? `Also in ${elsewhere.map(([l]) => locName(l)).join(", ")}` : here ? "In place" : "None on hand"}
+                          <span className={`tabular-nums ${it.home && it.home !== area.id ? "font-medium text-amber-700" : ""}`}>
+                            {fmt(qty)} {it.baseUnit}
                           </span>
                         </li>
-                      );
-                    })}
-                </ul>
-              )}
-            </div>
-            </>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <div className="label">Belongs here</div>
+                  {items.filter((i) => i.home === area.id).length === 0 ? (
+                    <p className="text-sm text-stone-500">No items have this as their home area.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {items
+                        .filter((i) => i.home === area.id)
+                        .map((it) => {
+                          const here = it.stock[area.id] ?? 0;
+                          const elsewhere = Object.entries(it.stock).filter(([l, q]) => q > 0 && l !== area.id);
+                          return (
+                            <li key={it.id} className="flex items-center justify-between gap-2 text-sm">
+                              <button type="button" className="link truncate text-left" onClick={() => setFound(it.id)}>
+                                {it.name}
+                              </button>
+                              <span
+                                className={`text-xs ${elsewhere.length ? "font-medium text-amber-700" : here ? "text-brand-700" : "text-stone-500"}`}
+                              >
+                                {elsewhere.length
+                                  ? `Also in ${elsewhere.map(([l]) => locName(l)).join(", ")}`
+                                  : here
+                                    ? "In place"
+                                    : "None on hand"}
+                              </span>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  )}
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -1378,7 +1542,12 @@ export function FloorPlan(props: {
                   {noHome.slice(0, 8).map((it) => (
                     <li key={it.id} className="flex items-center gap-2">
                       <span className="min-w-0 flex-1 truncate">{it.name}</span>
-                      <select className="input w-36 py-1 text-xs" value="" onChange={(e) => setHome(it, e.target.value || null)} aria-label={`Home area for ${it.name}`}>
+                      <select
+                        className="input w-36 py-1 text-xs"
+                        value=""
+                        onChange={(e) => setHome(it, e.target.value || null)}
+                        aria-label={`Home area for ${it.name}`}
+                      >
                         <option value="">Set…</option>
                         {props.locations
                           .filter((l) => l.active)
@@ -1408,7 +1577,12 @@ export function FloorPlan(props: {
               ? { locationId: secForm.locationId }
               : secForm.mode === "rename"
                 ? { id: secForm.id, name: locName(secForm.id) }
-                : { id: secForm.id, locationId: sectionOf(secForm.id)?.locationId, name: sectionOf(secForm.id)?.name, shelves: sectionOf(secForm.id)?.shelves }
+                : {
+                    id: secForm.id,
+                    locationId: sectionOf(secForm.id)?.locationId,
+                    name: sectionOf(secForm.id)?.name,
+                    shelves: sectionOf(secForm.id)?.shelves,
+                  }
           }
           error={secError}
           pending={pending}
@@ -1430,14 +1604,39 @@ function FeetGrid({ aspect, widthFt, heightFt }: { aspect: number; widthFt: numb
   const lines: React.ReactNode[] = [];
   for (let f = minor; f < widthFt; f += minor) {
     const x = f * perFt;
-    lines.push(<line key={`x${f}`} x1={x} y1={0} x2={x} y2={100} className={f % 10 === 0 ? "grid-major" : "grid-minor"} vectorEffect="non-scaling-stroke" />);
+    lines.push(
+      <line
+        key={`x${f}`}
+        x1={x}
+        y1={0}
+        x2={x}
+        y2={100}
+        className={f % 10 === 0 ? "grid-major" : "grid-minor"}
+        vectorEffect="non-scaling-stroke"
+      />,
+    );
   }
   for (let f = minor; f < heightFt; f += minor) {
     const y = f * perFt;
-    lines.push(<line key={`y${f}`} x1={0} y1={y} x2={vbW} y2={y} className={f % 10 === 0 ? "grid-major" : "grid-minor"} vectorEffect="non-scaling-stroke" />);
+    lines.push(
+      <line
+        key={`y${f}`}
+        x1={0}
+        y1={y}
+        x2={vbW}
+        y2={y}
+        className={f % 10 === 0 ? "grid-major" : "grid-minor"}
+        vectorEffect="non-scaling-stroke"
+      />,
+    );
   }
   return (
-    <svg viewBox={`0 0 ${vbW} 100`} preserveAspectRatio="none" className="plan-feet pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+    <svg
+      viewBox={`0 0 ${vbW} 100`}
+      preserveAspectRatio="none"
+      className="plan-feet pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden="true"
+    >
       {lines}
     </svg>
   );

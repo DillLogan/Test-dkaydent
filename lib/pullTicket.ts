@@ -76,7 +76,10 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
       shop.set(lot.locationName, rows);
       const section = lot.section ?? null;
       const shelf = lot.shelf ?? null;
-      const same = rows.find((r) => r.lineId === line.id && r.lotCode === lot.lotCode && r.expiresAt === lot.expiresAt && r.section === section && r.shelf === shelf);
+      const same = rows.find(
+        (r) =>
+          r.lineId === line.id && r.lotCode === lot.lotCode && r.expiresAt === lot.expiresAt && r.section === section && r.shelf === shelf,
+      );
       if (same) same.base += take;
       else rows.push({ ...base, lotCode: lot.lotCode, expiresAt: lot.expiresAt, base: take, section, shelf });
     }
@@ -93,7 +96,13 @@ export function buildPullTicket(lines: TicketLine[], lots: TicketLot[], layouts:
         // within a location: by section, then shelf, then item (rows without a section last)
         .map(([name, rows]) => ({
           name,
-          rows: rows.sort((a, b) => Number(!a.section) - Number(!b.section) || byText(a.section ?? "", b.section ?? "") || byText(a.shelf ?? "", b.shelf ?? "") || byText(a.name, b.name)),
+          rows: rows.sort(
+            (a, b) =>
+              Number(!a.section) - Number(!b.section) ||
+              byText(a.section ?? "", b.section ?? "") ||
+              byText(a.shelf ?? "", b.shelf ?? "") ||
+              byText(a.name, b.name),
+          ),
         })),
     }));
   short.sort((a, b) => byText(a.name, b.name));

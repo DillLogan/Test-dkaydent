@@ -1,7 +1,15 @@
 /** Printing preferences, saved per computer (browser localStorage) */
 export type PrintMode = "label" | "regular";
 export type Paper = "letter" | "a4";
-export type PrintSettings = { mode: PrintMode; size: string; w: number; h: number; paper: Paper; labelPrinter: string; regularPrinter: string };
+export type PrintSettings = {
+  mode: PrintMode;
+  size: string;
+  w: number;
+  h: number;
+  paper: Paper;
+  labelPrinter: string;
+  regularPrinter: string;
+};
 
 export const PRINT_KEY = "dk-print";
 
@@ -20,7 +28,15 @@ export const PAPERS: Record<Paper, { label: string; w: number; h: number }> = {
   a4: { label: "A4 (210 × 297 mm)", w: 8.27, h: 11.69 },
 };
 
-export const DEFAULT_PRINT: PrintSettings = { mode: "label", size: "2.25x1.25", w: 2.25, h: 1.25, paper: "letter", labelPrinter: "", regularPrinter: "" };
+export const DEFAULT_PRINT: PrintSettings = {
+  mode: "label",
+  size: "2.25x1.25",
+  w: 2.25,
+  h: 1.25,
+  paper: "letter",
+  labelPrinter: "",
+  regularPrinter: "",
+};
 
 const clampIn = (v: unknown, d: number) => {
   const n = Number(v);

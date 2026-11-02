@@ -10,8 +10,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   if (!c.ok) return NextResponse.json({ error: c.error }, { status: c.status });
   try {
     const bytes = await signedBytes(r);
-    const name = (String(r.doc_name || "document").replace(/[^A-Za-z0-9 _.-]/g, "").trim() || "document") + " - signed.pdf";
-    return new Response(bytes, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" } });
+    const name =
+      (String(r.doc_name || "document")
+        .replace(/[^A-Za-z0-9 _.-]/g, "")
+        .trim() || "document") + " - signed.pdf";
+    return new Response(bytes, {
+      headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" },
+    });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 409 });
   }

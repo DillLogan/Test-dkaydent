@@ -1,14 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DEFAULT_PRINT, LABEL_SIZES, PAPERS, readPrintSettings, savePrintSettings, withSize, type PrintSettings } from "@/lib/printSettings";
+import {
+  DEFAULT_PRINT,
+  LABEL_SIZES,
+  PAPERS,
+  readPrintSettings,
+  savePrintSettings,
+  withSize,
+  type PrintSettings,
+} from "@/lib/printSettings";
 
 export function LabelSizeFields({ value, onChange }: { value: PrintSettings; onChange: (s: PrintSettings) => void }) {
   return (
     <div className="flex flex-wrap items-end gap-2">
       <label className="block">
         <span className="label">Label size</span>
-        <select className="input w-auto" value={value.size} onChange={(e) => onChange(withSize(value, e.target.value))} aria-label="Label size">
+        <select
+          className="input w-auto"
+          value={value.size}
+          onChange={(e) => onChange(withSize(value, e.target.value))}
+          aria-label="Label size"
+        >
           {LABEL_SIZES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
@@ -91,11 +104,17 @@ export function PrintSettingsForm() {
       </div>
       <div>
         <LabelSizeFields value={s} onChange={update} />
-        <p className="mt-1 text-xs text-stone-500">Set this to the labels loaded in your label printer. You can change it for any single print job.</p>
+        <p className="mt-1 text-xs text-stone-500">
+          Set this to the labels loaded in your label printer. You can change it for any single print job.
+        </p>
       </div>
       <label className="block">
         <span className="label">Regular printer paper</span>
-        <select className="input w-auto" value={s.paper} onChange={(e) => update({ ...s, paper: e.target.value === "a4" ? "a4" : "letter" })}>
+        <select
+          className="input w-auto"
+          value={s.paper}
+          onChange={(e) => update({ ...s, paper: e.target.value === "a4" ? "a4" : "letter" })}
+        >
           {Object.entries(PAPERS).map(([k, p]) => (
             <option key={k} value={k}>
               {p.label}
@@ -106,13 +125,28 @@ export function PrintSettingsForm() {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="label">Label printer name</span>
-          <input className="input" value={s.labelPrinter} maxLength={80} placeholder="e.g. Zebra ZD410" onChange={(e) => update({ ...s, labelPrinter: e.target.value })} />
+          <input
+            className="input"
+            value={s.labelPrinter}
+            maxLength={80}
+            placeholder="e.g. Zebra ZD410"
+            onChange={(e) => update({ ...s, labelPrinter: e.target.value })}
+          />
         </label>
         <label className="block">
           <span className="label">Regular printer name</span>
-          <input className="input" value={s.regularPrinter} maxLength={80} placeholder="e.g. Office HP" onChange={(e) => update({ ...s, regularPrinter: e.target.value })} />
+          <input
+            className="input"
+            value={s.regularPrinter}
+            maxLength={80}
+            placeholder="e.g. Office HP"
+            onChange={(e) => update({ ...s, regularPrinter: e.target.value })}
+          />
         </label>
-        <p className="text-xs text-stone-500 sm:col-span-2">Browsers can&apos;t list your printers, so type the names as they appear in the print dialog. Box labels remind staff to pick the label printer; every other printout reminds them to pick the regular printer.</p>
+        <p className="text-xs text-stone-500 sm:col-span-2">
+          Browsers can&apos;t list your printers, so type the names as they appear in the print dialog. Box labels remind staff to pick the
+          label printer; every other printout reminds them to pick the regular printer.
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <a href="/labels?test=1" className="btn">
@@ -126,8 +160,9 @@ export function PrintSettingsForm() {
         </span>
       </div>
       <p className="text-xs text-stone-500">
-        Printing uses your computer&apos;s print dialog, so any installed printer works. For a label printer, pick it in the dialog and choose the
-        same label size in its settings (on Mac, Paper Size; on Windows, the printer&apos;s Preferences). Set margins to None if asked.
+        Printing uses your computer&apos;s print dialog, so any installed printer works. For a label printer, pick it in the dialog and
+        choose the same label size in its settings (on Mac, Paper Size; on Windows, the printer&apos;s Preferences). Set margins to None if
+        asked.
       </p>
     </div>
   );

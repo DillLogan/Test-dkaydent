@@ -7,7 +7,9 @@ const NONE = "No hint has been set for this login.";
 
 // unknown user and no-hint look identical on purpose
 export async function passwordHint(typed: string): Promise<string> {
-  const t = String(typed ?? "").trim().slice(0, 200);
+  const t = String(typed ?? "")
+    .trim()
+    .slice(0, 200);
   const admin = createServiceClient();
   if (!t || !admin) return NONE;
   const { data: prof } = await admin.from("profiles").select("id, role, active").eq("email", loginEmail(t)).maybeSingle();

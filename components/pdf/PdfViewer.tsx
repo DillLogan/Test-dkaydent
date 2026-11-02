@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 type Build = () => Promise<Uint8Array>;
 
-const isTouchApple = () => typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+const isTouchApple = () =>
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 
 /**
  * Shows a PDF made in the browser: every page drawn to fit the width (phone or computer), with
@@ -100,7 +102,12 @@ export function PdfViewer({
         // the words on the page, for screen readers (the pages themselves are pictures)
         try {
           const tc = await page.getTextContent();
-          texts.push(tc.items.map((it: any) => ("str" in it ? it.str + (it.hasEOL ? "\n" : " ") : "")).join("").replace(/[ \t]+/g, " "));
+          texts.push(
+            tc.items
+              .map((it: any) => ("str" in it ? it.str + (it.hasEOL ? "\n" : " ") : ""))
+              .join("")
+              .replace(/[ \t]+/g, " "),
+          );
         } catch {}
         if (off) return;
         frag.appendChild(c);
@@ -123,7 +130,17 @@ export function PdfViewer({
     a.click();
     a.remove();
   };
-  const canShare = typeof navigator !== "undefined" && !!navigator.canShare && !!bytes && (() => { try { return navigator.canShare({ files: [file()] }); } catch { return false; } })();
+  const canShare =
+    typeof navigator !== "undefined" &&
+    !!navigator.canShare &&
+    !!bytes &&
+    (() => {
+      try {
+        return navigator.canShare({ files: [file()] });
+      } catch {
+        return false;
+      }
+    })();
   const share = async () => {
     try {
       await navigator.share({ files: [file()], title: filename });
@@ -168,30 +185,53 @@ export function PdfViewer({
             Open
           </button>
           <span className="ml-auto flex items-center gap-1 text-sm text-stone-500">
-            <button type="button" className="btn btn-sm" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 4) / 4))} aria-label="Zoom out">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.25) * 4) / 4))}
+              aria-label="Zoom out"
+            >
               −
             </button>
             <span className="w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-            <button type="button" className="btn btn-sm" onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 4) / 4))} aria-label="Zoom in">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.25) * 4) / 4))}
+              aria-label="Zoom in"
+            >
               +
             </button>
           </span>
         </div>
         {children}
         <div className="text-xs text-stone-500" aria-live="polite" data-testid="pdf-status">
-          {error ? <span className="text-red-700">The PDF couldn&apos;t be made: {error}</span> : busy ? "Making the PDF…" : `${filename} · ${pages} page${pages === 1 ? "" : "s"}`}
+          {error ? (
+            <span className="text-red-700">The PDF couldn&apos;t be made: {error}</span>
+          ) : busy ? (
+            "Making the PDF…"
+          ) : (
+            `${filename} · ${pages} page${pages === 1 ? "" : "s"}`
+          )}
         </div>
       </div>
       <div className="pdfv-scroll">
         <div ref={holder} className="pdfv-pages" data-testid="pdf-pages" aria-hidden="true" />
-        <div className="sr-only" data-testid="pdf-text" style={{ whiteSpace: "pre-wrap" }}>{text}</div>
+        <div className="sr-only" data-testid="pdf-text" style={{ whiteSpace: "pre-wrap" }}>
+          {text}
+        </div>
       </div>
     </div>
   );
 }
 
 // modal version (route sheet, designer preview)
-export function PdfModal({ open, onClose, title, ...rest }: { open: boolean; onClose: () => void; title: string } & React.ComponentProps<typeof PdfViewer>) {
+export function PdfModal({
+  open,
+  onClose,
+  title,
+  ...rest
+}: { open: boolean; onClose: () => void; title: string } & React.ComponentProps<typeof PdfViewer>) {
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();

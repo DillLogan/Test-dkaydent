@@ -12,7 +12,9 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const since = addDays(today(), -30);
 
   const [lots, stock, openPOs, toFulfill, openInv, sales, inbound] = await Promise.all([
-    supabase.from("v_lot_aging").select("lot_id, lot_code, product_name, location_name, qty_on_hand_base, base_unit, value, days_to_expiry"),
+    supabase
+      .from("v_lot_aging")
+      .select("lot_id, lot_code, product_name, location_name, qty_on_hand_base, base_unit, value, days_to_expiry"),
     supabase.from("v_product_stock").select("product_id, sku, name, base_unit, qty_on_hand_base, reorder_point_base").eq("active", true),
     supabase.from("purchase_orders").select("id", { count: "exact", head: true }).in("status", ["ordered", "partially_received"]),
     supabase.from("sales_orders").select("id", { count: "exact", head: true }).eq("status", "confirmed"),
@@ -75,9 +77,19 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           tone={lateShipments.length ? "bad" : undefined}
         />
         <Stat label="Ready to pull" value={toFulfill.count ?? 0} hint="pick tickets out, not pulled yet" href="/sales?status=confirmed" />
-        <Stat label="Revenue, 30 days" value={money(revenue)} hint={`Gross margin ${pct(revenue ? margin / revenue : null)}`} href="/reports" />
+        <Stat
+          label="Revenue, 30 days"
+          value={money(revenue)}
+          hint={`Gross margin ${pct(revenue ? margin / revenue : null)}`}
+          href="/reports"
+        />
         <Stat label="Gross profit, 30 days" value={money(margin)} href="/reports" />
-        <Stat label="Open invoices" value={money(sum(invRows, (i) => i.total))} hint={`${invRows.length} unpaid`} href="/invoices?status=open" />
+        <Stat
+          label="Open invoices"
+          value={money(sum(invRows, (i) => i.total))}
+          hint={`${invRows.length} unpaid`}
+          href="/invoices?status=open"
+        />
         <Stat
           label="Overdue invoices"
           value={money(sum(overdue, (i) => i.total))}
@@ -88,7 +100,14 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       </div>
 
       {inboundRows.length > 0 && (
-        <Section title="Incoming shipments" actions={<Link href="/receiving" className="btn">Receiving</Link>}>
+        <Section
+          title="Incoming shipments"
+          actions={
+            <Link href="/receiving" className="btn">
+              Receiving
+            </Link>
+          }
+        >
           <div className="table-wrap">
             <table className="table">
               <thead>

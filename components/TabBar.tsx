@@ -4,7 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { setViewMode } from "@/lib/viewMode";
 
-export type TabIcon = "home" | "shop" | "cart" | "user" | "messages" | "orders" | "inventory" | "scan" | "counter" | "routing" | "purchasing" | "receiving";
+export type TabIcon =
+  | "home"
+  | "shop"
+  | "cart"
+  | "user"
+  | "messages"
+  | "orders"
+  | "inventory"
+  | "scan"
+  | "counter"
+  | "routing"
+  | "purchasing"
+  | "receiving";
 export type Tab = { href: string; label: string; icon: TabIcon; badge?: number };
 
 const PATHS: Record<TabIcon | "menu", React.ReactNode> = {
@@ -41,7 +53,9 @@ const PATHS: Record<TabIcon | "menu", React.ReactNode> = {
       <path d="m3 8 9 5 9-5M12 13v8" />
     </>
   ),
-  scan: <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M11 9v6M14 9v6M17 9v6" />,
+  scan: (
+    <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M11 9v6M14 9v6M17 9v6" />
+  ),
   counter: (
     <>
       <rect x="3" y="10" width="18" height="10" rx="1.5" />
@@ -72,19 +86,48 @@ const PATHS: Record<TabIcon | "menu", React.ReactNode> = {
 
 export function TabIconSvg({ name }: { name: TabIcon | "menu" }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       {PATHS[name]}
     </svg>
   );
 }
 
 // mobile mode only
-export function TabBar({ tabs, active, menuOpen, onMenu }: { tabs: Tab[]; active: string | undefined; menuOpen: boolean; onMenu: () => void }) {
+export function TabBar({
+  tabs,
+  active,
+  menuOpen,
+  onMenu,
+}: {
+  tabs: Tab[];
+  active: string | undefined;
+  menuOpen: boolean;
+  onMenu: () => void;
+}) {
   const isOn = (href: string) => !menuOpen && (href === "/" ? active === "/" : active === href || (active ?? "").startsWith(href + "/"));
   return (
-    <nav className="tabbar border-t border-stone-200 bg-white/95 text-stone-600 backdrop-blur print:hidden" aria-label="Tabs" style={{ ["--tabs" as string]: tabs.length + 1 }}>
+    <nav
+      className="tabbar border-t border-stone-200 bg-white/95 text-stone-600 backdrop-blur print:hidden"
+      aria-label="Tabs"
+      style={{ ["--tabs" as string]: tabs.length + 1 }}
+    >
       {tabs.map((t) => (
-        <Link key={t.href} href={t.href} className={`tab ${isOn(t.href) ? "tab-on text-brand-700" : ""}`} aria-current={isOn(t.href) ? "page" : undefined}>
+        <Link
+          key={t.href}
+          href={t.href}
+          className={`tab ${isOn(t.href) ? "tab-on text-brand-700" : ""}`}
+          aria-current={isOn(t.href) ? "page" : undefined}
+        >
           <span className="tab-ic">
             <TabIconSvg name={t.icon} />
             {t.badge ? <span className="tab-badge bg-brand-700 text-white">{t.badge > 99 ? "99+" : t.badge}</span> : null}
@@ -92,7 +135,13 @@ export function TabBar({ tabs, active, menuOpen, onMenu }: { tabs: Tab[]; active
           <span className="tab-label">{t.label}</span>
         </Link>
       ))}
-      <button type="button" className={`tab ${menuOpen ? "tab-on text-brand-700" : ""}`} aria-expanded={menuOpen} aria-controls="app-menu" onClick={onMenu}>
+      <button
+        type="button"
+        className={`tab ${menuOpen ? "tab-on text-brand-700" : ""}`}
+        aria-expanded={menuOpen}
+        aria-controls="app-menu"
+        onClick={onMenu}
+      >
         <span className="tab-ic">
           <TabIconSvg name="menu" />
         </span>
@@ -110,7 +159,12 @@ export function ViewSwitch() {
   }, []);
   if (!state || (!state.mobile && !state.phone)) return null;
   return (
-    <button type="button" className="text-xs text-stone-500 hover:underline" onClick={() => setViewMode(state.mobile ? "pc" : "mobile")} data-testid="view-switch">
+    <button
+      type="button"
+      className="text-xs text-stone-500 hover:underline"
+      onClick={() => setViewMode(state.mobile ? "pc" : "mobile")}
+      data-testid="view-switch"
+    >
       {state.mobile ? "Desktop site" : "Mobile site"}
     </button>
   );

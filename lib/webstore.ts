@@ -144,7 +144,12 @@ export function mapOrders(json: unknown, m: FieldMap): { orders: WebOrder[]; pro
   // a single order object, or a list of them
   const one = !Array.isArray(json) && get(json, m.order_id) !== undefined && get(json, m.orders_list) === undefined;
   const raw = one ? [json] : list(json, m.orders_list);
-  const cancelled = new Set(m.cancelled_values.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+  const cancelled = new Set(
+    m.cancelled_values
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
   const orders: WebOrder[] = [];
   const problems: string[] = [];
   if (!raw.length) problems.push(`No orders found at "${m.orders_list || "(the response itself)"}".`);
@@ -214,7 +219,13 @@ export async function applyOrders(db: SupabaseClient, orders: WebOrder[], source
     else counts[(data as any).result] = (counts[(data as any).result] ?? 0) + 1;
   }
   const summary = { orders: orders.length, ...counts, ...(errors.length ? { errors } : {}) };
-  await db.rpc("web_store_log", { p_kind: "orders", p_source: source, p_ok: errors.length === 0, p_summary: summary, p_error: errors.join("\n") || null });
+  await db.rpc("web_store_log", {
+    p_kind: "orders",
+    p_source: source,
+    p_ok: errors.length === 0,
+    p_summary: summary,
+    p_error: errors.join("\n") || null,
+  });
   return { kind: "orders", ok: errors.length === 0, summary, error: errors.join("\n") || undefined };
 }
 
@@ -230,7 +241,9 @@ async function fetchJson(url: string, apiKey: string | null) {
     if (!res.ok) throw new Error(`The website answered ${res.status} ${res.statusText} for ${new URL(url).pathname}`);
     return await res.json();
   } catch (e: any) {
-    throw new Error(e?.name === "AbortError" ? "The website took longer than 20 seconds to answer." : e?.message || "Couldn't reach the website.");
+    throw new Error(
+      e?.name === "AbortError" ? "The website took longer than 20 seconds to answer." : e?.message || "Couldn't reach the website.",
+    );
   } finally {
     clearTimeout(t);
   }
@@ -261,7 +274,8 @@ export async function pullFromWebsite(db: SupabaseClient, source: "pull" | "manu
       }
       const json = await fetchJson(url.toString(), cfg.api_key);
       const { orders, problems } = mapOrders(json, m);
-      if (!orders.length && problems.length && !(Array.isArray(get(json, m.orders_list)) || Array.isArray(json))) throw new Error(problems[0]);
+      if (!orders.length && problems.length && !(Array.isArray(get(json, m.orders_list)) || Array.isArray(json)))
+        throw new Error(problems[0]);
       out.push(await applyOrders(db, orders, source));
     } catch (e: any) {
       await db.rpc("web_store_log", { p_kind: "orders", p_source: source, p_ok: false, p_summary: null, p_error: e.message });

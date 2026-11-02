@@ -12,7 +12,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const base = { docName: r.doc_name, status: r.status, sender: r.sender_name || r.sender_email || "DKaydent Wholesale" };
   const c = await signerCheck(r, req.headers.get("x-signer-email"));
   if (!c.ok) {
-    if (c.needsLogin || c.needsEmail) return NextResponse.json({ ...base, needsLogin: !!c.needsLogin, needsEmail: !!c.needsEmail, message: c.error });
+    if (c.needsLogin || c.needsEmail)
+      return NextResponse.json({ ...base, needsLogin: !!c.needsLogin, needsEmail: !!c.needsEmail, message: c.error });
     return NextResponse.json({ ...base, error: c.error }, { status: c.status });
   }
   return NextResponse.json({ ...base, via: c.via, boxes: r.status === "completed" ? [] : r.boxes });

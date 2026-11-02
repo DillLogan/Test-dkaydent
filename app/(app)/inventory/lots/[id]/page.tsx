@@ -36,25 +36,21 @@ export default async function LotPage({ params, searchParams }: Props) {
   const [{ data: lot }, { data: movements }, { data: locations }] = await Promise.all([
     supabase
       .from("lots")
-      .select("*, products(id, sku, name, base_unit, kind, image_path, product_homes(layout_id, location_id)), locations(id, name, layout_id), purchase_order_lines(po_id, qty, product_units(name), purchase_orders(po_number, vendors(name, email, contact_name)))")
+      .select(
+        "*, products(id, sku, name, base_unit, kind, image_path, product_homes(layout_id, location_id)), locations(id, name, layout_id), purchase_order_lines(po_id, qty, product_units(name), purchase_orders(po_number, vendors(name, email, contact_name)))",
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase.from("stock_movements").select("*, locations(name), profiles(full_name)").eq("lot_id", id).order("created_at"),
     supabase.from("locations").select("id, name").eq("active", true).order("name"),
   ]);
   if (!lot) notFound();
-  const { data: units } = await supabase
-    .from("product_units")
-    .select("id, name, factor")
-    .eq("product_id", lot.product_id)
-    .order("factor");
+  const { data: units } = await supabase.from("product_units").select("id, name, factor").eq("product_id", lot.product_id).order("factor");
 
   const onHand = Number(lot.qty_on_hand_base);
   const base = lot.products.base_unit;
   const canWork = can(profile, "warehouse") && onHand > 0;
-  const daysToExpiry = lot.expires_at
-    ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000)
-    : null;
+  const daysToExpiry = lot.expires_at ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000) : null;
   const po = lot.purchase_order_lines?.purchase_orders;
   const vendor = (po as any)?.vendors as { name: string; email: string | null; contact_name: string | null } | null | undefined;
   const pol = lot.purchase_order_lines as any;
@@ -124,7 +120,9 @@ export default async function LotPage({ params, searchParams }: Props) {
         <div className="card">
           <div className="label">Landed cost</div>
           <div className="text-xl font-semibold">{unitMoney(lot.unit_cost_base)}</div>
-          <div className="text-xs text-stone-500">per {base} · value {money(onHand * Number(lot.unit_cost_base))}</div>
+          <div className="text-xs text-stone-500">
+            per {base} · value {money(onHand * Number(lot.unit_cost_base))}
+          </div>
         </div>
         <div className="card">
           <div className="label">Received</div>
@@ -145,7 +143,9 @@ export default async function LotPage({ params, searchParams }: Props) {
             {spot?.section_name ? (
               <>
                 <b>{spotText(spot.section_name, spot.shelf)}</b> in {lot.locations.name}
-                {spot.spot_from === "home" && <span className="text-stone-500"> (the item&apos;s usual spot; this stock has none of its own)</span>}
+                {spot.spot_from === "home" && (
+                  <span className="text-stone-500"> (the item&apos;s usual spot; this stock has none of its own)</span>
+                )}
               </>
             ) : (
               <span className="text-stone-500">Not recorded. Pull tickets show only {lot.locations.name} for this stock.</span>

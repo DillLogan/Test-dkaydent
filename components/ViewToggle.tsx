@@ -12,7 +12,11 @@ export function ViewToggle({ list, view }: { list: string; view: "cards" | "tabl
     start(() => router.refresh());
   }
   return (
-    <div role="group" aria-label="Show as" className={`inline-flex rounded-full border border-stone-200 bg-white p-0.5 ${pending ? "opacity-70" : ""}`}>
+    <div
+      role="group"
+      aria-label="Show as"
+      className={`inline-flex rounded-full border border-stone-200 bg-white p-0.5 ${pending ? "opacity-70" : ""}`}
+    >
       {(["cards", "table"] as const).map((v) => (
         <button
           key={v}

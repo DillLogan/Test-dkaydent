@@ -19,11 +19,25 @@ export default async function BoxLabelsPage({ params }: Props) {
   const c = so.customers as unknown as { name: string; address: string | null; route_code: string | null } | null;
   const { templates, business } = await loadPrintouts(supabase, ["boxlabel"]);
   const n = so.label_count ?? 0;
-  const labels = boxLabels(business, { customer: c?.name ?? "", address: (so.delivery_address || c?.address || "").trim(), route: c?.route_code, code: so.so_number, count: n });
+  const labels = boxLabels(business, {
+    customer: c?.name ?? "",
+    address: (so.delivery_address || c?.address || "").trim(),
+    route: c?.route_code,
+    code: so.so_number,
+    count: n,
+  });
   return (
     <>
-      <PageHeader title={`Box labels · ${so.so_number}`} subtitle={`${c?.name ?? ""} · ${n} box${n === 1 ? "" : "es"}`} back={{ href: `/sales/${id}`, label: so.so_number }} />
-      {n === 0 ? <Empty>No labels yet. Enter how many boxes on the order page.</Empty> : <LabelsPdf template={templates.boxlabel} labels={labels} filename={`Box labels ${so.so_number}.pdf`} hideCopies />}
+      <PageHeader
+        title={`Box labels · ${so.so_number}`}
+        subtitle={`${c?.name ?? ""} · ${n} box${n === 1 ? "" : "es"}`}
+        back={{ href: `/sales/${id}`, label: so.so_number }}
+      />
+      {n === 0 ? (
+        <Empty>No labels yet. Enter how many boxes on the order page.</Empty>
+      ) : (
+        <LabelsPdf template={templates.boxlabel} labels={labels} filename={`Box labels ${so.so_number}.pdf`} hideCopies />
+      )}
     </>
   );
 }

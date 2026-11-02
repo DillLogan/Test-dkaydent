@@ -24,7 +24,13 @@ export function SectionEditor(props: {
   const { mode, locations, initial } = props;
   const others = locations.filter((l) => l.id !== props.wholeId);
   // the layout itself is offered first; a section already in it shows that choice
-  const [loc, setLoc] = useState(initial.locationId && initial.locationId !== props.wholeId ? initial.locationId : initial.locationId === props.wholeId && initial.locationId ? "__layout" : others[0]?.id || "__layout");
+  const [loc, setLoc] = useState(
+    initial.locationId && initial.locationId !== props.wholeId
+      ? initial.locationId
+      : initial.locationId === props.wholeId && initial.locationId
+        ? "__layout"
+        : others[0]?.id || "__layout",
+  );
   const first = useRef<HTMLInputElement>(null);
   useEffect(() => {
     first.current?.focus();
@@ -34,7 +40,10 @@ export function SectionEditor(props: {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={(e) => e.target === e.currentTarget && props.onClose()}>
+    <div
+      className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
       <form
         role="dialog"
         aria-modal="true"
@@ -72,7 +81,13 @@ export function SectionEditor(props: {
           <>
             <label className="block">
               <span className="label">Location</span>
-              <select name="locationId" className="input" value={loc} onChange={(e) => setLoc(e.target.value)} data-testid="section-location">
+              <select
+                name="locationId"
+                className="input"
+                value={loc}
+                onChange={(e) => setLoc(e.target.value)}
+                data-testid="section-location"
+              >
                 <option value="__layout">{props.layoutName} (whole space)</option>
                 {others.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -90,12 +105,29 @@ export function SectionEditor(props: {
             )}
             <label className="block">
               <span className="label">Section name</span>
-              <input ref={first} name="name" className="input" required maxLength={40} placeholder="e.g. Rack A" defaultValue={initial.name} data-testid="section-name" />
+              <input
+                ref={first}
+                name="name"
+                className="input"
+                required
+                maxLength={40}
+                placeholder="e.g. Rack A"
+                defaultValue={initial.name}
+                data-testid="section-name"
+              />
             </label>
             <label className="block">
               <span className="label">Shelves</span>
-              <input name="shelves" className="input" placeholder="1-4, or Top, Middle, Bottom" defaultValue={initial.shelves?.join(", ")} data-testid="section-shelves" />
-              <span className="mt-1 block text-xs text-stone-500">Separate with commas. 1-4 makes shelves 1, 2, 3 and 4. Leave empty if it has none.</span>
+              <input
+                name="shelves"
+                className="input"
+                placeholder="1-4, or Top, Middle, Bottom"
+                defaultValue={initial.shelves?.join(", ")}
+                data-testid="section-shelves"
+              />
+              <span className="mt-1 block text-xs text-stone-500">
+                Separate with commas. 1-4 makes shelves 1, 2, 3 and 4. Leave empty if it has none.
+              </span>
             </label>
             {mode === "new" && (
               <label className="flex items-center gap-2 text-sm">

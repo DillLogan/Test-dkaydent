@@ -61,13 +61,23 @@ export function KnowledgeBase({
   const byId = new Map(visible.map((a) => [a.id, a]));
   const docs: KbDoc[] = useMemo(
     () => [
-      ...visible.filter((a) => cat === "All" || a.category === cat).map((a): KbDoc => ({ id: a.id, kind: "article", title: a.title, category: a.category, text: a.body, custom: a.source === "custom" })),
+      ...visible
+        .filter((a) => cat === "All" || a.category === cat)
+        .map(
+          (a): KbDoc => ({ id: a.id, kind: "article", title: a.title, category: a.category, text: a.body, custom: a.source === "custom" }),
+        ),
       ...(cat === "All" || cat === "Tutorials" ? tutorials : []),
     ],
     [visible, cat, tutorials], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const searching = q.trim().length > 0;
-  const hits = useMemo(() => (searching ? searchKb(docs, q) : docs.filter((d) => d.kind === "article").map((doc) => ({ doc, score: 0, partial: false, terms: [] as string[] }))), [docs, q, searching]);
+  const hits = useMemo(
+    () =>
+      searching
+        ? searchKb(docs, q)
+        : docs.filter((d) => d.kind === "article").map((doc) => ({ doc, score: 0, partial: false, terms: [] as string[] })),
+    [docs, q, searching],
+  );
   const terms = hits[0]?.terms ?? [];
 
   const canEdit = (a: KbView) => me.isAdmin || (a.source === "custom" && a.authorId === me.id);
@@ -129,7 +139,13 @@ export function KnowledgeBase({
       </div>
       <div className="mb-4 flex flex-wrap gap-1" role="group" aria-label="Category">
         {["All", ...categories, "Tutorials"].map((c) => (
-          <button key={c} type="button" aria-pressed={cat === c} onClick={() => setCat(c)} className={`btn btn-sm ${cat === c ? "btn-primary" : ""}`}>
+          <button
+            key={c}
+            type="button"
+            aria-pressed={cat === c}
+            onClick={() => setCat(c)}
+            className={`btn btn-sm ${cat === c ? "btn-primary" : ""}`}
+          >
             {c}
           </button>
         ))}
@@ -185,7 +201,9 @@ export function KnowledgeBase({
                 <span className="flex shrink-0 items-center gap-1.5">
                   {a.hidden && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800">Hidden</span>}
                   {a.source !== "builtin" && (
-                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-800">{a.source === "custom" ? "Added" : "Edited"}</span>
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-800">
+                      {a.source === "custom" ? "Added" : "Edited"}
+                    </span>
                   )}
                   <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-normal text-stone-600">{a.category}</span>
                 </span>
@@ -205,7 +223,12 @@ export function KnowledgeBase({
               {a.images?.map((cap, j) => (
                 <figure key={j} className="mt-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/help/kb-${a.id}-${j + 1}.jpg`} alt={cap} loading="lazy" className="w-full max-w-2xl rounded-lg border border-stone-200" />
+                  <img
+                    src={`/help/kb-${a.id}-${j + 1}.jpg`}
+                    alt={cap}
+                    loading="lazy"
+                    className="w-full max-w-2xl rounded-lg border border-stone-200"
+                  />
                   <figcaption className="mt-1 text-xs text-stone-500">{cap}</figcaption>
                 </figure>
               ))}
@@ -232,17 +255,33 @@ export function KnowledgeBase({
                     </button>
                   )}
                   {me.isAdmin && (
-                    <button type="button" className="btn btn-sm" onClick={() => run(() => actions.setArticleHidden(a.source === "custom" ? { rowId: a.rowId! } : { builtinId: a.id }, !a.hidden))} data-testid="kb-hide">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() =>
+                        run(() => actions.setArticleHidden(a.source === "custom" ? { rowId: a.rowId! } : { builtinId: a.id }, !a.hidden))
+                      }
+                      data-testid="kb-hide"
+                    >
                       {a.hidden ? "Show" : "Hide"}
                     </button>
                   )}
                   {me.isAdmin && a.source === "edited" && (
-                    <button type="button" className="btn btn-sm" onClick={() => window.confirm("Put this article back the way it shipped?") && run(() => actions.restoreBuiltin(a.id))}>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => window.confirm("Put this article back the way it shipped?") && run(() => actions.restoreBuiltin(a.id))}
+                    >
                       Restore original
                     </button>
                   )}
                   {a.source === "custom" && canEdit(a) && (
-                    <button type="button" className="btn btn-sm btn-danger" onClick={() => window.confirm("Remove this article?") && run(() => actions.deleteArticle(a.rowId!))} data-testid="kb-delete">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger"
+                      onClick={() => window.confirm("Remove this article?") && run(() => actions.deleteArticle(a.rowId!))}
+                      data-testid="kb-delete"
+                    >
                       Remove
                     </button>
                   )}
@@ -255,7 +294,10 @@ export function KnowledgeBase({
       </div>
 
       {editing && (
-        <div className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={(e) => e.target === e.currentTarget && setEditing(null)}>
+        <div
+          className="modal-bg fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          onClick={(e) => e.target === e.currentTarget && setEditing(null)}
+        >
           <form
             role="dialog"
             aria-modal="true"
@@ -280,7 +322,15 @@ export function KnowledgeBase({
             )}
             <label className="block">
               <span className="label">Title</span>
-              <input name="title" className="input" required maxLength={150} defaultValue={editing.mode === "edit" ? editing.a.title : ""} placeholder="e.g. Handling rush orders" autoFocus />
+              <input
+                name="title"
+                className="input"
+                required
+                maxLength={150}
+                defaultValue={editing.mode === "edit" ? editing.a.title : ""}
+                placeholder="e.g. Handling rush orders"
+                autoFocus
+              />
             </label>
             <label className="block">
               <span className="label">Category</span>
@@ -311,7 +361,9 @@ export function KnowledgeBase({
                 defaultValue={editing.mode === "edit" ? editing.a.body.join("\n\n") : ""}
                 placeholder={"Write each point as its own paragraph.\n\nLeave a blank line between paragraphs; each one shows as a bullet."}
               />
-              <span className="mt-1 block text-xs text-stone-500">Each paragraph (separated by a blank line) shows as a bullet point. Search finds words anywhere in the title or text.</span>
+              <span className="mt-1 block text-xs text-stone-500">
+                Each paragraph (separated by a blank line) shows as a bullet point. Search finds words anywhere in the title or text.
+              </span>
             </label>
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" className="btn" onClick={() => setEditing(null)}>

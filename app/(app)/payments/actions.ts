@@ -52,7 +52,9 @@ export async function voidPayment(paymentId: string, back: string) {
   const { error } = await supabase.rpc("void_payment", { p_payment_id: paymentId });
   if (error) fail(back, dbMessage(error));
   refreshAll();
-  redirect(msg(back, "Payment voided in the app. If it was a card payment, also void or refund it on the terminal or in the Valor portal."));
+  redirect(
+    msg(back, "Payment voided in the app. If it was a card payment, also void or refund it on the terminal or in the Valor portal."),
+  );
 }
 
 // terminal
@@ -74,7 +76,10 @@ async function sendToTerminal(supabase: any, requestId: string) {
       await finalize(supabase, requestId, res);
     }
   } catch (e: any) {
-    await finalize(supabase, requestId, { status: "error", message: `Couldn't reach the terminal: ${String(e?.message ?? e).slice(0, 240)}` });
+    await finalize(supabase, requestId, {
+      status: "error",
+      message: `Couldn't reach the terminal: ${String(e?.message ?? e).slice(0, 240)}`,
+    });
   }
 }
 
@@ -130,7 +135,13 @@ export async function cancelTerminalCharge(requestId: string, back: string) {
   const r = await loadRequest(supabase, requestId);
   if (r?.status === "pending") {
     await getProvider()
-      .cancel(r.payment_terminals, { reqTxnId: r.req_txn_id, amount: Number(r.amount), tipEntry: r.tip_entry, invoiceRef: r.invoice_ref ?? "", providerRef: r.provider_ref })
+      .cancel(r.payment_terminals, {
+        reqTxnId: r.req_txn_id,
+        amount: Number(r.amount),
+        tipEntry: r.tip_entry,
+        invoiceRef: r.invoice_ref ?? "",
+        providerRef: r.provider_ref,
+      })
       .catch(() => {});
     await finalize(supabase, requestId, { status: "cancelled", message: "Cancelled from the app" });
   }
@@ -196,9 +207,7 @@ export async function counterCheckout(fd: FormData) {
   const tendered = num(fd, "tendered");
   const { data: inv } = await supabase.from("invoices").select("total").eq("id", invId).single();
   const change = method === "cash" && tendered && inv ? tendered - Number(inv.total) : null;
-  redirect(
-    `/counter?done=${invId}${change !== null && change > 0.004 ? `&change=${change.toFixed(2)}` : ""}`,
-  );
+  redirect(`/counter?done=${invId}${change !== null && change > 0.004 ? `&change=${change.toFixed(2)}` : ""}`);
 }
 
 // after a decline/timeout: pay another way or retry

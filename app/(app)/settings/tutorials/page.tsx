@@ -30,7 +30,9 @@ export default async function TutorialsPage() {
             <ol className="mt-4 space-y-3">
               {t.steps.map((s, i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">{i + 1}</span>
+                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                    {i + 1}
+                  </span>
                   <div className="text-sm">
                     {s.text}
                     {s.href && (
@@ -43,7 +45,12 @@ export default async function TutorialsPage() {
                     )}
                     {!t.noImages && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`/help/${t.id}-${i + 1}.jpg`} alt={`Screenshot for step ${i + 1}: the highlighted box and arrow show what to use`} loading="lazy" className="mt-2 w-full max-w-2xl rounded-lg border border-stone-200" />
+                      <img
+                        src={`/help/${t.id}-${i + 1}.jpg`}
+                        alt={`Screenshot for step ${i + 1}: the highlighted box and arrow show what to use`}
+                        loading="lazy"
+                        className="mt-2 w-full max-w-2xl rounded-lg border border-stone-200"
+                      />
                     )}
                   </div>
                 </li>

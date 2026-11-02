@@ -45,5 +45,7 @@ export async function applyToUncategorized() {
     n++;
   }
   revalidatePath("/products");
-  redirect(`${PATH}?message=${encodeURIComponent(n ? `Sorted ${n} uncategorized item${n === 1 ? "" : "s"}.` : "No uncategorized items matched a rule.")}`);
+  redirect(
+    `${PATH}?message=${encodeURIComponent(n ? `Sorted ${n} uncategorized item${n === 1 ? "" : "s"}.` : "No uncategorized items matched a rule.")}`,
+  );
 }

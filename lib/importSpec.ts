@@ -74,7 +74,10 @@ export function validate(
 
     if (entity === "products") {
       key = (r.sku ?? "").trim().toUpperCase();
-      const kind = (r.kind ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const kind = (r.kind ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
       if (r.kind && !["flower", "hard_good"].includes(kind)) errors.push('kind must be "flower" or "hard_good"');
       const units = parseUnits(r.units ?? "");
       if (typeof units === "string") errors.push(units);
@@ -121,7 +124,7 @@ export function validate(
       if (terms !== null && (!Number.isInteger(terms) || terms < 0)) errors.push("payment_terms_days must be a whole number");
       record = {
         name: r.name?.trim(),
-        price_tier_id: tierName ? tiers[tierName] ?? null : null,
+        price_tier_id: tierName ? (tiers[tierName] ?? null) : null,
         contact_name: r.contact_name || null,
         email: r.email || null,
         phone: r.phone || null,

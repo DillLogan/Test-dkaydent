@@ -11,8 +11,8 @@ export default async function ForgotPage({ searchParams }: { searchParams: SP })
       <div className="card page-in w-full max-w-sm p-8">
         <h1 className="text-3xl leading-none text-stone-900">Reset password</h1>
         <p className="mt-3 text-[15px] text-stone-500">
-          Enter your username. If we have your email we&apos;ll send a link. Otherwise your sales rep gets a request to approve, and then you can
-          choose a new password.
+          Enter your username. If we have your email we&apos;ll send a link. Otherwise your sales rep gets a request to approve, and then
+          you can choose a new password.
         </p>
         <div className="mt-4">
           <ErrorBanner error={error} />
