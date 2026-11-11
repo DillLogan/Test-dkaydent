@@ -339,6 +339,50 @@ export const TUTORIALS: Tutorial[] = [
     tip: "Send a teammate's DKaydent email and they sign while signed in, from their To sign tab.",
   },
   {
+    id: "confirm-backorder",
+    title: "Confirm a held order and its backorder",
+    summary: "When stock runs short, the short items move to a backorder and the order waits for you.",
+    who: "Sales rep",
+    steps: [
+      {
+        text: "When stock is removed and one of your customers' orders no longer has enough, you get a message and Sales orders shows how many orders need your OK.",
+        href: "/sales?status=needs_ok",
+        linkLabel: "Needs rep's OK",
+      },
+      { text: "Open the order marked On hold. The red panel says what was moved and the number of the new backorder." },
+      {
+        text: "Check with the customer, then tap Confirm and release. The order can be pulled again with what's left. If nothing is left, the button says Confirm (nothing left on it) and the empty order stays.",
+      },
+      {
+        text: "Open the backorder and tap Confirm backorder. Purchasing is told and sets the order date (stock due). Tap Cancel backorder instead if the customer doesn't want to wait.",
+      },
+      {
+        text: "That's it. When the stock is received and counted, the backorder moves to Ready to pull by itself and you get a message.",
+      },
+    ],
+    tip: "Backorders take stock in the order they were made, oldest first.",
+  },
+  {
+    id: "set-stock-due",
+    title: "Set when a backorder's stock is due",
+    summary: "Give a confirmed backorder its order date (stock due).",
+    who: "Staff (purchasing)",
+    steps: [
+      {
+        text: "When a rep confirms a backorder you get a message in Buyers. Open Purchasing → Backorders. The button shows how many need a date.",
+        href: "/purchasing/backorders",
+        linkLabel: "Backorders",
+      },
+      {
+        text: "The date box starts at the suggested date: when the last of its items is due on an open purchase order or shipment. It is empty if one of the items isn't on order yet.",
+      },
+      { text: "Change the date if you need to (today or later) and tap Set. Sales sees it as the order date (stock due)." },
+      {
+        text: "If only part of the stock comes in, the backorder goes out with what came in and a new backorder is made for the rest. It needs a new date, and you get a message in Buyers.",
+      },
+    ],
+  },
+  {
     id: "sign-document",
     title: "Sign a document you were sent",
     summary: "Open the link, sign, fill in the boxes and submit.",
@@ -388,6 +432,7 @@ export const ARTICLES: Article[] = [
     body: [
       "Draft: the sales rep is still building the order. It can be edited or deleted.",
       "Ready to pull: the order was sent to the warehouse and the pick ticket can be printed. Lines are locked.",
+      "Backorder: items that came off an order when stock ran short. It moves to Ready to pull by itself when the stock is in. See Backorders.",
       "Pulled: the items were taken from stock (oldest lots first, or lots you chose). Stock counts drop at this point.",
       "Sent back to sales: Delivery/Order Management found a problem on a pulled order. Sales fixes the quantities and sends it on, and it returns to Pulled.",
       "Completed: Delivery/Order Management checked the returned pick ticket. Only completed orders can be invoiced.",
@@ -396,6 +441,24 @@ export const ARTICLES: Article[] = [
       "The bar at the top of every order shows where it is. The step it is on is filled in, with who does the next job underneath.",
     ],
     images: ["The step bar on an order that is Pulled and waiting for Delivery/Order Management."],
+  },
+  {
+    id: "backorders",
+    category: "Orders",
+    title: "Backorders: when stock runs short on an order",
+    body: [
+      "When the warehouse removes stock (shrink, or a count lower than what's on the shelf) and there's no longer enough for the orders waiting on it, the short amount comes off those orders right away and moves to a new order with the status Backorder.",
+      "Only the short amount moves. If 10 are on the order and 6 are left, 4 go to the backorder and 6 stay. Items in whole units move in whole units.",
+      "The newest orders lose stock first. Older orders keep theirs.",
+      "Each order that lost items is put On hold. It can't be marked pulled and its pull ticket can't be printed until the sales rep confirms it. If every item came off, the order stays, empty, after the rep confirms.",
+      "The customer's sales rep gets a message from the person who removed the stock, and the Sales orders link shows how many orders need their OK. With no rep, or when the system removed the stock, it is posted in the Sales team channel as DKaydent alerts. A rep who removes stock themselves gets no message.",
+      "The rep confirms the backorder (or cancels it if the customer doesn't want to wait). Purchasing is told in the Buyers channel.",
+      "Purchasing sets the order date (stock due) on Purchasing → Backorders. The app suggests the date from open purchase orders and shipments. The date must be today or later.",
+      "When the stock is received and counted, confirmed backorders move to Ready to pull by themselves, oldest first, and the rep is told. Stock that arrives before the rep confirms waits; confirming releases it right away.",
+      "If only part of the stock comes in, the backorder goes out with what came in and a new backorder is made for the rest. It stays confirmed, its date is cleared, and purchasing is told to set a new one.",
+      "Customers see backorders in their orders list as Backordered.",
+    ],
+    images: ["An order on hold after items moved to a backorder.", "A confirmed backorder with its order date (stock due)."],
   },
   {
     id: "roles",

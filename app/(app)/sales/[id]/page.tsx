@@ -20,6 +20,10 @@ import {
   setMustCheck,
   setSOStatus,
   updateSO,
+  confirmHold,
+  confirmBackorder,
+  cancelBackorder,
+  setStockDue,
 } from "../actions";
 import { PickForm, type PickLine } from "@/components/PickForm";
 import { ProductUnitPicker } from "@/components/ProductUnitPicker";
@@ -55,6 +59,14 @@ export default async function SOPage({ params, searchParams }: Props) {
     supabase.from("shop_layouts").select("id, name").order("created_at").order("id"),
   ]);
   if (!so) notFound();
+  // backorder links: what came off this ticket, and where this backorder came from
+  const [{ data: backorders }, { data: parent }, { data: suggested }] = await Promise.all([
+    supabase.from("sales_orders").select("id, so_number, status").eq("backorder_of", id).order("created_at"),
+    so.backorder_of
+      ? supabase.from("sales_orders").select("id, so_number").eq("id", so.backorder_of).maybeSingle()
+      : Promise.resolve({ data: null }),
+    so.status === "backorder" ? supabase.rpc("backorder_suggested_due", { p_so: id }) : Promise.resolve({ data: null }),
+  ]);
   const { data: returns } = await supabase
     .from("returns")
     .select("*, return_lines(so_line_id, qty, qty_base, restock, credit, product_id)")
@@ -66,6 +78,8 @@ export default async function SOPage({ params, searchParams }: Props) {
   const canComplete = can(profile, "orders_manager");
   const canInvoice = can(profile, "sales", "orders_manager");
   const isDraft = so.status === "draft";
+  const held = !!so.backorder_hold;
+  const isBackorder = so.status === "backorder";
   const pulledOrLater = ["fulfilled", "completed", "invoiced"].includes(so.status);
   const showCost = pulledOrLater;
   const tier = so.customers?.price_tiers;
@@ -172,6 +186,14 @@ export default async function SOPage({ params, searchParams }: Props) {
             </Link>
             {tier && ` · ${tier.name}`} · ordered {date(so.order_date)}
             {so.ship_date && ` · ships ${date(so.ship_date)}`}
+            {parent && (
+              <>
+                {" · backorder from "}
+                <Link href={`/sales/${parent.id}`} className="link">
+                  {parent.so_number}
+                </Link>
+              </>
+            )}
             {so.recurring_sales && (
               <>
                 {" · ↻ "}
@@ -229,7 +251,7 @@ export default async function SOPage({ params, searchParams }: Props) {
                 </form>
               </>
             )}
-            {canFulfill && (
+            {canFulfill && !held && (
               <form action={fulfillSO.bind(null, id)}>
                 <SubmitButton pendingText="Marking pulled…" confirm="Mark this order pulled? Stock comes out of the oldest lots first.">
                   Mark pulled
@@ -238,7 +260,7 @@ export default async function SOPage({ params, searchParams }: Props) {
             )}
           </>
         )}
-        {(isDraft || so.status === "confirmed") && (
+        {(isDraft || so.status === "confirmed") && !held && (
           <Link href={`/sales/${id}/pull-ticket`} className="btn">
             Print pull ticket
           </Link>
@@ -271,6 +293,103 @@ export default async function SOPage({ params, searchParams }: Props) {
       </PageHeader>
       <ErrorBanner error={error} />
       <Notice message={message} />
+      {held && (
+        <div className="card mb-6 space-y-2 border-red-300 bg-red-50" role="alert" data-testid="hold-panel">
+          <p className="font-semibold text-red-800">On hold: items were moved to a backorder</p>
+          <p className="text-sm text-red-800">
+            Stock was removed and there wasn&apos;t enough left for this ticket. {so.hold_note}. It can&apos;t be pulled until the sales rep
+            confirms it.
+          </p>
+          {(backorders ?? []).length > 0 && (
+            <p className="text-sm">
+              Backorder:{" "}
+              {backorders!.map((b, i) => (
+                <span key={b.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/sales/${b.id}`} className="link">
+                    {b.so_number}
+                  </Link>{" "}
+                  <StatusBadge status={b.status} />
+                </span>
+              ))}
+            </p>
+          )}
+          {canSell ? (
+            <form action={confirmHold.bind(null, id)} data-testid="confirm-hold">
+              <SubmitButton pendingText="…">
+                {rows.length ? "Confirm and release" : "Confirm (nothing left on it)"}
+              </SubmitButton>
+            </form>
+          ) : (
+            <p className="text-xs text-stone-500">Waiting for the sales rep.</p>
+          )}
+        </div>
+      )}
+      {isBackorder && (
+        <div className="card mb-6 space-y-3 border-amber-300 bg-amber-50" data-testid="backorder-panel">
+          <p className="font-semibold text-amber-900">
+            Backorder{parent ? ` from ${parent.so_number}` : ""}
+            {" · "}
+            {so.bo_confirmed_at ? `confirmed ${dateTime(so.bo_confirmed_at)}` : "waiting for the sales rep to confirm"}
+          </p>
+          <p className="text-sm text-amber-900">
+            Order date (stock due): <b>{so.stock_due ? date(so.stock_due) : "not set yet"}</b>
+            {!so.stock_due && suggested ? ` · suggested ${date(suggested as string)} (next incoming delivery)` : ""}
+            {so.bo_confirmed_at ? ". It goes to Ready to pull by itself once the stock is in." : "."}
+          </p>
+          {canSell && !so.bo_confirmed_at && (
+            <div className="flex flex-wrap gap-2">
+              <form action={confirmBackorder.bind(null, id)} data-testid="confirm-backorder">
+                <SubmitButton pendingText="…">
+                  Confirm backorder
+                </SubmitButton>
+              </form>
+              <form action={cancelBackorder.bind(null, id)}>
+                <SubmitButton className="btn btn-danger" confirm="Cancel this backorder?" pendingText="…">
+                  Cancel backorder
+                </SubmitButton>
+              </form>
+            </div>
+          )}
+          {canSell && so.bo_confirmed_at && (
+            <form action={cancelBackorder.bind(null, id)}>
+              <SubmitButton className="btn btn-danger" confirm="Cancel this backorder?" pendingText="…">
+                Cancel backorder
+              </SubmitButton>
+            </form>
+          )}
+          {can(profile, "buyer") && so.bo_confirmed_at && (
+            <form action={setStockDue.bind(null, id, `/sales/${id}`)} className="flex flex-wrap items-end gap-2" data-testid="stock-due-form">
+              <Field label="Stock due">
+                <input
+                  name="stock_due"
+                  type="date"
+                  className="input"
+                  defaultValue={so.stock_due ?? (suggested as string) ?? ""}
+                  min={new Date().toISOString().slice(0, 10)}
+                  required
+                />
+              </Field>
+              <SubmitButton pendingText="…">Save date</SubmitButton>
+            </form>
+          )}
+        </div>
+      )}
+      {!held && !isBackorder && (backorders ?? []).some((b) => b.status === "backorder") && (
+        <p className="mb-4 text-sm text-stone-600">
+          Some of this order is on backorder:{" "}
+          {backorders!
+            .filter((b) => b.status === "backorder")
+            .map((b, i) => (
+              <span key={b.id}>
+                {i > 0 && ", "}
+                <Link href={`/sales/${b.id}`} className="link">
+                  {b.so_number}
+                </Link>
+              </span>
+            ))}
+        </p>
+      )}
       <OrderSteps status={so.status} />
       {so.status === "returned" && (
         <Section title="Sent back to sales">
@@ -694,7 +813,7 @@ const STEPS: { key: string; label: string; who: string }[] = [
 ];
 
 function OrderSteps({ status }: { status: string }) {
-  if (status === "cancelled") return null;
+  if (status === "cancelled" || status === "backorder") return null;
   const at = STEPS.findIndex((s) => s.key === (status === "returned" ? "fulfilled" : status));
   return (
     <ol className="mb-6 grid grid-cols-5 gap-1 text-center text-[11px] sm:text-xs" aria-label="Order steps" data-testid="order-steps">

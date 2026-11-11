@@ -35,15 +35,25 @@ export default async function PurchasingPage({ searchParams }: { searchParams: S
   // Standing-order deliveries that haven't been placed yet live under "Planned", not in the open/draft lists.
   if (status === "planned") query = query.not("standing_order_id", "is", null);
   else if (status === "open" || status === "draft") query = query.or("standing_order_id.is.null,status.neq.draft");
-  const [{ data: pos }, { data: vendors }, { data: customers }] = await Promise.all([
+  const [{ data: pos }, { data: vendors }, { data: customers }, { count: toDate }] = await Promise.all([
     query,
     supabase.from("vendors").select("id, name").eq("active", true).order("name"),
     supabase.from("customers").select("id, name").eq("active", true).order("name"),
+    // confirmed backorders still waiting for a stock due date
+    supabase
+      .from("sales_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "backorder")
+      .not("bo_confirmed_at", "is", null)
+      .is("stock_due", null),
   ]);
 
   return (
     <>
       <PageHeader title="Purchasing" subtitle="Purchase orders from growers and suppliers, and receiving">
+        <Link href="/purchasing/backorders" className="btn" data-testid="backorders-link">
+          Backorders{toDate ? ` (${toDate} need a date)` : ""}
+        </Link>
         <a href="/export/purchase-orders" className="btn">
           Export CSV
         </a>

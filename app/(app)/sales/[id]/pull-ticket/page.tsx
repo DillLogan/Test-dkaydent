@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { date } from "@/lib/format";
@@ -16,7 +17,7 @@ export default async function PullTicketPage({ params }: Props) {
   const [{ data: so }, { data: lines }, { data: layouts }] = await Promise.all([
     supabase
       .from("sales_orders")
-      .select("id, so_number, status, ship_date, notes, must_check, label_count, customers(name)")
+      .select("id, so_number, status, ship_date, notes, must_check, label_count, backorder_hold, hold_note, customers(name)")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -27,6 +28,30 @@ export default async function PullTicketPage({ params }: Props) {
     supabase.from("shop_layouts").select("id, name").order("created_at").order("id"),
   ]);
   if (!so) notFound();
+
+  // held tickets don't print until the rep confirms what's left on them
+  if (so.backorder_hold || so.status === "backorder") {
+    return (
+      <>
+        <PageHeader title={`Pull ticket · ${so.so_number}`} back={{ href: `/sales/${id}`, label: so.so_number }} />
+        <div role="alert" className="card space-y-2 border-red-300 bg-red-50 text-sm text-red-800" data-testid="ticket-held">
+          {so.status === "backorder" ? (
+            <p>
+              <b>{so.so_number} is a backorder.</b> It gets a pull ticket once the stock is in and it moves to Ready to pull.
+            </p>
+          ) : (
+            <p>
+              <b>On hold.</b> Items were moved to a backorder ({so.hold_note}). The ticket can be printed once the sales rep confirms the
+              order.
+            </p>
+          )}
+          <Link href={`/sales/${id}`} className="link">
+            Back to {so.so_number}
+          </Link>
+        </div>
+      </>
+    );
+  }
 
   const productIds = [...new Set((lines ?? []).map((l) => l.product_id))];
   const { data: lots } = productIds.length

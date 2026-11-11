@@ -88,6 +88,7 @@ export async function Nav({ profile }: { profile: Profile }) {
   let waiting = 0;
   let resetWaiting = 0;
   let toSign = 0;
+  let needsOk = 0;
   try {
     const supabase = await createClient();
     const { data } = await supabase.rpc("chat_unread");
@@ -109,6 +110,13 @@ export async function Nav({ profile }: { profile: Profile }) {
         .eq("status", "draft")
         .eq("customers.rep_id", profile.id);
       waiting = mine?.length ?? 0;
+      // held tickets and unconfirmed backorders for this rep's customers
+      const { count: held } = await supabase
+        .from("sales_orders")
+        .select("id, customers!inner(rep_id)", { count: "exact", head: true })
+        .eq("customers.rep_id", profile.id)
+        .or("backorder_hold.eq.true,and(status.eq.backorder,bo_confirmed_at.is.null)");
+      needsOk = held ?? 0;
       const { data: resets } = await supabase.rpc("pending_reset_count");
       resetWaiting = Number(resets ?? 0);
     }
@@ -151,7 +159,9 @@ export async function Nav({ profile }: { profile: Profile }) {
                 ? { ...l, label: `Open orders (${waiting})` }
                 : l.href === "/admin/logins" && resetWaiting
                   ? { ...l, label: `Customer logins (${resetWaiting})` }
-                  : l,
+                  : l.href === "/sales" && needsOk
+                    ? { ...l, href: "/sales?status=needs_ok", label: `Sales orders (${needsOk} need your OK)` }
+                    : l,
         ),
       }))}
       userName={profile.full_name || profile.email || ""}

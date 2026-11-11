@@ -21,6 +21,7 @@ const CUSTOMER: ShopMode = { shopHref: "/shop", cartHref: "/shop/cart" };
 
 const STATUS_WORDS: Record<string, string> = {
   draft: "Waiting for approval",
+  backorder: "Backordered",
   confirmed: "Approved, being pulled",
   fulfilled: "Pulled",
   completed: "Checked",

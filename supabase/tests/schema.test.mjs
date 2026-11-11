@@ -1193,4 +1193,146 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   await as(admin);
 }
 
+// ---- Backorders ----
+{
+  await as(admin);
+  await q(`update profiles set active=true, role='sales', full_name='Rita Rep' where id=$1`, [sales]);
+  const wh = "00000000-0000-0000-0000-0000000000b1";
+  await q(`insert into auth.users (id, email) values ($1, 'wade@example.com') on conflict do nothing`, [wh]);
+  await q(`insert into profiles (id, email, full_name, role, active) values ($1, 'wade@example.com', 'Wade', 'warehouse', true) on conflict (id) do update set role='warehouse', active=true`, [wh]);
+  const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
+  const v = (await one(`select id from vendors limit 1`)).id;
+  const cust = (await one(`insert into customers (name, address, rep_id) values ('Back Order Florist','5 Elm',$1) returning id`, [sales])).id;
+  const mkProduct = async (sku) => {
+    const id = (await one(`insert into products (sku, name, kind, base_unit) values ($1,$1,'flower','stem') returning id`, [sku])).id;
+    const stem = (await one(`select id from product_units where product_id=$1`, [id])).id;
+    const bunch = (await one(`insert into product_units (product_id, name, factor) values ($1,'bunch',10) returning id`, [id])).id;
+    return { id, stem, bunch };
+  };
+  const receive = async (p, stems) => {
+    const po = (await one(`insert into purchase_orders (vendor_id, status) values ($1,'ordered') returning id`, [v])).id;
+    const l = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,$4,1) returning id`, [po, p.id, p.stem, stems])).id;
+    await q(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: l, qty: stems, location_id: c1 }])]);
+  };
+  const order = async (p, bunches) => {
+    const so = (await one(`insert into sales_orders (customer_id, status) values ($1,'draft') returning id, so_number`, [cust]));
+    await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,$4,12)`, [so.id, p.id, p.bunch, bunches]);
+    await q(`update sales_orders set status='confirmed' where id=$1`, [so.id]);
+    return so;
+  };
+  const lotOf = async (p) => (await one(`select id from lots where product_id=$1 and qty_on_hand_base > 0 order by received_at, created_at limit 1`, [p.id])).id;
+  const lineQty = async (so) => Number((await one(`select coalesce(sum(qty),0) q from sales_order_lines where so_id=$1`, [so])).q);
+
+  const t = await mkProduct("BO-TULIP");
+  await receive(t, 50);
+  const so1 = await order(t, 3); // older
+  const so2 = await order(t, 2); // newer
+
+  // plenty left: nothing moves
+  await as(wh);
+  await expectErr(`select record_shrink($1, 1000, 'x')`, [await lotOf(t)], "no more than", "shrink can't exceed the lot");
+  await as(admin);
+  await receive(t, 5);
+  await as(wh);
+  await q(`select record_shrink($1, 5, 'wilted')`, [await lotOf(t)]);
+  ok((await one(`select count(*)::int n from sales_orders where status='backorder' and customer_id=$1`, [cust])).n === 0, "nothing moves while stock still covers the tickets");
+
+  // 5 short: the newest ticket gives up whole bunches
+  await q(`select record_shrink($1, 5, 'broken')`, [await lotOf(t)]);
+  const bo = await one(`select id, so_number, backorder_of, status, payment_type from sales_orders where backorder_of=$1`, [so2.id]);
+  ok(bo && bo.status === "backorder", "the short amount went onto a backorder ticket");
+  ok((await lineQty(bo.id)) === 1 && (await lineQty(so2.id)) === 1, "newest ticket keeps 1 bunch, 1 bunch moved");
+  ok((await lineQty(so1.id)) === 3, "the older ticket keeps everything");
+  const h = await one(`select backorder_hold, hold_note from sales_orders where id=$1`, [so2.id]);
+  ok(h.backorder_hold === true && h.hold_note.includes(bo.so_number), "the original is on hold, note names the backorder");
+  const dm = await one(`select m.sender_id, m.body from chat_messages m join chat_channels c on c.id=m.channel_id where c.kind='dm' and c.dm_key like '%' || $1 || '%' order by m.created_at desc limit 1`, [sales]);
+  ok(dm && dm.sender_id === wh && dm.body.includes(so2.so_number) && dm.body.includes(bo.so_number), "the rep gets a message from whoever removed the stock");
+  ok(Number((await one(`select bo_committed($1) c`, [t.id])).c) === 40, "backorder tickets don't hold stock");
+
+  // held: can't be pulled, can't be unheld by hand
+  await as(sales);
+  await expectErr(`select fulfill_sales_order($1)`, [so2.id], "on hold", "a held ticket can't be pulled");
+  await db.exec(`set role authenticated`);
+  await expectErr(`update sales_orders set backorder_hold=false where id=$1`, [so2.id], "backorder buttons", "hold can't be cleared directly");
+  await expectErr(`update sales_orders set status='confirmed' where id=$1`, [bo.id], "cannot be changed", "a backorder can't be released by hand");
+  await db.exec(`reset role`);
+  await q(`select confirm_hold($1)`, [so2.id]);
+  await q(`select fulfill_sales_order($1)`, [so2.id]);
+  ok((await one(`select status from sales_orders where id=$1`, [so2.id])).status === "fulfilled", "after the rep confirms, it can be pulled");
+
+  // stock arriving before the rep's OK doesn't release it
+  await as(admin);
+  await receive(t, 20);
+  ok((await one(`select status from sales_orders where id=$1`, [bo.id])).status === "backorder", "stock in before the rep's OK: still waits");
+  await as(wh);
+  await expectErr(`select confirm_backorder($1)`, [bo.id], "Not authorized", "warehouse can't confirm a backorder");
+  await as(sales);
+  await q(`select confirm_backorder($1)`, [bo.id]);
+  const b2 = await one(`select status, bo_confirmed_by, released_at from sales_orders where id=$1`, [bo.id]);
+  ok(b2.status === "confirmed" && b2.bo_confirmed_by === sales && b2.released_at, "rep's OK with stock already in releases it to Ready to pull");
+  const buy = await one(`select m.body, m.sender_id from chat_messages m join chat_channels c on c.id=m.channel_id where c.kind='team' and c.team_role='buyer' order by m.created_at desc limit 1`);
+  ok(buy && buy.body.includes(bo.so_number) && buy.sender_id === sales, "purchasing is told in the Buyers channel");
+
+  // everything comes off a ticket; partial arrival splits the backorder
+  const p2 = await mkProduct("BO-IRIS");
+  await as(admin);
+  await receive(p2, 30);
+  const so3 = await order(p2, 3);
+  await as(wh);
+  await q(`select record_shrink($1, 30, 'frozen')`, [await lotOf(p2)]);
+  const bx = await one(`select id, so_number from sales_orders where backorder_of=$1`, [so3.id]);
+  ok((await lineQty(so3.id)) === 0 && (await lineQty(bx.id)) === 3, "all of it moved; the original is left empty");
+  await as(sales);
+  await q(`select confirm_hold($1)`, [so3.id]);
+  const e3 = await one(`select status, backorder_hold from sales_orders where id=$1`, [so3.id]);
+  ok(e3.status === "confirmed" && e3.backorder_hold === false, "an emptied ticket stays, empty, after the rep confirms");
+  await q(`select confirm_backorder($1)`, [bx.id]);
+  ok((await one(`select status from sales_orders where id=$1`, [bx.id])).status === "backorder", "confirmed with nothing in: keeps waiting");
+  await expectErr(`select set_stock_due($1, current_date + 3)`, [bx.id], "Not authorized", "sales can't set the stock due date");
+  await as(admin);
+  const due = (await one(`select (current_date + 9)::text d`)).d;
+  const pod = (await one(`insert into purchase_orders (vendor_id, status, expected_date) values ($1,'ordered',$2) returning id`, [v, due])).id;
+  await q(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,30,1)`, [pod, p2.id, p2.stem]);
+  ok((await one(`select backorder_suggested_due($1)::text d`, [bx.id])).d === due, "suggested date = the next incoming PO");
+  await expectErr(`select set_stock_due($1, current_date - 1)`, [bx.id], "today or a later", "no past dates");
+  await q(`select set_stock_due($1, $2::date)`, [bx.id, due]);
+  ok((await one(`select stock_due::text d from sales_orders where id=$1`, [bx.id])).d === due, "purchasing sets the stock due date");
+  // 2 of 3 bunches arrive
+  const pl = (await one(`select id from purchase_order_lines where po_id=$1`, [pod])).id;
+  await q(`select receive_po($1,$2::jsonb)`, [pod, JSON.stringify([{ line_id: pl, qty: 25, location_id: c1 }])]);
+  const after = await one(`select status from sales_orders where id=$1`, [bx.id]);
+  const rest = await one(`select id, so_number, status, bo_confirmed_at, stock_due, backorder_of from sales_orders where backorder_of=$1 and id<>$2 and status='backorder'`, [so3.id, bx.id]);
+  ok(after.status === "confirmed" && (await lineQty(bx.id)) === 2, "partial arrival: the backorder goes out with what's in (2 bunches)");
+  ok(rest && (await lineQty(rest.id)) === 1 && rest.bo_confirmed_at && rest.stock_due === null, "the rest moves to a new backorder, still confirmed, due date cleared");
+  const buy2 = await one(`select m.body from chat_messages m join chat_channels c on c.id=m.channel_id where c.kind='team' and c.team_role='buyer' order by m.created_at desc limit 1`);
+  ok(buy2.body.includes(rest.so_number), "purchasing is told about the new backorder");
+  await as(sales);
+  await q(`select cancel_backorder($1)`, [rest.id]);
+  ok((await one(`select status from sales_orders where id=$1`, [rest.id])).status === "cancelled", "rep can cancel a backorder");
+
+  // no person behind the change (web sync): an alert in the Sales channel
+  const p3 = await mkProduct("BO-LILY");
+  await as(admin);
+  await receive(p3, 10);
+  const so4 = await order(p3, 1);
+  await q(`update lots set qty_on_hand_base = 0 where product_id=$1`, [p3.id]);
+  await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
+  await q(`select backorder_shortfall($1)`, [p3.id]);
+  const sys = await one(`select m.sender_id, m.body from chat_messages m join chat_channels c on c.id=m.channel_id where c.kind='team' and c.team_role='sales' order by m.created_at desc limit 1`);
+  ok(sys && sys.sender_id === null && sys.body.startsWith("@Rita Rep") && sys.body.includes(so4.so_number), "no person: an automatic alert in the Sales channel");
+
+  // the rep removing stock themselves gets no message
+  const p4 = await mkProduct("BO-ROSE");
+  await as(admin);
+  await receive(p4, 10);
+  await order(p4, 1);
+  await q(`update profiles set role='admin' where id=$1`, [sales]);
+  const before = (await one(`select count(*)::int n from chat_messages`)).n;
+  await as(sales);
+  await q(`select record_shrink($1, 5, 'mine')`, [await lotOf(p4)]);
+  ok((await one(`select count(*)::int n from chat_messages`)).n === before, "the rep removing stock themselves gets no message");
+  await as(admin);
+  await q(`update profiles set role='sales' where id=$1`, [sales]);
+}
+
 console.log(`\n${pass} checks passed`);

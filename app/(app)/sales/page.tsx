@@ -9,9 +9,11 @@ import { Empty, ErrorBanner, PageHeader, Section, STATUS_LABELS, StatusBadge, Ta
 type SP = Promise<Record<string, string | undefined>>;
 
 const FILTERS: Record<string, string[] | null> = {
-  open: ["draft", "confirmed", "fulfilled", "completed"],
+  open: ["draft", "confirmed", "backorder", "fulfilled", "completed"],
+  needs_ok: null,
   draft: ["draft"],
   confirmed: ["confirmed"],
+  backorder: ["backorder"],
   fulfilled: ["fulfilled"],
   completed: ["completed"],
   invoiced: ["invoiced"],
@@ -26,7 +28,9 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
 
   let query = supabase
     .from("sales_orders")
-    .select("id, so_number, status, order_date, ship_date, must_check, source, customers(name), sales_order_lines(qty, unit_price)")
+    .select(
+      "id, so_number, status, order_date, ship_date, must_check, source, backorder_hold, bo_confirmed_at, stock_due, customers(name), sales_order_lines(qty, unit_price)",
+    )
     .order(status === "recurring" ? "ship_date" : "created_at", {
       ascending: status === "recurring",
     })
@@ -35,6 +39,7 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
   if (statuses) query = query.in("status", statuses);
   // Planned recurring drafts wait under "Recurring (planned)" until a week before they ship.
   const soon = addDays(today(), 7);
+  if (status === "needs_ok") query = query.or("backorder_hold.eq.true,and(status.eq.backorder,bo_confirmed_at.is.null)");
   if (status === "recurring") query = query.not("recurring_id", "is", null);
   else if (status === "open" || status === "draft")
     query = query.or(`recurring_id.is.null,status.neq.draft,customized.eq.true,ship_date.lte.${soon}`);
@@ -95,7 +100,12 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
         items={Object.keys(FILTERS).map((k) => ({
           key: k,
           href: `/sales?status=${k}`,
-          label: k === "recurring" ? "Recurring (planned)" : (STATUS_LABELS[k] ?? k[0].toUpperCase() + k.slice(1)),
+          label:
+            k === "recurring"
+              ? "Recurring (planned)"
+              : k === "needs_ok"
+                ? "Needs rep's OK"
+                : (STATUS_LABELS[k] ?? k[0].toUpperCase() + k.slice(1)),
         }))}
       />
 
@@ -129,6 +139,16 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
                         Customer cart
                       </span>
                     )}
+                    {o.backorder_hold && (
+                      <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-red-700">
+                        On hold
+                      </span>
+                    )}
+                    {o.status === "backorder" && !o.bo_confirmed_at && (
+                      <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-amber-800">
+                        Needs rep&apos;s OK
+                      </span>
+                    )}
                     {o.must_check && (
                       <span className="ml-2 rounded border border-red-600 px-1 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap text-red-600">
                         MUST CHECK
@@ -140,7 +160,7 @@ export default async function SalesPage({ searchParams }: { searchParams: SP }) 
                     <StatusBadge status={o.status} />
                   </td>
                   <td>{date(o.order_date)}</td>
-                  <td>{date(o.ship_date)}</td>
+                  <td>{o.status === "backorder" ? (o.stock_due ? `stock due ${date(o.stock_due)}` : "stock due not set") : date(o.ship_date)}</td>
                   <td className="num">{money(sum(o.sales_order_lines, (l: any) => l.qty * l.unit_price))}</td>
                 </tr>
               ))}

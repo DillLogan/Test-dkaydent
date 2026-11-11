@@ -252,3 +252,34 @@ export async function setLabelCount(id: string, fd: FormData) {
   revalidatePath(path);
   redirect(`${path}/box-labels`);
 }
+
+// ---- backorders ----
+
+async function backorderCall(role: "sales" | "buyer", id: string, fn: string, args: Record<string, unknown>, msg: string, back?: string) {
+  const { supabase } = await requireRole(role);
+  const path = back ?? `/sales/${id}`;
+  const { error } = await supabase.rpc(fn, args);
+  if (error) fail(path, dbMessage(error));
+  revalidatePath(`/sales/${id}`);
+  revalidatePath("/sales");
+  revalidatePath("/purchasing/backorders");
+  redirect(`${path}?message=${encodeURIComponent(msg)}`);
+}
+
+// rep: the held ticket goes out without what came off it
+export async function confirmHold(id: string) {
+  await backorderCall("sales", id, "confirm_hold", { p_so: id }, "Confirmed. The order can be pulled now.");
+}
+
+export async function confirmBackorder(id: string) {
+  await backorderCall("sales", id, "confirm_backorder", { p_so: id }, "Backorder confirmed. Purchasing has been told.");
+}
+
+export async function cancelBackorder(id: string) {
+  await backorderCall("sales", id, "cancel_backorder", { p_so: id }, "Backorder cancelled.");
+}
+
+// purchasing; `back` is the page the form is on
+export async function setStockDue(id: string, back: string, fd: FormData) {
+  await backorderCall("buyer", id, "set_stock_due", { p_so: id, p_date: str(fd, "stock_due") }, "Stock due date saved.", back);
+}

@@ -16,7 +16,7 @@ export type Channel = {
 type Msg = {
   id: string;
   channel_id: string;
-  sender_id: string;
+  sender_id: string | null;
   body: string;
   gif_url: string | null;
   created_at: string;
@@ -58,7 +58,11 @@ export function Messenger({
   const activeRef = useRef(active);
   activeRef.current = active;
 
-  const nameOf = useCallback((id: string) => people.find((p) => p.id === id)?.name ?? "Someone", [people]);
+  // messages the app sends itself have no sender
+  const nameOf = useCallback(
+    (id: string | null) => (id === null ? "DKaydent alerts" : (people.find((p) => p.id === id)?.name ?? "Someone")),
+    [people],
+  );
   const label = useCallback(
     (c: Channel) => (c.kind === "dm" ? nameOf(c.members.find((m) => m !== me) ?? "") : (c.name ?? "Chat")),
     [me, nameOf],

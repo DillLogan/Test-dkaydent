@@ -79,10 +79,12 @@ const STATUS_STYLES: Record<string, string> = {
   planned: "bg-stone-100 text-stone-700",
   in_transit: "bg-blue-50 text-blue-700",
   arrived: "bg-amber-50 text-amber-800",
+  backorder: "bg-amber-50 text-amber-800",
 };
 
 export const STATUS_LABELS: Record<string, string> = {
   confirmed: "Ready to pull",
+  backorder: "Backorder",
   fulfilled: "Pulled",
   completed: "Completed",
 };
