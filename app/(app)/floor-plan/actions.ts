@@ -12,7 +12,7 @@ type Result = { error?: string };
 
 // points are % of the plan
 export async function saveArea(id: string, area: { points: Pt[]; color?: string }): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   if (!validShape(area.points)) return { error: "That shape needs at least 3 points on the plan." };
   const pts = clampPts(area.points);
   const b = bbox(pts);
@@ -40,7 +40,7 @@ export async function saveArea(id: string, area: { points: Pt[]; color?: string 
  * already set, their outlines are rescaled to the new floor (and kept on it).
  */
 export async function setFloorSize(layoutId: string, widthFt: number, heightFt: number): Promise<Result & { aspect?: number }> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   if (!(widthFt > 0 && widthFt <= 5000 && heightFt > 0 && heightFt <= 5000))
     return { error: "Enter the floor's width and depth in feet (up to 5,000)." };
   const { data: lay, error: e1 } = await supabase
@@ -105,7 +105,7 @@ export async function setFloorSize(layoutId: string, widthFt: number, heightFt: 
 }
 
 export async function removeArea(id: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const off = { map_x: null, map_y: null, map_w: null, map_h: null, map_shape: null };
   const { data: hit, error } = await supabase.from("locations").update(off).eq("id", id).select("id");
   if (error) return { error: dbMessage(error) };
@@ -125,7 +125,7 @@ const unique = (e: { message: string }) =>
   e.message.includes("shop_layouts_name_uidx") ? "A layout with that name already exists." : dbMessage(e);
 
 export async function uploadPlanBackground(fd: FormData): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const layoutId = String(fd.get("layout_id") ?? "");
   const file = fd.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose an image first." };
@@ -158,7 +158,7 @@ export async function uploadPlanBackground(fd: FormData): Promise<Result> {
 }
 
 export async function removePlanBackground(layoutId: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { data: old } = await supabase.from("shop_layouts").select("background_path").eq("id", layoutId).single();
   const { error } = await supabase.from("shop_layouts").update({ background_path: null }).eq("id", layoutId);
   if (error) return { error: dbMessage(error) };
@@ -173,7 +173,7 @@ export async function removePlanBackground(layoutId: string): Promise<Result> {
 
 // Layouts
 export async function createLayout(name: string): Promise<Result & { id?: string }> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const n = layoutName(name);
   if (!n) return { error: "Name the layout." };
   if (n.length > 60) return { error: "Keep the name under 60 characters." };
@@ -184,7 +184,7 @@ export async function createLayout(name: string): Promise<Result & { id?: string
 }
 
 export async function renameLayout(id: string, name: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const n = layoutName(name);
   if (!n) return { error: "Name the layout." };
   if (n.length > 60) return { error: "Keep the name under 60 characters." };
@@ -195,7 +195,7 @@ export async function renameLayout(id: string, name: string): Promise<Result> {
 }
 
 export async function deleteLayout(id: string, moveTo: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { data: old } = await supabase.from("shop_layouts").select("background_path").eq("id", id).single();
   const { error } = await supabase.rpc("delete_shop_layout", { p_id: id, p_move_to: moveTo });
   if (error) return { error: dbMessage(error) };
@@ -235,7 +235,7 @@ export async function addDoor(
   layoutId: string,
   d: { kind: string; label: string; side: string; pos: number },
 ): Promise<Result & { id?: string }> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { error: bad, patch } = cleanDoor(d);
   if (bad) return { error: bad };
   const { data, error } = await supabase
@@ -249,7 +249,7 @@ export async function addDoor(
 }
 
 export async function saveDoor(id: string, d: DoorPatch): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { error: bad, patch } = cleanDoor(d);
   if (bad) return { error: bad };
   const { error } = await supabase.from("plan_doors").update(patch).eq("id", id);
@@ -259,7 +259,7 @@ export async function saveDoor(id: string, d: DoorPatch): Promise<Result> {
 }
 
 export async function removeDoor(id: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { error } = await supabase.from("plan_doors").delete().eq("id", id);
   if (error) return { error: dbMessage(error) };
   revalidatePath("/floor-plan");
@@ -268,7 +268,7 @@ export async function removeDoor(id: string): Promise<Result> {
 
 // Home areas (one per shop)
 export async function setHomeArea(productId: string, layoutId: string, fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `/products/${productId}`;
   const { error } = await supabase.rpc("set_home_location", {
     p_product_id: productId,
@@ -283,7 +283,7 @@ export async function setHomeArea(productId: string, layoutId: string, fd: FormD
 
 // used by the item panel on the floor plan
 export async function setHomeAreaInline(productId: string, layoutId: string, locationId: string | null): Promise<Result> {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const { error } = await supabase.rpc("set_home_location", { p_product_id: productId, p_layout_id: layoutId, p_location_id: locationId });
   if (error) return { error: dbMessage(error) };
   revalidatePath("/floor-plan");
@@ -317,7 +317,7 @@ function parseShelves(text: string): string[] {
 
 // returns { sectionId, locationId }; creates the location too if asked
 export async function saveSection(input: SectionInput): Promise<Result & { id?: string; locationId?: string }> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const name = String(input.name ?? "")
     .trim()
     .replace(/\s+/g, " ");
@@ -386,7 +386,7 @@ export async function saveSection(input: SectionInput): Promise<Result & { id?: 
 }
 
 export async function deleteSection(id: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const { error } = await supabase.from("location_sections").delete().eq("id", id);
   if (error) return { error: dbMessage(error) };
   revalidatePath("/floor-plan");
@@ -394,7 +394,7 @@ export async function deleteSection(id: string): Promise<Result> {
 }
 
 export async function renameLocation(id: string, name: string): Promise<Result> {
-  const { supabase } = await requireRole("warehouse");
+  const { supabase } = await requireRole("warehouse", "sales");
   const n = String(name ?? "")
     .trim()
     .replace(/\s+/g, " ");
@@ -406,7 +406,7 @@ export async function renameLocation(id: string, name: string): Promise<Result> 
 }
 
 export async function setHomeSpot(productId: string, layoutId: string, fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `/products/${productId}`;
   const { sectionId, shelf } = splitSpot(fd.get("spot"));
   const { error } = await supabase.rpc("set_home_spot", {

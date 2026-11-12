@@ -437,8 +437,15 @@ await expectErr(`select fulfill_sales_order($1)`, [so2], "Not authorized", "inac
 await as(admin);
 await q(`update profiles set active=true where id=$1`, [sales]);
 await as(sales);
-await expectErr(`select receive_po($1, '[]')`, [po2], "Not authorized", "sales cannot receive");
-await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not authorized", "sales cannot transfer");
+await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "already in that location", "sales gets past the stock role check");
+await as(admin);
+await q(`update profiles set role='orders_manager' where id=$1`, [sales]);
+await as(sales);
+await expectErr(`select receive_po($1, '[]')`, [po2], "Not authorized", "delivery/order management cannot receive");
+await expectErr(`select transfer_stock($1, 1, $2)`, [lotA.id, cooler1], "Not authorized", "delivery/order management cannot transfer");
+await as(admin);
+await q(`update profiles set role='sales' where id=$1`, [sales]);
+await as(sales);
 
 // Web store connection
 {
@@ -510,20 +517,30 @@ const so3 = (await one(`insert into sales_orders (customer_id) values ($1) retur
 await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so3, rose, bunch.id]);
 ok(true, "sales can create draft SO + lines");
 await expectErr(`insert into returns (so_id, customer_id) values ($1,$2)`, [so.id, cust], "row-level security", "returns only via create_return");
-await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Not authorized", "sales can't import stock");
-await expectErr(`select set_home_location($1, $2, null)`, [rose, main.id], "Not authorized", "sales can't set home areas");
-await expectErr(`select delete_shop_layout($1, $1)`, [main.id], "Not authorized", "sales can't delete layouts");
-await expectErr(`insert into shop_layouts (name) values ('Sales shop')`, [], "row-level security", "sales can't add layouts");
-await expectErr(`insert into plan_doors (layout_id, kind, label, side) values ($1,'entry','X','top')`, [main.id], "row-level security", "sales can't add entries/exits");
+await db.exec(`reset role`);
+await as(admin);
+await q(`update profiles set role='orders_manager' where id=$1`, [sales]);
+await as(sales);
+await db.exec(`set role authenticated`);
+await expectErr(`select import_stock_batch($1::jsonb)`, [JSON.stringify([{ sku: "RO-FRE-60", qty: 1, unit_cost: 1, location: "Cooler 1" }])], "Not authorized", "other roles can't import stock");
+await expectErr(`select set_home_location($1, $2, null)`, [rose, main.id], "Not authorized", "other roles can't set home areas");
+await expectErr(`select delete_shop_layout($1, $1)`, [main.id], "Not authorized", "other roles can't delete layouts");
+await expectErr(`insert into shop_layouts (name) values ('Sales shop')`, [], "row-level security", "other roles can't add layouts");
+await expectErr(`insert into plan_doors (layout_id, kind, label, side) values ($1,'entry','X','top')`, [main.id], "row-level security", "other roles can't add entries/exits");
 await expectErr(`insert into product_homes (product_id, layout_id, location_id) values ($1,$2,$3)`, [rose, main.id, c1], "row-level security", "homes only via set_home_location");
-await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-level security", "sales can't plan shipments");
+await expectErr(`insert into shipments (eta) values (current_date)`, [], "row-level security", "other roles can't plan shipments");
+await db.exec(`reset role`);
+await as(admin);
+await q(`update profiles set role='sales' where id=$1`, [sales]);
+await as(sales);
+await db.exec(`set role authenticated`);
 await expectErr(`select generate_standing_orders()`, [], "Not authorized", "sales can't run standing orders");
 await expectErr(`insert into payments (customer_id, kind, method, amount) values ($1,'payment','cash',1)`, [cust], "row-level security", "payments only through record_payment");
 await expectErr(`insert into payment_terminals (name, model, epi) values ('T','VL100','X1')`, [], "row-level security", "only admins add terminals");
 ok((await q(`select api_key from web_store_settings`)).length === 0, "web store settings (API key, secret) hidden from sales");
 await expectErr(`select web_store_apply_inventory('[]'::jsonb)`, [], "Not authorized", "sales can't push web inventory");
 await expectErr(`select web_store_config()`, [], "Not authorized", "sales can't read the web store secrets");
-ok((await db.query(`update shop_layouts set aspect = 2`)).affectedRows === 0, "sales can't edit layout");
+ok((await db.query(`update shop_layouts set aspect = aspect`)).affectedRows > 0, "sales can edit the shop layout");
 ok((await q(`select keyword from category_rules`)).length > 40, "everyone reads category rules");
 await expectErr(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,1,20)`, [so.id, rose, bunch.id], "row-level security", "cannot add lines to invoiced SO");
 await db.exec(`reset role`);
@@ -859,12 +876,15 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await one(`select section_id from product_homes where product_id=$1 and layout_id=$2`, [prod, c1.layout_id])).section_id === null, "moving the home clears its spot");
   await q(`delete from location_sections where id=$1`, [sec.id]);
   ok((await q(`select 1 from lots where section_id=$1`, [sec.id])).length === 0, "deleting a section frees stock");
+  await q(`update profiles set role='orders_manager' where id=$1`, [sales]);
   await as(sales);
   await db.exec(`set role authenticated`);
-  await expectErr(`insert into location_sections (location_id, name) values ($1, 'X')`, [c2], "row-level security", "sales can't add sections");
-  await expectErr(`select set_lot_spot($1,null,null)`, [moved], "Not authorized", "sales can't move stock spots");
+  await expectErr(`insert into location_sections (location_id, name) values ($1, 'X')`, [c2], "row-level security", "other roles can't add sections");
+  await expectErr(`select set_lot_spot($1,null,null)`, [moved], "Not authorized", "other roles can't move stock spots");
   ok((await q(`select 1 from location_sections`)).length >= 1, "staff can read sections");
   await db.exec(`reset role`);
+  await as(admin);
+  await q(`update profiles set role='sales' where id=$1`, [sales]);
 }
 
 
@@ -1187,10 +1207,12 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await one(`select status from shipments where id=$1`, [shp])).status === "received", "closing the short PO finishes the shipment");
   await expectErr(`select receive_shipment($1,$2::jsonb,$3::uuid[])`, [shp, "[]", []], "already received", "finished shipment can't be received again");
 
-  // sales can't receive to a customer
+  // other roles can't receive to a customer
+  await q(`update profiles set role='orders_manager' where id=$1`, [sales]);
   await as(sales);
-  await expectErr(`select receive_po_to_customer($1,'[]')`, [gen[3].id], "Not authorized", "sales can't receive");
+  await expectErr(`select receive_po_to_customer($1,'[]')`, [gen[3].id], "Not authorized", "delivery/order management can't receive");
   await as(admin);
+  await q(`update profiles set role='sales' where id=$1`, [sales]);
 }
 
 // ---- Backorders ----
@@ -1333,6 +1355,100 @@ ok(aging.length > 0 && aging.every(a => a.age_days === 0), "aging view works");
   ok((await one(`select count(*)::int n from chat_messages`)).n === before, "the rep removing stock themselves gets no message");
   await as(admin);
   await q(`update profiles set role='sales' where id=$1`, [sales]);
+}
+
+// ---- Counting and moving a whole product ----
+{
+  await as(admin);
+  const c1 = (await one(`select id from locations where name='Cooler 1'`)).id;
+  const c2 = (await one(`insert into locations (name, kind) values ('Cooler 9','cooler') returning id`)).id;
+  const v = (await one(`select id from vendors limit 1`)).id;
+  const cust = (await one(`insert into customers (name, address, rep_id) values ('Count Florist','9 Elm',$1) returning id`, [sales])).id;
+  const prod = (await one(`insert into products (sku, name, kind, base_unit, shelf_life_days) values ('CT-ROSE','Count Rose','flower','stem',7) returning id`)).id;
+  const stem = (await one(`select id from product_units where product_id=$1`, [prod])).id;
+  const receive = async (stems, cost, loc = c1) => {
+    const po = (await one(`insert into purchase_orders (vendor_id, status) values ($1,'draft') returning id`, [v])).id;
+    const l = (await one(`insert into purchase_order_lines (po_id, product_id, unit_id, qty, unit_cost) values ($1,$2,$3,$4,$5) returning id`, [po, prod, stem, stems, cost])).id;
+    await q(`update purchase_orders set status='ordered' where id=$1`, [po]);
+    await q(`select receive_po($1,$2::jsonb)`, [po, JSON.stringify([{ line_id: l, qty: stems, location_id: loc }])]);
+  };
+  const lots = async () => (await db.query(`select id, location_id, qty_on_hand_base::float q, unit_cost_base::float c, expires_at from lots where product_id=$1 order by received_at, created_at`, [prod])).rows;
+  const total = async (loc) => Number((await one(`select coalesce(sum(qty_on_hand_base),0) n from lots where product_id=$1 and ($2::uuid is null or location_id=$2)`, [prod, loc ?? null])).n);
+
+  // sales can now do stock work Warehouse does
+  await as(sales);
+  await receive(10, 1);
+  await receive(20, 2);
+  ok((await total()) === 30, "sales can receive");
+  const [old1] = await lots();
+  await q(`select record_shrink($1, 1, 'x')`, [old1.id]);
+  await q(`select adjust_lot($1, 10, 'Cycle count')`, [old1.id]);
+  ok((await total()) === 30, "sales can shrink and count a lot");
+
+  // lower: oldest lot first, one movement per lot, reason Count
+  await q(`select count_product($1, null, 22, 30)`, [prod]);
+  let l = await lots();
+  ok(l[0].q === 2 && l[1].q === 20, "a lower count comes off the oldest lot first");
+  await q(`select count_product($1, null, 5, 22)`, [prod]);
+  l = await lots();
+  ok(l[0].q === 0 && l[1].q === 5, "and runs on into the next lot");
+  ok((await one(`select count(*)::int n from stock_movements where product_id=$1 and reason='Count'`, [prod])).n === 3, "each lot touched gets its own Count movement");
+
+  // the difference from what was on screen is what changes
+  await q(`select count_product($1, null, 4, 5)`, [prod]);
+  ok((await total()) === 4, "count applies the difference from what was on screen");
+  await expectErr(`select count_product($1, null, 0, 50)`, [prod], "Only 4 on hand", "can't take away more than is there");
+
+  // higher: needs a lot or a new lot
+  await expectErr(`select count_product($1, null, 9, 4)`, [prod], "Choose a lot", "a higher count needs a lot to go into");
+  await q(`select count_product($1, null, 9, 4, $2)`, [prod, l[1].id]);
+  ok((await lots())[1].q === 9, "extra goes into the chosen lot");
+  await q(`select count_product($1, null, 12, 9, null, $2)`, [prod, c1]);
+  l = await lots();
+  const nl = l[l.length - 1];
+  const due = (await one(`select (current_date + 7)::text d`)).d;
+  ok(l.length === 3 && nl.q === 3 && nl.c === 2 && String(nl.expires_at instanceof Date ? nl.expires_at.toISOString().slice(0, 10) : nl.expires_at).startsWith(due), "new lot: latest cost, expiry from shelf life");
+  ok((await one(`select count(*)::int n from receipts r join lots x on x.receipt_id=r.id where x.id=$1`, [nl.id])).n === 0, "a count is not a receipt");
+
+  // location scope
+  await q(`select move_product_stock($1, $2, $3, 4)`, [prod, c1, c2]);
+  ok((await total(c2)) === 4 && (await total(c1)) === 8 && (await total()) === 12, "move part of it to another location, total unchanged");
+  await q(`select count_product($1, $2, 1, 4)`, [prod, c2]);
+  ok((await total(c2)) === 1 && (await total(c1)) === 8, "a count in one location only touches that location");
+  await expectErr(`select count_product($1, $2, 3, 1, $3)`, [prod, c2, l[1].id], "another location", "can't add to a lot in another location");
+  await q(`select move_product_stock($1, $2, $3, 1)`, [prod, c2, c1]);
+  ok((await total(c2)) === 0 && (await total(c1)) === 9, "move all of it back");
+  await expectErr(`select move_product_stock($1, $2, $2, 1)`, [prod, c1], "already in that location", "can't move to the same place");
+  await expectErr(`select move_product_stock($1, $2, $3, 99)`, [prod, c1, c2], "no more than", "can't move more than is there");
+
+  // counting below what's on orders makes one backorder and one message
+  const so = (await one(`insert into sales_orders (customer_id, status) values ($1,'draft') returning id`, [cust])).id;
+  await q(`insert into sales_order_lines (so_id, product_id, unit_id, qty, unit_price) values ($1,$2,$3,8,2)`, [so, prod, stem]);
+  await q(`update sales_orders set status='confirmed' where id=$1`, [so]);
+  const wh = "00000000-0000-0000-0000-0000000000b1";
+  const msgs = async () => (await one(`select count(*)::int n from chat_messages where sender_id=$1`, [wh])).n;
+  const before = await msgs();
+  await as(wh);
+  await q(`select count_product($1, null, 2, 9)`, [prod]);
+  ok((await one(`select count(*)::int n from sales_orders where backorder_of=$1`, [so])).n === 1, "a count below what's on orders makes a backorder");
+  ok((await msgs()) === before + 1, "the rep gets one message for the whole count");
+  ok(Number((await one(`select sum(qty) n from sales_order_lines where so_id=$1`, [so])).n) === 2, "the order keeps what's left");
+
+  // a higher count brings confirmed backorders back
+  const bo = (await one(`select id from sales_orders where backorder_of=$1`, [so])).id;
+  await as(sales);
+  await q(`select confirm_hold($1)`, [so]);
+  await q(`select confirm_backorder($1)`, [bo]);
+  await q(`select count_product($1, null, 10, 2, null, $2)`, [prod, c1]);
+  ok((await one(`select status from sales_orders where id=$1`, [bo])).status === "confirmed", "a higher count releases a confirmed backorder");
+
+  // other roles can't
+  await as(admin);
+  await q(`update profiles set role='buyer' where id=$1`, [wh]);
+  await as(wh);
+  await expectErr(`select count_product($1, null, 1, 2)`, [prod], "Not authorized", "staff can't count a product");
+  await as(admin);
+  await q(`update profiles set role='warehouse' where id=$1`, [wh]);
 }
 
 console.log(`\n${pass} checks passed`);

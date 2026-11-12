@@ -49,7 +49,7 @@ export default async function LotPage({ params, searchParams }: Props) {
 
   const onHand = Number(lot.qty_on_hand_base);
   const base = lot.products.base_unit;
-  const canWork = can(profile, "warehouse") && onHand > 0;
+  const canWork = can(profile, "warehouse", "sales") && onHand > 0;
   const daysToExpiry = lot.expires_at ? Math.round((Date.parse(lot.expires_at) - Date.parse(today())) / 86400000) : null;
   const po = lot.purchase_order_lines?.purchase_orders;
   const vendor = (po as any)?.vendors as { name: string; email: string | null; contact_name: string | null } | null | undefined;
@@ -67,7 +67,7 @@ export default async function LotPage({ params, searchParams }: Props) {
   const lotMarks: Record<string, "home" | "here" | "both"> = { [lot.location_id]: home === lot.location_id ? "both" : "here" };
   if (home && home !== lot.location_id) lotMarks[home] = "home";
   const homeName = plan.locations.find((l) => l.id === home)?.name;
-  const canPhoto = can(profile, "buyer", "warehouse");
+  const canPhoto = can(profile, "buyer", "warehouse", "sales");
 
   const UnitSelect = () => (
     <select name="unit_id" className="input w-auto" defaultValue={units?.[0]?.id}>
@@ -151,7 +151,7 @@ export default async function LotPage({ params, searchParams }: Props) {
               <span className="text-stone-500">Not recorded. Pull tickets show only {lot.locations.name} for this stock.</span>
             )}
           </p>
-          {can(profile, "warehouse") &&
+          {can(profile, "warehouse", "sales") &&
             (spotChoices.length ? (
               <form action={setLotSpot.bind(null, id)} className="flex flex-wrap items-end gap-2">
                 <label>

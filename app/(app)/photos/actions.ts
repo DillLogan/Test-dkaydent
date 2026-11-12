@@ -9,7 +9,7 @@ type Result = { error?: string };
 const MAX_BYTES = 5 * 1024 * 1024;
 
 async function store(folder: string, id: string, fd: FormData): Promise<{ path?: string; error?: string; supabase?: any }> {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const file = fd.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo first." };
   if (file.size > MAX_BYTES) return { error: "That photo is over 5 MB even after shrinking. Try a smaller one." };
@@ -41,7 +41,7 @@ export async function uploadProductPhoto(productId: string, fd: FormData): Promi
 }
 
 export async function removeProductPhoto(productId: string): Promise<Result> {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const { data: old } = await supabase.from("products").select("image_path").eq("id", productId).single();
   const { error } = await supabase.rpc("set_product_image", { p_product_id: productId, p_path: null });
   if (error) return { error: dbMessage(error) };
@@ -63,7 +63,7 @@ export async function uploadLotPhoto(lotId: string, fd: FormData): Promise<Resul
 }
 
 export async function removeLotPhoto(lotId: string): Promise<Result> {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const { data: old } = await supabase.from("lots").select("image_path").eq("id", lotId).single();
   const { error } = await supabase.rpc("set_lot_image", { p_lot_id: lotId, p_path: null });
   if (error) return { error: dbMessage(error) };

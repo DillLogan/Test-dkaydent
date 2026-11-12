@@ -18,7 +18,7 @@ function refresh() {
 // shipments
 
 export async function createShipment(fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const eta = str(fd, "eta");
   if (!eta) fail(`${LIST}?view=new`, "Enter an ETA.");
   const { data, error } = await supabase
@@ -36,7 +36,7 @@ export async function createShipment(fd: FormData) {
 }
 
 export async function updateShipment(id: string, fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `${LIST}/${id}`;
   const eta = str(fd, "eta");
   if (!eta) fail(path, "Enter an ETA.");
@@ -50,7 +50,7 @@ export async function updateShipment(id: string, fd: FormData) {
 }
 
 export async function setShipmentStatus(id: string, status: "planned" | "in_transit" | "arrived" | "cancelled") {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `${LIST}/${id}`;
   if (status === "cancelled") {
     // take any open POs off the shipment so they can go on another one
@@ -71,7 +71,7 @@ export async function setShipmentStatus(id: string, status: "planned" | "in_tran
 }
 
 export async function addPOToShipment(id: string, fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `${LIST}/${id}`;
   const po = str(fd, "po_id");
   if (!po) fail(path, "Choose a purchase order.");
@@ -82,7 +82,7 @@ export async function addPOToShipment(id: string, fd: FormData) {
 }
 
 export async function removePOFromShipment(id: string, poId: string) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `${LIST}/${id}`;
   const { error } = await supabase.rpc("set_po_shipment", { p_po_id: poId, p_shipment_id: null });
   if (error) fail(path, dbMessage(error));
@@ -96,7 +96,7 @@ const spotOf = (fd: FormData, lineId: string) => {
 };
 
 export async function receiveShipment(id: string, lineIds: string[], fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `${LIST}/${id}`;
   const lines = lineIds
     .map((lineId) => ({

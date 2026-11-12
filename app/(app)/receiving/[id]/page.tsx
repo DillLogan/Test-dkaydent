@@ -40,7 +40,7 @@ export default async function ShipmentPage({ params, searchParams }: Props) {
   ]);
   if (!s) notFound();
 
-  const canPlan = can(profile, "buyer", "warehouse");
+  const canPlan = can(profile, "buyer", "warehouse", "sales");
   const canBuy = can(profile, "buyer");
   const open = !["received", "cancelled"].includes(s.status);
   const locs = locations ?? [];

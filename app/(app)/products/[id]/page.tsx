@@ -75,7 +75,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
       misplaced: home ? here.filter((l) => l !== home) : [],
     };
   });
-  const canPlace = can(profile, "buyer", "warehouse");
+  const canPlace = can(profile, "buyer", "warehouse", "sales");
 
   return (
     <>

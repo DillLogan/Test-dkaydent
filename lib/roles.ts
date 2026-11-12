@@ -12,7 +12,7 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "admin", label: "Admin", description: "Everything, including user management" },
   { value: "buyer", label: "Staff", description: "Products, vendors, purchase orders, receiving" },
   { value: "warehouse", label: "Warehouse", description: "Locations, receiving, transfers, shrink, counts, fulfillment" },
-  { value: "sales", label: "Sales", description: "Customers, pricing, sales orders, invoices" },
+  { value: "sales", label: "Sales", description: "Customers, pricing, sales orders, invoices, plus stock, counts and receiving" },
   {
     value: "orders_manager",
     label: "Delivery/Order Management",

@@ -110,7 +110,7 @@ export async function closePO(id: string) {
 }
 
 export async function receivePO(id: string, lineIds: string[], fd: FormData) {
-  const { supabase } = await requireRole("buyer", "warehouse");
+  const { supabase } = await requireRole("buyer", "warehouse", "sales");
   const path = `/purchasing/${id}`;
   const defaultLocation = str(fd, "default_location");
   const lines = lineIds

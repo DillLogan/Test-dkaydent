@@ -26,7 +26,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: SP
     t.lots += 1;
     totals.set(l.location_id, t);
   }
-  const canEdit = can(profile, "warehouse");
+  const canEdit = can(profile, "warehouse", "sales");
 
   return (
     <>

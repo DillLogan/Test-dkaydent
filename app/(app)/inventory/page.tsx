@@ -2,7 +2,10 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { searchTerm } from "@/lib/forms";
 import { date, money, qty, sum, unitMoney } from "@/lib/format";
-import { Empty, ErrorBanner, ExpiryText, PageHeader, Stat, Tabs } from "@/components/ui";
+import { Empty, ErrorBanner, ExpiryText, Notice, PageHeader, Stat, Tabs } from "@/components/ui";
+import { can } from "@/lib/roles";
+import { CountCell, MoveStock } from "@/components/StockRowTools";
+import { countProduct, moveProduct } from "./actions";
 import { ItemCell, ItemPhoto } from "@/components/ItemThumb";
 import { ViewToggle } from "@/components/ViewToggle";
 import { listView } from "@/lib/view";
@@ -12,7 +15,8 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function InventoryPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const view = sp.view === "lots" ? "lots" : "stock";
-  const { supabase } = await getSession();
+  const { supabase, profile } = await getSession();
+  const canWork = can(profile, "warehouse", "sales");
   const term = searchTerm(sp.q);
 
   let lotsQ = supabase.from("v_lot_aging").select("*");
@@ -56,6 +60,60 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
     byProduct.set(l.product_id, p);
   }
   const products = [...byProduct.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  // for counting and moving: units, every lot of these products (any location) and what's on open orders
+  const ids = products.map((p) => p.product_id);
+  const [{ data: unitRows }, { data: allLots }, { data: openLines }] =
+    canWork && ids.length
+      ? await Promise.all([
+          supabase.from("product_units").select("id, product_id, name, factor").in("product_id", ids).order("factor"),
+          supabase.from("lots").select("product_id, location_id, qty_on_hand_base").in("product_id", ids).gt("qty_on_hand_base", 0),
+          supabase
+            .from("sales_order_lines")
+            .select("product_id, qty, product_units(factor), sales_orders!inner(status)")
+            .in("product_id", ids)
+            .eq("sales_orders.status", "confirmed"),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }];
+  const unitsOf = (id: string) =>
+    (unitRows ?? []).filter((u: any) => u.product_id === id).map((u: any) => ({ id: u.id, name: u.name, factor: Number(u.factor) }));
+  const totalOf = (id: string) =>
+    sum(
+      (allLots ?? []).filter((l: any) => l.product_id === id),
+      (l: any) => Number(l.qty_on_hand_base),
+    );
+  const committedOf = (id: string) =>
+    sum(
+      (openLines ?? []).filter((l: any) => l.product_id === id),
+      (l: any) => Number(l.qty) * Number(l.product_units?.factor ?? 1),
+    );
+  const locName = new Map((locations ?? []).map((l) => [l.id, l.name]));
+  const placesOf = (id: string) => {
+    const by = new Map<string, number>();
+    for (const l of allLots ?? [])
+      if (l.product_id === id && (!sp.location || l.location_id === sp.location))
+        by.set(l.location_id, (by.get(l.location_id) ?? 0) + Number(l.qty_on_hand_base));
+    return [...by].map(([lid, q]) => ({ id: lid, name: locName.get(lid) ?? "", qty: q }));
+  };
+  const lotsOf = (id: string) =>
+    rows
+      .filter((l) => l.product_id === id)
+      .map((l) => ({
+        id: l.lot_id,
+        code: l.lot_code,
+        locationId: l.location_id,
+        locationName: l.location_name,
+        received: date(l.received_at),
+        expires: l.expires_at ? date(l.expires_at) : null,
+        qty: Number(l.qty_on_hand_base),
+      }));
+  const here =
+    "/inventory?" +
+    new URLSearchParams(
+      Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && k !== "error" && k !== "message")) as Record<string, string>,
+    ).toString();
+  const placeList = (locations ?? []).map((l) => ({ id: l.id, name: l.name }));
+  const oneProduct = sp.product ? products.find((p) => p.product_id === sp.product) : null;
   const qs = (extra: Record<string, string>) =>
     "/inventory?" +
     new URLSearchParams({
@@ -86,6 +144,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
         </Link>
       </PageHeader>
       <ErrorBanner error={sp.error} />
+      <Notice message={sp.message} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Value (filtered)" value={money(sum(rows, (l) => l.value))} />
@@ -138,7 +197,20 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
           ]}
         />
         {view === "lots" && rows.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2">
+            {canWork && oneProduct && (
+              <MoveStock
+                productId={oneProduct.product_id}
+                name={oneProduct.name}
+                baseUnit={oneProduct.base_unit}
+                units={unitsOf(oneProduct.product_id)}
+                from={placesOf(oneProduct.product_id)}
+                locations={placeList}
+                back={here}
+                action={moveProduct}
+                label="Move to another location"
+              />
+            )}
             <ViewToggle list="lots" view={lotView} />
           </div>
         )}
@@ -157,6 +229,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
                 <th className="num">Oldest</th>
                 <th>Soonest expiry</th>
                 <th className="num">Value</th>
+                {canWork && (
+                  <th>
+                    <span className="sr-only">Move</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -169,8 +246,27 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
                       </Link>
                     </ItemCell>
                   </td>
-                  <td className="num">
-                    {qty(p.qty)} {p.base_unit}
+                  <td className="num" data-testid="on-hand">
+                    {canWork ? (
+                      <CountCell
+                        key={`${p.product_id}-${p.qty}`}
+                        productId={p.product_id}
+                        baseUnit={p.base_unit}
+                        onHand={p.qty}
+                        totalAll={totalOf(p.product_id)}
+                        committed={committedOf(p.product_id)}
+                        units={unitsOf(p.product_id)}
+                        lots={lotsOf(p.product_id)}
+                        locations={placeList}
+                        scopeLocation={sp.location ?? null}
+                        back={here}
+                        action={countProduct}
+                      />
+                    ) : (
+                      <>
+                        {qty(p.qty)} {p.base_unit}
+                      </>
+                    )}
                   </td>
                   <td className="num">
                     <Link href={qs({ view: "lots", product: p.product_id })} className="link">
@@ -182,6 +278,20 @@ export default async function InventoryPage({ searchParams }: { searchParams: SP
                     <ExpiryText days={p.soonest} />
                   </td>
                   <td className="num">{money(p.value)}</td>
+                  {canWork && (
+                    <td className="text-right">
+                      <MoveStock
+                        productId={p.product_id}
+                        name={p.name}
+                        baseUnit={p.base_unit}
+                        units={unitsOf(p.product_id)}
+                        from={placesOf(p.product_id)}
+                        locations={placeList}
+                        back={here}
+                        action={moveProduct}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -39,7 +39,7 @@ const shortDay = (ymd: string) =>
 export default async function ReceivingPage({ searchParams }: { searchParams: SP }) {
   const { view = "plan", status = "open", error, message } = await searchParams;
   const { supabase, profile } = await getSession();
-  const canPlan = can(profile, "buyer", "warehouse");
+  const canPlan = can(profile, "buyer", "warehouse", "sales");
   const now = today();
   const horizon = oneYearFrom(now);
 

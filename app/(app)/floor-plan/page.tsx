@@ -82,8 +82,8 @@ export default async function FloorPlanPage({ searchParams }: { searchParams: SP
         doors={plan.doors}
         locations={plan.locations.map((l) => ({ id: l.id, name: l.name, kind: l.kind, active: l.active, whole_layout: !!l.whole_layout }))}
         items={items}
-        canEdit={can(profile, "warehouse")}
-        canAssign={can(profile, "buyer", "warehouse")}
+        canEdit={can(profile, "warehouse", "sales")}
+        canAssign={can(profile, "buyer", "warehouse", "sales")}
         initialItem={item ?? null}
         actions={{
           saveArea,

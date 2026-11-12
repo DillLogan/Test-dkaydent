@@ -174,7 +174,7 @@ export const TUTORIALS: Tutorial[] = [
     id: "floor-plan",
     title: "Draw your shop in Location in shop",
     summary: "Shape sections to match the real floor, set the size in feet, and mark doors.",
-    who: "Warehouse, admin",
+    who: "Warehouse, sales, admin",
     steps: [
       {
         text: "Open Location in shop. If you own several shops, use the shop menu to pick one or add another.",
@@ -383,6 +383,46 @@ export const TUTORIALS: Tutorial[] = [
     ],
   },
   {
+    id: "count-stock",
+    title: "Count an item from the Inventory list",
+    summary: "Change an item's on-hand amount after a count.",
+    who: "Warehouse, sales, admin",
+    steps: [
+      {
+        text: "Open Inventory on By product. To count one location only, choose it in the location filter first and tap Apply.",
+        href: "/inventory",
+        linkLabel: "Inventory",
+      },
+      { text: "Tap the pencil next to the On hand amount. Type what you counted. You can count in stems or another unit, like bunches." },
+      {
+        text: "If your count is lower, tap Save. It comes off the oldest lots first. If that leaves orders short, you're told how much will move to a backorder; tap Save anyway to go ahead.",
+      },
+      {
+        text: "If your count is higher, a pop-up says it's higher than expected. Choose the lot the extra goes into, or a new lot, and tap Allow. Deny cancels the change.",
+      },
+      { text: "Every change shows in the Movement log as a count adjustment.", href: "/inventory/movements", linkLabel: "Movement log" },
+    ],
+    tip: "To count one lot instead of the whole item, open the lot and use Cycle count.",
+  },
+  {
+    id: "move-stock",
+    title: "Move an item to another location",
+    summary: "Move all or part of an item from one location to another.",
+    who: "Warehouse, sales, admin",
+    steps: [
+      {
+        text: "On Inventory, tap Move on the item's row. You can also open the item's lots (tap its Lots number) and tap Move to another location.",
+        href: "/inventory",
+        linkLabel: "Inventory",
+      },
+      { text: "Choose where it's going. If the item is in more than one location, choose where it's coming from too." },
+      { text: "All of it is filled in. Change the amount to move only part of it, then tap Move." },
+      {
+        text: "The oldest stock moves first. Moving part of a lot splits it into a new lot in the new location. On hand and value don't change.",
+      },
+    ],
+  },
+  {
     id: "sign-document",
     title: "Sign a document you were sent",
     summary: "Open the link, sign, fill in the boxes and submit.",
@@ -414,7 +454,7 @@ export const TUTORIALS: Tutorial[] = [
       { text: "Ask the person to sign up on the login page. New people start inactive." },
       { text: "Open Settings → Users & roles.", href: "/admin/users", linkLabel: "Users & roles" },
       {
-        text: "Choose their role and turn them active. Admin: everything. Staff: products, vendors, purchasing, receiving. Warehouse: locations, stock, pulling. Sales: customers, orders, invoices. Delivery/Order Management: completes pulled orders, invoices.",
+        text: "Choose their role and turn them active. Admin: everything. Staff: products, vendors, purchasing, receiving. Warehouse: locations, stock, pulling. Sales: customers, orders, invoices, plus stock and receiving. Delivery/Order Management: completes pulled orders, invoices.",
       },
     ],
     tip: "The first person to sign up becomes the admin.",
@@ -466,7 +506,7 @@ export const ARTICLES: Article[] = [
     title: "Who can do what",
     body: [
       "Admin can do everything, including adding users and the web store connection.",
-      "Sales can create and edit orders, set MUST CHECK, send orders to pull, invoice, take payments and manage customers.",
+      "Sales can create and edit orders, set MUST CHECK, send orders to pull, invoice, take payments and manage customers. Sales can also do everything Warehouse does with stock: receiving, moving, counting, shrink, locations and the shop floor plan.",
       "Warehouse can mark orders pulled, record returns, move and count stock, and edit the shop floor plan.",
       "Staff manage products, vendors, purchase orders and receiving.",
       "Delivery/Order Management marks pulled orders Completed (or sends them back), creates and voids invoices, and builds delivery routes.",
@@ -751,6 +791,22 @@ export const ARTICLES: Article[] = [
       "An adjustment corrects a lot's quantity after a count.",
       "Resellable returns go back into the lots they came from. Returned items marked not resellable are written off as shrink automatically.",
     ],
+  },
+  {
+    id: "counting-moving",
+    category: "Stock",
+    title: "Counting and moving a whole item",
+    body: [
+      "Warehouse, Sales and admins can change an item's on-hand amount from the Inventory list. Tap the pencil next to On hand.",
+      "With All locations chosen, the count covers every location. With one location chosen in the filter, it only changes that location's stock, and the item's total updates to match.",
+      "A lower count comes off the oldest lots first. Each lot it touches gets its own line in the Movement log.",
+      "If a lower count leaves orders without enough stock, you're warned first. Saving moves the short amount to a backorder and the rep is told, the same as any other stock removal.",
+      "A higher count asks you to allow it and choose where the extra goes: an existing lot, or a new lot dated today. A new lot uses the cost from the latest delivery and expires after the item's shelf life. A count is never recorded as a receipt.",
+      "A higher count also brings back confirmed backorders that were waiting for this item.",
+      "The amount shown when you started counting is what the change is based on. If someone else moves stock while you count, their change isn't lost.",
+      "Move takes all or part of an item to another location, oldest stock first. Moving part of a lot splits it. Moving doesn't change on hand, value or any orders.",
+    ],
+    images: ["Counting an item on the Inventory list.", "Choosing where extra stock goes after a higher count."],
   },
   {
     id: "floor-plan-faq",

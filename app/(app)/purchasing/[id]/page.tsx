@@ -52,7 +52,7 @@ export default async function POPage({ params, searchParams }: Props) {
     .order("created_at");
 
   const canBuy = can(profile, "buyer");
-  const canReceive = can(profile, "buyer", "warehouse");
+  const canReceive = can(profile, "buyer", "warehouse", "sales");
   const isDraft = po.status === "draft";
   const receivable = po.status === "ordered" || po.status === "partially_received";
   const editableHeader = !["received", "cancelled"].includes(po.status);

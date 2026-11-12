@@ -35,11 +35,11 @@ export default async function ImportPage({ searchParams }: { searchParams: SP })
   );
 
   if (tab === "stock") {
-    if (!can(profile, "buyer", "warehouse")) {
+    if (!can(profile, "buyer", "warehouse", "sales")) {
       return (
         <>
           {header}
-          <Empty>Receiving a stock batch needs the Buyer or Warehouse role.</Empty>
+          <Empty>Receiving a stock batch needs the Staff, Warehouse or Sales role.</Empty>
         </>
       );
     }

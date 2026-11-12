@@ -105,7 +105,7 @@ export async function importRows(entity: Entity, fd: FormData) {
 
 // validated again here, the browser preview can't be trusted
 export async function importStockBatch(fd: FormData) {
-  const { supabase, profile } = await requireRole("buyer", "warehouse");
+  const { supabase, profile } = await requireRole("buyer", "warehouse", "sales");
   const path = "/import?entity=stock";
   let raw: Record<string, string>[] = [];
   try {
